@@ -1,12 +1,13 @@
-import cv2
-import numpy as np
-import random
-from torch.utils import data
-from datasets.laserscan import SemLaserScan
-from active_learning.utils import convert_label, correct_label
 import os
-import yaml
+import random
 
+import cv2
+import yaml
+import numpy as np
+from torch.utils import data
+
+from .laserscan import SemLaserScan
+from src.active_learning.utils import convert_label, correct_label
 
 data_dir = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'data'))
 
@@ -14,15 +15,15 @@ VOID_VALUE = 255
 TRAVERSABILITY_LABELS = {0: "traversable",
                          1: "non-traversable",
                          VOID_VALUE: "background"}
-TRAVERSABILITY_COLOR_MAP = {0:          [0, 255, 0],
-                            1:          [255, 0, 0],
+TRAVERSABILITY_COLOR_MAP = {0: [0, 255, 0],
+                            1: [255, 0, 0],
                             VOID_VALUE: [0, 0, 0]}
 
 FLEXIBILITY_LABELS = {1: "flexible",
                       0: "non-flexible",
                       VOID_VALUE: "background"}
-FLEXIBILITY_COLOR_MAP = {1:          [0, 255, 0],
-                         0:          [255, 0, 0],
+FLEXIBILITY_COLOR_MAP = {1: [0, 255, 0],
+                         0: [255, 0, 0],
                          VOID_VALUE: [0, 0, 0]}
 
 
@@ -80,8 +81,8 @@ class BaseDatasetImages(data.Dataset):
         new_h, new_w = label.shape
         x = random.randint(0, new_w - self.crop_size[1])
         y = random.randint(0, new_h - self.crop_size[0])
-        image = image[y:y+self.crop_size[0], x:x+self.crop_size[1]]
-        label = label[y:y+self.crop_size[0], x:x+self.crop_size[1]]
+        image = image[y:y + self.crop_size[0], x:x + self.crop_size[1]]
+        label = label[y:y + self.crop_size[0], x:x + self.crop_size[1]]
 
         return image, label
 
@@ -115,7 +116,7 @@ class BaseDatasetImages(data.Dataset):
             new_w = np.int(w * short_length / h + 0.5)
         else:
             new_w = short_length
-            new_h = np.int(h * short_length / w + 0.5)        
+            new_h = np.int(h * short_length / w + 0.5)
         image = cv2.resize(image, (new_w, new_h),
                            interpolation=cv2.INTER_LINEAR)
         pad_w, pad_h = 0, 0
@@ -123,7 +124,7 @@ class BaseDatasetImages(data.Dataset):
             pad_w = 0 if (new_w % fit_stride == 0) else fit_stride - (new_w % fit_stride)
             pad_h = 0 if (new_h % fit_stride == 0) else fit_stride - (new_h % fit_stride)
             image = cv2.copyMakeBorder(
-                image, 0, pad_h, 0, pad_w, 
+                image, 0, pad_h, 0, pad_w,
                 cv2.BORDER_CONSTANT, value=tuple(x * 255 for x in self.mean[::-1])
             )
 
@@ -133,7 +134,7 @@ class BaseDatasetImages(data.Dataset):
                 interpolation=cv2.INTER_NEAREST)
             if pad_h > 0 or pad_w > 0:
                 label = cv2.copyMakeBorder(
-                    label, 0, pad_h, 0, pad_w, 
+                    label, 0, pad_h, 0, pad_w,
                     cv2.BORDER_CONSTANT, value=self.ignore_label
                 )
             if return_padding:
@@ -144,7 +145,7 @@ class BaseDatasetImages(data.Dataset):
             if return_padding:
                 return image, (pad_h, pad_w)
             else:
-                return image  
+                return image
 
     def random_brightness(self, img, shift_value=10):
         if random.random() < 0.5:
@@ -192,6 +193,7 @@ class BaseDatasetImages(data.Dataset):
 
 class BaseDatasetClouds(data.Dataset):
     CLASSES = []
+
     def __init__(self,
                  path=None,
                  fields=None,

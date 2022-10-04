@@ -1,18 +1,21 @@
 #!/usr/bin/env python
 
+import os
+
 import numpy as np
 import torch
 from argparse import ArgumentParser
-import datasets
-import os
-from active_learning.utils import visualize_imgs, visualize_cloud
+import src.datasets
+
+from src.active_learning.utils import visualize_imgs, visualize_cloud
 import open3d as o3d
 
 
 def main():
     parser = ArgumentParser()
     parser.add_argument('--dataset', type=str, default='SemanticUSL')
-    parser.add_argument('--weights', type=str, default='deeplabv3_resnet101_lr_0.0001_bs_16_epoch_74_SemanticKITTI_SemanticUSL_depth_labels_None_iou_0.199.pth')
+    parser.add_argument('--weights', type=str,
+                        default='deeplabv3_resnet101_lr_0.0001_bs_16_epoch_74_SemanticKITTI_SemanticUSL_depth_labels_None_iou_0.199.pth')
     parser.add_argument('--device', type=str, default='cpu')
     args = parser.parse_args()
     print(args)
@@ -39,7 +42,7 @@ def main():
         output = None
         ignore_label = 0
 
-    Dataset = eval('datasets.%s' % args.dataset)
+    Dataset = eval('src.datasets.%s' % args.dataset)
     ds = Dataset(split='test', fields=data_fields,
                  output=output,
                  lidar_beams_step=1)

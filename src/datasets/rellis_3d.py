@@ -1,19 +1,21 @@
 from __future__ import absolute_import
 import os
-import numpy as np
-from matplotlib import pyplot as plt
-import cv2
-from numpy.lib.recfunctions import structured_to_unstructured
-from os.path import dirname, join, realpath
-from active_learning.utils import *
-from datasets.base_dataset import BaseDatasetImages, BaseDatasetClouds
-from datasets.base_dataset import TRAVERSABILITY_COLOR_MAP, TRAVERSABILITY_LABELS, VOID_VALUE
-from datasets.base_dataset import FLEXIBILITY_COLOR_MAP, FLEXIBILITY_LABELS
-from datasets.laserscan import SemLaserScan
 from copy import copy
-import torch
-from PIL import Image
+from os.path import dirname, join, realpath
+
+import cv2
 import yaml
+import torch
+import numpy as np
+from PIL import Image
+from matplotlib import pyplot as plt
+from numpy.lib.recfunctions import structured_to_unstructured
+
+from src.active_learning.utils import *
+from .base_dataset import BaseDatasetImages, BaseDatasetClouds
+from .base_dataset import TRAVERSABILITY_COLOR_MAP, TRAVERSABILITY_LABELS, VOID_VALUE
+from .base_dataset import FLEXIBILITY_COLOR_MAP, FLEXIBILITY_LABELS
+from .laserscan import SemLaserScan
 
 __all__ = [
     'data_dir',
