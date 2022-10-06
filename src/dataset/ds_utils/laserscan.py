@@ -1,14 +1,12 @@
+#!/usr/bin/env python3
 import numpy as np
 
 
-class LaserScan(object):
-    """
-    Class that contains LaserScan with x,y,z,r:
-    https://github.com/PRBonn/semantic-kitti-api/blob/8e75f4d049b787321f68a11753cb5947b1e58e17/auxiliary/laserscan.py
-    """
+class LaserScan:
+    """Class that contains LaserScan with x,y,z,r"""
     EXTENSIONS_SCAN = ['.bin']
 
-    def __init__(self, project=False, H=64, W=2048, fov_up=22.5, fov_down=-22.5):
+    def __init__(self, project=False, H=64, W=1024, fov_up=3.0, fov_down=-25.0):
         self.project = project
         self.proj_H = H
         self.proj_W = W
@@ -140,7 +138,7 @@ class LaserScan(object):
         proj_x = np.floor(proj_x)
         proj_x = np.minimum(self.proj_W - 1, proj_x)
         proj_x = np.maximum(0, proj_x).astype(np.int32)  # in [0,W-1]
-        self.proj_x = np.copy(proj_x)  # store a copy in orig order
+        self.proj_x = np.copy(proj_x)  # store a copy in original order
 
         proj_y = np.floor(proj_y)
         proj_y = np.minimum(self.proj_H - 1, proj_y)
@@ -160,7 +158,7 @@ class LaserScan(object):
         proj_y = proj_y[order]
         proj_x = proj_x[order]
 
-        # assing to images
+        # assign to images
         self.proj_range[proj_y, proj_x] = depth
         self.proj_xyz[proj_y, proj_x] = points
         self.proj_remission[proj_y, proj_x] = remission
@@ -172,7 +170,7 @@ class SemLaserScan(LaserScan):
     """Class that contains LaserScan with x,y,z,r,sem_label,sem_color_label,inst_label,inst_color_label"""
     EXTENSIONS_LABEL = ['.label']
 
-    def __init__(self, nclasses, sem_color_dict=None, project=False, H=64, W=2048, fov_up=22.5, fov_down=-22.5):
+    def __init__(self, nclasses, sem_color_dict=None, project=False, H=64, W=1024, fov_up=3.0, fov_down=-25.0):
         super(SemLaserScan, self).__init__(project, H, W, fov_up, fov_down)
         self.reset()
         self.nclasses = nclasses  # number of classes
@@ -194,29 +192,29 @@ class SemLaserScan(LaserScan):
         # force zero to a gray-ish color
         self.inst_color_lut[0] = np.full((3), 0.1)
 
-    def reset(self, fill_value=0):
+    def reset(self):
         """ Reset scan members. """
         super(SemLaserScan, self).reset()
 
         # semantic labels
-        self.sem_label = np.full((0, 1), fill_value, dtype=np.uint32)  # [m, 1]: label
-        self.sem_label_color = np.full((0, 3), fill_value, dtype=np.float32)  # [m ,3]: color
+        self.sem_label = np.zeros((0, 1), dtype=np.uint32)  # [m, 1]: label
+        self.sem_label_color = np.zeros((0, 3), dtype=np.float32)  # [m ,3]: color
 
         # instance labels
-        self.inst_label = np.full((0, 1), fill_value, dtype=np.uint32)  # [m, 1]: label
-        self.inst_label_color = np.full((0, 3), fill_value, dtype=np.float32)  # [m ,3]: color
+        self.inst_label = np.zeros((0, 1), dtype=np.uint32)  # [m, 1]: label
+        self.inst_label_color = np.zeros((0, 3), dtype=np.float32)  # [m ,3]: color
 
         # projection color with semantic labels
-        self.proj_sem_label = np.full((self.proj_H, self.proj_W), fill_value,
+        self.proj_sem_label = np.zeros((self.proj_H, self.proj_W),
                                        dtype=np.int32)  # [H,W]  label
-        self.proj_sem_color = np.full((self.proj_H, self.proj_W, 3), fill_value,
-                                       dtype=float)  # [H,W,3] color
+        self.proj_sem_color = np.zeros((self.proj_H, self.proj_W, 3),
+                                       dtype=np.float)  # [H,W,3] color
 
         # projection color with instance labels
-        self.proj_inst_label = np.full((self.proj_H, self.proj_W), fill_value,
-                                      dtype=np.int32)  # [H,W]  label
-        self.proj_inst_color = np.full((self.proj_H, self.proj_W, 3), fill_value,
-                                        dtype=float)  # [H,W,3] color
+        self.proj_inst_label = np.zeros((self.proj_H, self.proj_W),
+                                        dtype=np.int32)  # [H,W]  label
+        self.proj_inst_color = np.zeros((self.proj_H, self.proj_W, 3),
+                                        dtype=np.float)  # [H,W,3] color
 
     def open_label(self, filename):
         """ Open raw scan and fill in attributes
