@@ -4,8 +4,8 @@
 import argparse
 import os
 import yaml
-from src.dataset.ds_utils.laserscan import LaserScan, SemLaserScan
-from src.dataset.ds_utils.laserscanvis import LaserScanVis
+from dataset.laserscan import LaserScan, SemLaserScan
+from dataset.laserscanvis import LaserScanVis
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("./visualize.py")

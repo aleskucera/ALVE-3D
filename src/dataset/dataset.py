@@ -1,14 +1,13 @@
+import os
+
 import numpy as np
+from tqdm import tqdm
+from copy import deepcopy
 from omegaconf import DictConfig
 from torch.utils.data import Dataset
-from copy import deepcopy
-import open3d as o3d
-from tqdm import tqdm
 
-from .ds_utils import Sample, \
-    create_semantic_laser_scan, \
-    init_sequences, read_sequence_data, \
-    transform_points, apply_augmentations, map_colors, map_labels
+from .sequence import Sequence
+from .laserscan import SemLaserScan
 
 
 class SemanticDataset(Dataset):
@@ -24,58 +23,44 @@ class SemanticDataset(Dataset):
         self.split = split
 
         # Create scan object for reading the data
-        self.scan = create_semantic_laser_scan(cfg)
+        self.scan = _create_semantic_laser_scan(cfg)
 
         # Initialize the list of sequences to load
-        self.sequences = init_sequences(self.path, cfg.split[split], cfg.sequence_structure)
+        self.sequences = _init_sequences(self.path, cfg.split[split], cfg.sequence_structure)
 
-        # Get the list of samples from the sequences
-        self.samples = self.get_samples(self.sequences)
-
-    @staticmethod
-    def get_samples(sequences: list) -> list:
-        samples = []
-        for seq in sequences:
-            ids, points, labels, calib, poses, times = read_sequence_data(seq)
-            for i in ids:
-                sample = Sample(id=i, time=times[i], points_path=points[i], label_path=labels[i],
-                                calibration=calib, pose=poses[i])
-                samples.append(sample)
-        return samples
+        # Get the dict of samples from the sequences
+        self.samples = _get_samples(self.sequences)
 
     def __getitem__(self, index):
-
-        # Load the sample
         sample = deepcopy(self.samples[index])
-        data, label = self.load_sample_data(sample)
-        label = map_labels(label, self.cfg.learning_map)
+        sample.load_learning_data(self.scan, self.cfg.learning_map)
 
         # Apply augmentations
-        if self.split == 'train':
-            data, label = apply_augmentations(data, label)
-
-        sample.points, sample.label = data, label
+        # if self.split == 'train':
+        #     sample.augment()
         return sample
 
-    def load_sample_data(self, sample: Sample):
-        # Load the sample
-        self.scan.open_scan(sample.points_path)
-        self.scan.open_label(sample.label_path)
+    def get_sem_cloud(self, index):
+        """ Get the semantic point cloud for visualization
+        :param index: index of the sample
+        :return: the semantic point cloud sample
+        """
+        sample = deepcopy(self.samples[index])
+        sample.load_semantic_cloud(self.scan)
+        return sample
 
-        # Create data
-        xyz = self.scan.proj_xyz.transpose([2, 0, 1])  # (3 x H x W)
-        intensity = self.scan.proj_remission[np.newaxis, ...]  # (1 x H x W)
-        depth = self.scan.proj_range[np.newaxis, ...]  # (1 x H x W)
-        data = np.concatenate([xyz, intensity, depth], axis=0)  # (5 x H x W)
+    def get_sem_depth(self, index):
+        """ Get the semantic depth image for visualization
+        :param index: index of the sample
+        :return: the semantic depth image sample
+        """
+        sample = deepcopy(self.samples[index])
+        sample.load_semantic_depth(self.scan)
+        return sample
 
-        # Create label
-        label = self.scan.proj_sem_label.copy()
-
-        return data, label
-
-    def create_global_cloud(self, sequence: int, step: int = 50) -> o3d.geometry.PointCloud:
+    def create_global_cloud(self, sequence_index: int, step: int = 50) -> tuple:
         """ Create a global point cloud from the sequence
-        :param sequence: sequence index
+        :param sequence_index: sequence index
         :param step: step between two points
         :return: point cloud
         """
@@ -83,31 +68,75 @@ class SemanticDataset(Dataset):
         global_cloud = []
 
         # Load samples from the sequence
-        seq = init_sequences(self.path, [sequence], self.cfg.sequence_structure)[0]
-        samples = self.get_samples([seq])
+        seq = self.sequences[sequence_index]
+        samples = _get_samples([seq], step)
 
         # Loop through the samples and store the points and their colors
-        for sample in tqdm(samples[::step]):
-            data, label = self.load_sample_data(sample)
+        for s in tqdm(samples.values()):
+            sample = deepcopy(s)
+            sample.load_semantic_cloud(self.scan)
 
             # Transform the points
-            cloud = data[:3, ...].transpose([1, 2, 0]).reshape([-1, 3])
-            cloud = transform_points(cloud, sample.pose)
-            global_cloud.append(cloud)
-
-            # Map the colors
-            color = map_colors(label, self.cfg.color_map).reshape([-1, 3])
-            colors.append(color)
+            sample.to_absolute_position()
+            global_cloud.append(sample.points)
+            colors.append(sample.colors)
 
         # Concatenate the points and colors
         global_cloud = np.concatenate(global_cloud, axis=0)
         colors = np.concatenate(colors, axis=0)
-
-        # Create the point cloud
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(global_cloud)
-        pcd.colors = o3d.utility.Vector3dVector(colors)
-        return pcd
+        return global_cloud, colors
 
     def __len__(self):
         return len(self.samples)
+
+
+def _create_semantic_laser_scan(cfg: DictConfig) -> SemLaserScan:
+    """ Create a semantic laser scan object
+    :param cfg: configuration
+    :return: semantic laser scan object
+    """
+    scan = SemLaserScan(
+        nclasses=len(cfg.labels),
+        sem_color_dict=cfg.color_map,
+        project=True,
+        H=cfg.laser_scan.H,
+        W=cfg.laser_scan.W,
+        fov_up=cfg.laser_scan.fov_up,
+        fov_down=cfg.laser_scan.fov_down)
+    return scan
+
+
+def _init_sequences(path: str, seq_list: list, seq_structure: DictConfig) -> list:
+    """ Initialize the sequences
+    :param path: path to the sequences
+    :param seq_list: list of sequences to load
+    :param seq_structure: structure of the sequences
+    :return: list of Sequence objects
+    """
+    sequences = []
+    for seq in seq_list:
+        seq_name = f"{seq:02d}"
+        seq_path = os.path.join(path, seq_name)
+        sequences.append(Sequence(name=seq_name,
+                                  path=seq_path,
+                                  points_dir=os.path.join(seq_path, seq_structure.points_dir),
+                                  labels_dir=os.path.join(seq_path, seq_structure.labels_dir),
+                                  calib_file=os.path.join(seq_path, seq_structure.calib_file),
+                                  poses_file=os.path.join(seq_path, seq_structure.poses_file),
+                                  times_file=os.path.join(seq_path, seq_structure.times_file)))
+    return sequences
+
+
+def _get_samples(sequences: list, step: int = 1) -> dict:
+    """ Get the samples from the sequences and store them in a dict
+    :param sequences: list of Sequence objects
+    :param step: step between two samples (for subsampling)
+    :return: dict of samples
+    """
+    samples, index = {}, 0
+    for seq in sequences:
+        samples_list = seq.get_samples()
+        for s in samples_list[::step]:
+            samples[index] = s
+            index += 1
+    return samples
