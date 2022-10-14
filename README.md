@@ -44,15 +44,13 @@ This is the main structure of the repository:
 - `main.py`: This is the main script of the project. It is used for training, evaluation and visualization of the
   models.
 
-## Usage
+## Demo
 
-For creation dataset and global map of the SemanticKITTI dataset, please run the following command:
+There are 3 demos in the repository at the moment: `global_cloud`, `sample` and `formats`. You can run the demos with:
 
-    python main.py
+    python main.py demo=<demo_name>
 
-For visualization of the dataset, please run the following command:
-
-    python src/dataset/visualize.py --dataset /path/to/dataset
+or you can change the `demo` parameter in the configuration files.
 
 ## Dataset
 
@@ -63,11 +61,34 @@ Dataset uses two new [dataclasses](https://docs.python.org/3/library/dataclasses
 
 - `Sample`: This dataclass is used for storing the data of a single sample. It contains everything that is needed for
   training and evaluation of the model. For better performance, only the essential data are stored permanently in the
-  dataset and the rest of are loaded on demand (e.g. point clouds, labels, etc.).
+  dataset and the rest of are loaded on demand (e.g. point clouds, labels, etc.). More information about the dataclass
+  can be found in the Sample section.
 - `Sequence`: This dataclass is used for storing information about a structure of a single sequence. The structure of a
   sequence is defined by the `sequence_structure` parameter in the configuration file. The structure is used for
   creating
   the global map of the dataset.
+
+## Sample class
+
+The `Sample` class is used for storing the data of a single sample. It contains everything that is needed for training
+and visualization of the dataset.
+For better performance, only the essential data are stored permanently in the dataset and the rest of are loaded on
+demand (e.g. point clouds, labels, etc.).
+There are 3 main types of data that can be loaded in the `Sample` class:
+
+- `learning_data`: This data are used for training and evaluation of the model. The data are loaded from the dataset
+  and stored permanently in the `Sample` class by function `load_learning_data`.
+- `semantic_cloud_data`: This data are used for visualization of the semantic point cloud. The data are loaded from the
+  dataset
+  and stored permanently in the `Sample` class by function `load_semantic_cloud`.
+- `depth_image_data`: This data are used for visualization of the depth image. The data are loaded from the dataset
+  and stored permanently in the `Sample` class by function `load_depth_image`.
+
+## Sequence class
+
+The `Sequence` class is used for storing information about a structure of a single sequence. The structure
+of a sequence is defined by the `sequence_structure` parameter in the configuration file. It is used
+loading the data and creating `Sample` objects by calling the `get_samples` function.
 
 ### TODO:
 

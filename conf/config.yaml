@@ -4,4 +4,4 @@ defaults:
   - kitti: default
 
 action: train
-demo: formats # global_cloud, sample or formats
+demo: formats # global_cloud, sample or sample_formats

@@ -71,7 +71,7 @@ def show_sample(cfg: DictConfig):
     vis.destroy_window()
 
 
-def show_formats(cfg: DictConfig):
+def show_sample_formats(cfg: DictConfig):
     dataset = SemanticDataset(path=cfg.kitti.path, split='train', cfg=cfg.kitti)
 
     # Load train sample
