@@ -26,7 +26,7 @@ def main(cfg: DictConfig):
     elif cfg.demo == 'sample':
         show_sample(cfg)
     elif cfg.demo == 'formats':
-        show_formats(cfg)
+        show_sample_formats(cfg)
     else:
         raise ValueError('Invalid demo type.')
 
@@ -35,7 +35,7 @@ def show_global_cloud(cfg: DictConfig):
     dataset = SemanticDataset(path=cfg.kitti.path, split='train', cfg=cfg.kitti)
 
     # Load global point cloud for visualization
-    points, colors = dataset.create_global_cloud(sequence_index=0, step=40)
+    points, colors = dataset.create_global_cloud(sequence_index=2, step=40)
 
     # Create point cloud geometry object
     cloud = o3d.geometry.PointCloud()
