@@ -1,0 +1,4 @@
+architecture: fcn_resnet50
+encoder: resnet50
+arch: fcn
+pretrained: true

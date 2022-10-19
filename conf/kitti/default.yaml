@@ -1,5 +1,3 @@
-path: /home/ales/Datasets/SemanticKITTI/sequences
-
 laser_scan:
   H: 64
   W: 2048

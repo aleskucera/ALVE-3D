@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 from omegaconf import OmegaConf
 from dataclasses import dataclass
@@ -21,8 +22,8 @@ class Sample:
     absolute_position = False
 
     # Data for learning
-    x: np.ndarray = None
-    y: np.ndarray = None
+    x: torch.tensor = None
+    y: torch.tensor = None
 
     # Point cloud data
     points: np.ndarray = None
@@ -35,8 +36,8 @@ class Sample:
     def load_learning_data(self, scan: SemLaserScan, learning_map: dict):
         scan.open_scan(self.points_path)
         scan.open_label(self.label_path)
-        self.x = scan.proj_xyz.transpose([2, 0, 1])
-        self.y = _map_labels(scan.proj_sem_label, learning_map)
+        self.x = torch.tensor(scan.proj_range).unsqueeze(0)
+        self.y = torch.tensor(_map_labels(scan.proj_sem_label, learning_map))
 
     def load_semantic_depth(self, scan: SemLaserScan):
         scan.open_scan(self.points_path)
@@ -69,27 +70,30 @@ class Sample:
                  f"\n\tPoints_path: {self.points_path}" \
                  f"\n\tAbsolute_position: {self.absolute_position}" \
                  f"\n\t--- Train data ---" \
-                 f"\n\tx: {_str_shape(self.x)}" \
-                 f"\n\ty: {_str_shape(self.y)}" \
+                 f"\n\tx: {_tensor_shape(self.x)}" \
+                 f"\n\ty: {_tensor_shape(self.y)}" \
                  f"\n\t--- Depth image data ---" \
-                 f"\n\tDepth_image: {_str_shape(self.depth_image)}" \
-                 f"\n\tDepth_color: {_str_shape(self.depth_color)}" \
+                 f"\n\tDepth_image: {_numpy_shape(self.depth_image)}" \
+                 f"\n\tDepth_color: {_numpy_shape(self.depth_color)}" \
                  f"\n\t--- Point cloud data ---" \
-                 f"\n\tPoints: {_str_shape(self.points)}" \
-                 f"\n\tColors: {_str_shape(self.colors)}"
+                 f"\n\tPoints: {_numpy_shape(self.points)}" \
+                 f"\n\tColors: {_numpy_shape(self.colors)}"
         return output
 
 
 # ----------- Auxiliary functions ------------
 
-def _str_shape(array: np.ndarray) -> str:
-    """Get the shape of an array
-    :param array: array
-    :return: shape
-    """
+def _tensor_shape(tensor: torch.tensor) -> str:
+    # print(tensor.size)
+    if tensor is None:
+        return 'Not initialized'
+    return tensor.size
+
+
+def _numpy_shape(array: np.ndarray):
     if array is None:
         return 'Not initialized'
-    return str(array.shape)
+    return array.shape
 
 
 def _mask_to_colors(mask: np.ndarray, color_map: dict) -> np.ndarray:

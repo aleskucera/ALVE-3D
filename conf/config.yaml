@@ -2,6 +2,9 @@ defaults:
   - _self_
   - path: default
   - kitti: default
+  - model: fcn_resnet50
+  - train: default
+  - test: default
 
-action: train
-demo: formats # global_cloud, sample or sample_formats
+action: test
+demo: global_cloud # global_cloud, sample or sample_formats

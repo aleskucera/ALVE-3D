@@ -11,7 +11,7 @@ from .laserscan import SemLaserScan
 
 
 class SemanticDataset(Dataset):
-    def __init__(self, path: str, cfg: DictConfig, split: str = None):
+    def __init__(self, path: str, cfg: DictConfig, split: str = None, size: int = None):
         """ Initialize the dataset
         :param path: path to the dataset (the directory containing the sequences)
         :param split: train, val or test
@@ -20,6 +20,7 @@ class SemanticDataset(Dataset):
 
         self.cfg = cfg
         self.path = path
+        self.size = size
         self.split = split
 
         # Create scan object for reading the data
@@ -29,7 +30,7 @@ class SemanticDataset(Dataset):
         self.sequences = _init_sequences(self.path, cfg.split[split], cfg.sequence_structure)
 
         # Get the dict of samples from the sequences
-        self.samples = _get_samples(self.sequences)
+        self.samples = _get_samples(self.sequences, size=size)
 
     def __getitem__(self, index):
         sample = deepcopy(self.samples[index])
@@ -38,7 +39,7 @@ class SemanticDataset(Dataset):
         # Apply augmentations
         # if self.split == 'train':
         #     sample.augment()
-        return sample
+        return sample.x, sample.y
 
     def get_sem_cloud(self, index):
         """ Get the semantic point cloud for visualization
@@ -69,7 +70,7 @@ class SemanticDataset(Dataset):
 
         # Load samples from the sequence
         seq = self.sequences[sequence_index]
-        samples = _get_samples([seq], step)
+        samples = _get_samples([seq], step=step)
 
         # Loop through the samples and store the points and their colors
         for s in tqdm(samples.values()):
@@ -127,16 +128,23 @@ def _init_sequences(path: str, seq_list: list, seq_structure: DictConfig) -> lis
     return sequences
 
 
-def _get_samples(sequences: list, step: int = 1) -> dict:
+def _get_samples(sequences: list, size: int = None, step: int = 1, ) -> dict:
     """ Get the samples from the sequences and store them in a dict
     :param sequences: list of Sequence objects
     :param step: step between two samples (for subsampling)
     :return: dict of samples
     """
-    samples, index = {}, 0
+    samples, samples_list, index = {}, [], 0
+    size = size if size is not None else float('inf')
+    # Load the samples from the sequences
     for seq in sequences:
-        samples_list = seq.get_samples()
-        for s in samples_list[::step]:
-            samples[index] = s
-            index += 1
+        samples_list += seq.get_samples()
+
+    # Subsample the samples and store them in a dict until the size is reached
+    for s in samples_list[::step]:
+        samples[index] = s
+        index += 1
+        if index >= size:
+            return samples
+
     return samples

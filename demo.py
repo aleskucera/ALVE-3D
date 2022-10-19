@@ -4,7 +4,7 @@ import hydra
 import open3d as o3d
 from omegaconf import DictConfig
 
-from src.dataset import SemanticDataset
+from src import SemanticDataset, paths_to_absolute
 
 import numpy as np
 
@@ -21,18 +21,21 @@ def main(cfg: DictConfig):
         python demo.py demo=global_cloud
 
     """
+    cfg = paths_to_absolute(cfg)
     if cfg.demo == 'global_cloud':
         show_global_cloud(cfg)
     elif cfg.demo == 'sample':
         show_sample(cfg)
-    elif cfg.demo == 'formats':
+    elif cfg.demo == 'sample_formats':
         show_sample_formats(cfg)
+    elif cfg.demo == 'paths':
+        show_paths(cfg)
     else:
         raise ValueError('Invalid demo type.')
 
 
 def show_global_cloud(cfg: DictConfig):
-    dataset = SemanticDataset(path=cfg.kitti.path, split='train', cfg=cfg.kitti)
+    dataset = SemanticDataset(path=cfg.path.kitti, split='train', cfg=cfg.kitti)
 
     # Load global point cloud for visualization
     points, colors = dataset.create_global_cloud(sequence_index=2, step=40)
@@ -52,7 +55,7 @@ def show_global_cloud(cfg: DictConfig):
 
 
 def show_sample(cfg: DictConfig):
-    dataset = SemanticDataset(path=cfg.kitti.path, split='train', cfg=cfg.kitti)
+    dataset = SemanticDataset(path=cfg.path.kitti, split='train', cfg=cfg.kitti)
 
     # Load semantic point cloud sample for visualization
     sample = dataset.get_sem_cloud(0)
@@ -72,12 +75,13 @@ def show_sample(cfg: DictConfig):
 
 
 def show_sample_formats(cfg: DictConfig):
-    dataset = SemanticDataset(path=cfg.kitti.path, split='train', cfg=cfg.kitti)
+    dataset = SemanticDataset(path=cfg.path.kitti, split='train', cfg=cfg.kitti)
 
     # Load train sample
     print('Loading train sample...')
     sample_train = dataset[0]
-    print(sample_train)
+    print(f"\n\tx size: {sample_train[0].shape} \n"
+          f"\ty size: {sample_train[1].shape}")
 
     # Load semantic point cloud sample for visualization
     print('Loading semantic point cloud...')
@@ -88,6 +92,11 @@ def show_sample_formats(cfg: DictConfig):
     print("Loading depth image...")
     sample_depth = dataset.get_sem_depth(0)
     print(sample_depth)
+
+
+def show_paths(cfg: DictConfig) -> None:
+    for name, path in cfg.path.items():
+        print(f'{name}: {path}')
 
 
 if __name__ == '__main__':

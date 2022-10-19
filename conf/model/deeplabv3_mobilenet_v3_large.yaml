@@ -1,0 +1,4 @@
+architecture: deeplabv3_mobilenet_v3_large
+encoder: mobilenet_v3_large
+arch: deeplabv3
+pretrained: true
