@@ -4,8 +4,8 @@
 import argparse
 import os
 import yaml
-from dataset.laserscan import LaserScan, SemLaserScan
-from dataset.laserscanvis import LaserScanVis
+from laserscan import LaserScan, SemLaserScan
+from laserscanvis import LaserScanVis
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("./visualize.py")
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--sequence', '-s',
         type=str,
-        default="00",
+        default="04",
         required=False,
         help='Sequence to visualize. Defaults to %(default)s',
     )

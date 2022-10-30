@@ -1,10 +1,18 @@
+import os
+import logging
+
 import torch
 from tqdm import tqdm
-from .classes import History, State
+from torch.utils.tensorboard import SummaryWriter
+from torchmetrics import Accuracy, JaccardIndex, MetricCollection
+
+from .state import State
+
+log = logging.getLogger(__name__)
 
 
 class Trainer:
-    def __init__(self, model, train_loader, val_loader, criterion, optimizer, device):
+    def __init__(self, model, train_loader, val_loader, criterion, optimizer, device, output_path):
         self.model = model
         self.device = device
         self.criterion = criterion
@@ -12,13 +20,14 @@ class Trainer:
         self.val_loader = val_loader
         self.train_loader = train_loader
 
-        self.history = History()
-        self.state = State(train_num_batches=len(train_loader), val_num_batches=len(val_loader))
+        self.state = State(writer=SummaryWriter(output_path),
+                           metrics=MetricCollection([Accuracy(mdmc_average='samplewise', top_k=1),
+                                                     JaccardIndex(num_classes=20).to(device)]), logger=log)
 
-    def train(self, n_epochs):
-        for epoch in range(n_epochs):
+    def train(self, epochs: int, save_path: str) -> None:
+        for epoch in range(epochs):
+            # ----------- Train Phase ------------
             self.model.train()
-            self.state.reset_train_state()
             for data in tqdm(self.train_loader):
                 image_batch, label_batch = _parse_data(data, self.device)
 
@@ -26,19 +35,22 @@ class Trainer:
                 output = self.model(image_batch)['out']
                 loss = self.criterion(output, label_batch)
 
-                # evaluation metrics
-                self.state.train_loss += loss.item()
-                self.state.train_accuracy += _accuracy(output, label_batch)
+                # Update metrics
+                self.state.update_loss(loss.item())
+                self.state.update_metrics(output, label_batch)
 
-                # compute gradient and make an optimization step
+                # Backward pass
                 loss.backward()
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
-            print(f"\nTrain loss: {self.state.train_loss}")
+            # Average data and log to tensorboard and console
+            self.state.compute()
+            self.state.log(epoch, 'train', verbose=True)
+            self.state.reset()
 
+            # ----------- Validation Phase ------------
             self.model.eval()
-            self.state.reset_val_state()
             with torch.no_grad():
                 for data in tqdm(self.val_loader):
                     image_batch, label_batch = _parse_data(data, self.device)
@@ -46,20 +58,28 @@ class Trainer:
                     # Forward pass
                     output = self.model(image_batch)['out']
 
-                    # loss
+                    # Update metrics
                     loss = self.criterion(output, label_batch)
-                    self.state.val_loss += loss.item()
-                    self.state.val_accuracy += _accuracy(output, label_batch)
+                    self.state.update_loss(loss.item())
+                    self.state.update_metrics(output, label_batch)
 
-            print(f"\nVal loss: {self.state.val_loss}")
+            self.state.compute()
+            self.state.save()
+            self.state.log(epoch, 'val', verbose=True)
+            self.state.reset()
 
-            # average loss and metrics by number of batches
-            self.state.average_metrics()
+            if self.state.main_metric_exceeded():
+                log.info(f'Loss Decreasing, saving model to {save_path}')
+                model_name = os.path.join(save_path, f'model_{epoch}.pth')
+                self.save(os.path.join(save_path, model_name))
 
-            # save state to history
-            self.history.save_state(self.state)
+            if self.state.stagnant(patience=5):
+                log.info('Training Stagnant, stopping training')
+                break
 
-        return self.history
+            # Save model
+            model_name = f'epoch-{epoch}.pth'
+            self.save(os.path.join(save_path, model_name))
 
     def save(self, path):
         torch.save(self.model.state_dict(), path)
@@ -70,7 +90,3 @@ def _parse_data(data: tuple, device: torch.device):
     image_batch = image_batch.to(device)
     label_batch = label_batch.to(device)
     return image_batch, label_batch
-
-
-def _accuracy(output, target):
-    return torch.eq(output.argmax(1), target).float().mean()

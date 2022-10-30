@@ -1,12 +1,20 @@
+#!/usr/bin/env python
+
+import time
+import math
+import random
 import logging
 
 import hydra
 import open3d as o3d
 from omegaconf import DictConfig
+from hydra.core.hydra_config import HydraConfig
+from torch.utils.tensorboard import SummaryWriter
 
-from src import SemanticDataset, paths_to_absolute
+from src import SemanticDataset, set_paths, check_value
 
 import numpy as np
+from torch.utils.tensorboard import SummaryWriter
 
 log = logging.getLogger(__name__)
 
@@ -18,20 +26,42 @@ def main(cfg: DictConfig):
     the conf/config.yaml file. You can change the demo mode by changing the demo variable or running the following
     command in the terminal:
 
-        python demo.py demo=global_cloud
+        python demo.py action=global_cloud
 
     """
-    cfg = paths_to_absolute(cfg)
-    if cfg.demo == 'global_cloud':
+
+    cfg = set_paths(cfg, HydraConfig.get().runtime.output_dir)
+    log.info(f'Starting demo: {cfg.action}')
+    check_value(cfg.node, ['master', 'slave'])
+    check_value(cfg.action, ['global_cloud', 'sample', 'sample_formats', 'paths', 'simulation'])
+
+    if cfg.action == 'global_cloud':
         show_global_cloud(cfg)
-    elif cfg.demo == 'sample':
+    elif cfg.action == 'sample':
         show_sample(cfg)
-    elif cfg.demo == 'sample_formats':
+    elif cfg.action == 'sample_formats':
         show_sample_formats(cfg)
-    elif cfg.demo == 'paths':
+    elif cfg.action == 'paths':
         show_paths(cfg)
+    elif cfg.action == 'simulation':
+        if cfg.node == 'master':
+            # Supervise the simulation
+            pass
+        elif cfg.node == 'slave':
+            computational_simulation(cfg)
     else:
         raise ValueError('Invalid demo type.')
+
+
+def computational_simulation(cfg: DictConfig) -> None:
+    writer = SummaryWriter(cfg.path.output)
+    for i in range(1000):
+        x = i / 10
+        a = random.random()
+        writer.add_scalar('Sin(x)', a * math.sin(x), i)
+        writer.add_scalar('Cos(x)', a * math.cos(x), i)
+        log.info(f'Iteration {i} completed')
+        time.sleep(0.5)
 
 
 def show_global_cloud(cfg: DictConfig):
