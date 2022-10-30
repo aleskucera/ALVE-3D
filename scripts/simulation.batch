@@ -1,0 +1,2 @@
+#!/bin/bash
+singularity run singularity/deep_learning_image.sif python main.py connection=remote node=slave
