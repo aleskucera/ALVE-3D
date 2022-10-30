@@ -5,3 +5,4 @@ config: 'config'
 models: 'models'
 kitti: 'data/SemanticKITTI/sequences'
 usl: 'data/SemanticUSL/sequences'
+output: ???

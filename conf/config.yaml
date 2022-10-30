@@ -5,6 +5,13 @@ defaults:
   - model: fcn_resnet50
   - train: default
   - test: default
+  - hydra: default
+  - run: default
+  - connect: default
 
-action: test
-demo: global_cloud # global_cloud, sample or sample_formats
+action: None
+
+node: master
+connection: remote
+
+
