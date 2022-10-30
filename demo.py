@@ -6,7 +6,7 @@ import random
 import logging
 
 import hydra
-import open3d as o3d
+# import open3d as o3d
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 from torch.utils.tensorboard import SummaryWriter
@@ -68,6 +68,7 @@ def computational_simulation(cfg: DictConfig) -> None:
 
 
 def show_global_cloud(cfg: DictConfig):
+    import open3d as o3d
     dataset = SemanticDataset(path=cfg.path.kitti, split='train', cfg=cfg.kitti)
 
     # Load global point cloud for visualization
@@ -88,6 +89,7 @@ def show_global_cloud(cfg: DictConfig):
 
 
 def show_sample(cfg: DictConfig):
+    import open3d as o3d
     dataset = SemanticDataset(path=cfg.path.kitti, split='train', cfg=cfg.kitti)
 
     # Load semantic point cloud sample for visualization
