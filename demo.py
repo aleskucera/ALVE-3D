@@ -11,7 +11,7 @@ from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 from torch.utils.tensorboard import SummaryWriter
 
-from src import SemanticDataset, set_paths, check_value
+from src import SemanticDataset, set_paths, check_value, supervise_remote
 
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
@@ -31,7 +31,7 @@ def main(cfg: DictConfig):
     """
 
     cfg = set_paths(cfg, HydraConfig.get().runtime.output_dir)
-    log.info(f'Starting demo: {cfg.action}')
+    log.info(f'Starting demo with action: {cfg.action}')
     check_value(cfg.node, ['master', 'slave'])
     check_value(cfg.action, ['global_cloud', 'sample', 'sample_formats', 'paths', 'simulation'])
 
@@ -45,12 +45,15 @@ def main(cfg: DictConfig):
         show_paths(cfg)
     elif cfg.action == 'simulation':
         if cfg.node == 'master':
-            # Supervise the simulation
+            log.info('Starting supervisor')
+            supervise_remote(cfg)
             pass
         elif cfg.node == 'slave':
             computational_simulation(cfg)
     else:
         raise ValueError('Invalid demo type.')
+
+    log.info('Demo completed.')
 
 
 def computational_simulation(cfg: DictConfig) -> None:
