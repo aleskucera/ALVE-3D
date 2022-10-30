@@ -58,7 +58,7 @@ def main(cfg: DictConfig):
 
 def computational_simulation(cfg: DictConfig) -> None:
     writer = SummaryWriter(cfg.path.output)
-    for i in range(1000):
+    for i in range(500):
         x = i / 10
         a = random.random()
         writer.add_scalar('Sin(x)', a * math.sin(x), i)
