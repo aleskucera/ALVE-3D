@@ -3,6 +3,7 @@
 import time
 import math
 import random
+import atexit
 import logging
 
 import hydra
@@ -11,12 +12,20 @@ from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 from torch.utils.tensorboard import SummaryWriter
 
-from src import SemanticDataset, set_paths, check_value, supervise_remote
+from src import SemanticDataset, set_paths, check_value, \
+    supervise_remote, start_tensorboard, terminate_tensorboard
 
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
 log = logging.getLogger(__name__)
+
+
+@atexit.register
+def exit_function():
+    """ Terminate all running tensorboard processes when the program exits. """
+    terminate_tensorboard()
+    log.info('Terminated all running tensorboard processes.')
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -45,6 +54,8 @@ def main(cfg: DictConfig):
         show_paths(cfg)
     elif cfg.action == 'simulation':
         if cfg.node == 'master':
+            start_tensorboard(cfg.path.output)
+            time.sleep(5)
             log.info('Starting supervisor')
             supervise_remote(cfg)
             pass
