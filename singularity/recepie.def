@@ -1,0 +1,23 @@
+Bootstrap: docker
+From: continuumio/miniconda3
+
+%files
+    environment.yaml
+
+%environment
+    export PATH="/opt/conda/bin:$PATH"
+    export PATH="/opt/conda/envs/$(head -n 1 environment.yaml | cut -f 2 -d ' ')/bin:$PATH"
+
+%post
+    /opt/conda/bin/conda env create -f environment.yaml
+    . /opt/conda/etc/profile.d/conda.sh
+    conda activate $(head -n 1 environment.yaml | cut -f 2 -d ' ')
+
+%test
+    python --version
+    python -c "import torch; print(torch.cuda.is_available())"
+
+%labels
+    author "Ales Kucera"
+    maintainer "Ales Kucera"
+    version "0.1"

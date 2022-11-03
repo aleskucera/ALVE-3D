@@ -1,0 +1,4 @@
+architecture: deeplabv3_resnet101
+encoder: resnet101
+arch: deeplabv3
+pretrained: true

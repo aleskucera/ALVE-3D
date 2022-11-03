@@ -2,5 +2,16 @@ defaults:
   - _self_
   - path: default
   - kitti: default
+  - model: fcn_resnet50
+  - train: default
+  - test: default
+  - hydra: default
+  - run: default
+  - connect: default
 
-action: train
+action: None
+
+node: master
+connection: remote
+
+

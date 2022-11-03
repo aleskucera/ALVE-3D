@@ -1,0 +1,4 @@
+#!/bin/bash
+singularity run singularity/deep_learning_image.sif python demo.py \
+            action=simulation node=slave hydra.run.dir="$1"
+
