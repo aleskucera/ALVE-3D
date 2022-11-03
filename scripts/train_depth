@@ -4,24 +4,21 @@ import os
 import numpy as np
 import torchvision.models.segmentation
 import torch
-from torch.utils.data import DataLoader, BatchSampler
-from torch.utils.data.sampler import SequentialSampler
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from argparse import ArgumentParser
-import datasets
+from src.dataset import SemanticDataset
 from tqdm import tqdm
 from time import time
 import segmentation_models_pytorch as smp
 from typing import Iterator, List
-from active_learning.utils import visualize_imgs
-from datasets.base_dataset import VOID_VALUE
+from src.utils.visualization import visualize_imgs
 import torchmetrics
 
 
 def parse_arguments():
     parser = ArgumentParser()
     parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--datasets', nargs='+', type=str, default=['Rellis3DClouds'])
     parser.add_argument('--output', type=str, default=None)
     parser.add_argument('--dont_save_models', action='store_true')
     parser.add_argument('--architecture', type=str, default='deeplabv3_resnet101')
@@ -69,140 +66,31 @@ def create_model(architecture, n_inputs, n_outputs, pretrained_backbone=True):
     return model
 
 
-class CommonBatchSampler(BatchSampler):
-    """
-    Selecting indices from two different datasets to form batches of data
-    """
+def create_dataloaders(cfg):
+    train_dataset = SemanticDataset(path=cfg.kitti.path, split='train', cfg=cfg.kitti)
+    valid_dataset = SemanticDataset(path=cfg.kitti.path, split='val', cfg=cfg.kitti)
 
-    def __init__(self, sampler, batch_size, drop_last, shuffle=False):
-        super(CommonBatchSampler, self).__init__(sampler=sampler, batch_size=batch_size, drop_last=drop_last)
-        self.shuffle = shuffle
+    train_loader = DataLoader(train_dataset,
+                              batch_size=cfg.batch_size,
+                              shuffle=True,
+                              num_workers=cfg.n_workers,
+                              drop_last=True,
+                              pin_memory=True)
 
-    def __iter__(self) -> Iterator[List[int]]:
-        datasets_idx_border = self.sampler.data_source.cumulative_sizes[0]
+    valid_loader = DataLoader(valid_dataset,
+                              batch_size=1,
+                              shuffle=False,
+                              num_workers=cfg.n_workers,
+                              pin_memory=True)
 
-        # assume we have 2 datasets two concatenate
-        assert len(self.sampler.data_source.cumulative_sizes) == 2
-        if self.shuffle:
-            # random batch sampler: select batches randomly either from one dataset or another
-            ids = {'0': list(self.sampler)[:datasets_idx_border],
-                   '1': list(self.sampler)[datasets_idx_border:]}
-            while len(ids['0']) > 0 or len(ids['1']) > 0:
-                data_id = np.random.choice(list(ids.keys()))
-                if len(ids[data_id]) == 0:
-                    # inverse 0 to 1 and vise versa
-                    data_id = str(int(not int(data_id)))
-                assert len(ids[data_id]) > 0
-
-                if len(ids[data_id]) > self.batch_size:
-                    batch = np.random.choice(ids[data_id], self.batch_size, replace=False).tolist()
-                    assert len(batch) > 0
-                else:
-                    if self.drop_last:
-                        break
-                    else:
-                        batch = ids[data_id].copy()
-                        assert len(batch) > 0
-
-                for ind in batch:
-                    ids[data_id].remove(ind)
-                assert len(batch) > 0
-                yield batch
-        else:
-            # sequential batch sampler
-            batch = []
-            for idx in self.sampler:
-                batch.append(idx)
-                if len(batch) == self.batch_size or idx == datasets_idx_border - 1:
-                    yield batch
-                    batch = []
-            if len(batch) > 0 and not self.drop_last:
-                yield batch
-
-
-def create_dataloaders(args):
-    print('Using datasets for training: %s' % ' '.join(args.datasets))
-
-    Dataset = eval('datasets.%s' % args.datasets[0])
-    # lidar_beams_step = 2 in order to have horizontal resolution = 1024 (instead of 2048 as in Rellis data)
-    train_dataset = Dataset(split='train',
-                            output=args.output,
-                            fields=args.data_fields, num_samples=args.n_samples,
-                            labels_mode='labels')
-    valid_dataset = Dataset(split='val',
-                            output=args.output,
-                            fields=args.data_fields, num_samples=args.n_samples,
-                            labels_mode='labels')
-
-    train_datasets, valid_datasets = [train_dataset], [valid_dataset]
-
-    if len(args.datasets) > 1:
-        assert len(args.datasets) == 2
-
-        DatasetFT = eval('datasets.%s' % args.datasets[1])
-
-        ft_dataset_train = DatasetFT(split='train',
-                                     output=args.output,
-                                     fields=args.data_fields, num_samples=args.n_samples,
-                                     labels_mode='labels')
-        assert ft_dataset_train.output == train_dataset.output
-
-        train_dataset_combined = torch.utils.data.ConcatDataset([train_dataset, ft_dataset_train])
-
-        # https://stackoverflow.com/questions/51837110/pytorch-data-loading-from-multiple-different-sized-datasets
-        batch_sampler = CommonBatchSampler(SequentialSampler(train_dataset_combined),
-                                           batch_size=args.batch_size,
-                                           drop_last=False,
-                                           shuffle=True)
-        train_loader = DataLoader(dataset=train_dataset_combined,
-                                  num_workers=args.n_workers,
-                                  batch_sampler=batch_sampler,
-                                  pin_memory=True)
-
-        ft_dataset_val = DatasetFT(split='val',
-                                   output=args.output,
-                                   fields=args.data_fields, num_samples=args.n_samples,
-                                   labels_mode='labels')
-        assert ft_dataset_val.output == valid_dataset.output
-
-        valid_dataset_combined = torch.utils.data.ConcatDataset([valid_dataset, ft_dataset_val])
-
-        # https://stackoverflow.com/questions/51837110/pytorch-data-loading-from-multiple-different-sized-datasets
-        batch_sampler_val = CommonBatchSampler(SequentialSampler(valid_dataset_combined),
-                                               batch_size=args.batch_size,
-                                               drop_last=False,
-                                               shuffle=False)
-        valid_loader = DataLoader(dataset=valid_dataset_combined,
-                                  num_workers=args.n_workers,
-                                  batch_sampler=batch_sampler_val,
-                                  pin_memory=True)
-
-        train_datasets.append(ft_dataset_train)
-        valid_datasets.append(ft_dataset_val)
-    else:
-        assert len(args.datasets) == 1
-
-        train_loader = DataLoader(train_dataset,
-                                  batch_size=args.batch_size,
-                                  shuffle=True,
-                                  num_workers=args.n_workers,
-                                  drop_last=True,
-                                  pin_memory=True)
-
-        valid_loader = DataLoader(valid_dataset,
-                                  batch_size=1,
-                                  shuffle=False,
-                                  num_workers=args.n_workers,
-                                  pin_memory=True)
-
-    return train_datasets, valid_datasets, train_loader, valid_loader
+    return train_dataset, valid_dataset, train_loader, valid_loader
 
 
 class Trainer(object):
 
     def __init__(self, args):
-        self.train_datasets, \
-        self.valid_datasets, \
+        self.train_dataset, \
+        self.valid_dataset, \
         self.train_loader, \
         self.valid_loader = create_dataloaders(args)
 
@@ -212,11 +100,11 @@ class Trainer(object):
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         # self.device = torch.device('cpu')
 
-        self.class_values = self.train_datasets[0].class_values
-        self.ignore_label = VOID_VALUE if VOID_VALUE in self.class_values else 0
+        self.class_values = self.train_dataset.class_values
+        self.ignore_label = 255 if 255 in self.class_values else 0
         print('Ignoring label value: %i' % self.ignore_label)
 
-        self.classes = self.train_datasets[0].CLASSES
+        self.classes = self.train_dataset.CLASSES
         self.non_bg_classes = np.asarray(self.classes)[np.asarray(self.class_values) != self.ignore_label]
 
         self.model = self.prepare_model()
