@@ -52,20 +52,3 @@ def supervise_remote(cfg: DictConfig):
         c.run(f'rm {pkg_dir}')
 
         time.sleep(10)
-
-    #     log.info(f'Local output directory: {cfg.path.output}')
-    #     slave_out_dir = os.path.join(paths['output'], 'slave')
-    #     log.info(f'Remote output directory: {slave_out_dir}')
-    #
-    # while True:
-    #     log.info(f'Syncing the directory')
-    #     sync_dir(c, paths.output[2:], cfg.path.output)
-    #     time.sleep(10)
-
-
-def sync_dir(c: Connection, directory: str, dest: str):
-    c.run(f'tar -czvf package.tar.gz {directory}')
-    c.get(f'package.tar.gz', f'{dest}/package.tar.gz')
-    subprocess.run(['tar', '-xzf', f'{dest}/package.tar.gz', '-C', dest])
-    subprocess.run(['rm', f'{dest}/package.tar.gz'])
-    c.run(f'rm package.tar.gz')

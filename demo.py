@@ -55,7 +55,7 @@ def main(cfg: DictConfig):
     elif cfg.action == 'simulation':
         if cfg.node == 'master':
             start_tensorboard(cfg.path.output)
-            time.sleep(5)
+            time.sleep(10)
             log.info('Starting supervisor')
             supervise_remote(cfg)
             pass
