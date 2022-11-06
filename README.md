@@ -1,4 +1,4 @@
-# ALVE-3D (Active Learning with Viewpoint Entropy for 3D Semantic Segmentation)
+<h1 align="center">ALVE-3D</h1>
 
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 ![Shell Script](https://img.shields.io/badge/shell_script-%23121011.svg?style=for-the-badge&logo=gnu-bash&logoColor=white)
