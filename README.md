@@ -20,10 +20,15 @@ The framework is will be evaluated on SemanticKITTI and SemanticUSL datasets.
 - [Project Architecture](#project-architecture)
     - [Repository Structure](#repository-structure)
     - [Basic Principles](#basic-principles)
+        - [Configuration](#configuration)
+        - [Monitoring](#monitoring)
+        - [Logging](#logging)
 - [Usage](#usage)
-    - [Training](#training)
-    - [Testing](#testing)
-    - [Visualization](#visualization)
+    - [Available Demos](#available-demos)
+- [Implementation Details](#implementation-details)
+    - [Dataset](#dataset)
+    - [Sample Class](#sample-class)
+    - [Sequence Class](#sequence-class)
 
 ## Requirements
 
@@ -117,7 +122,7 @@ The main configuration file is `conf/config.yaml`. This file contains the follow
   cluster. The development configuration files will be loaded. The monitoring software will not be used.
 
 > **Note**: These configurations are only for `main.py`. When running the `demo.py` script, the `action` variable is
-> used for determining, what demo should be run.
+> used for determining, what demo should be run. More about supported demos can be found in the [Usage](#usage).
 
 ---
 
@@ -142,15 +147,30 @@ when the project was started. Then there are the following subdirectories:
 - `slave`: This directory contains the logs of the `slave` node when is used.
 - *tensorboard file*: This file is used for the Tensorboard. It is created when the Tensorboard is used.
 
-## Demo
+## Usage
 
-There are 3 demos in the repository at the moment: `global_cloud`, `sample` and `formats`. You can run the demos with:
+The project can be used for training and testing of the model. Run the `main.py` script for training and testing of the
+model by:
 
-    python main.py demo=<demo_name>
+    python main.py action={action} node={node} connection={connection}
 
-or you can change the `demo` parameter in the configuration files.
+more information about the configuration variables can be found in the [Configuration](#configuration) section.
 
-## Dataset
+You can also run the `demo.py` script for demo of the finished features of the project by:
+
+    python demo.py action={action}
+
+#### Available Demos
+
+- `simulation`: Demo of the remote communication between the `master` and the `slave` node.
+- `global_cloud`: Demo of the global point cloud visualization.
+- `sample`: Demo of the sample visualization.
+- `sample_formats`: Demo of 3 different sample formats.
+- `paths`: Demo of the absolute paths in the configuration files.
+
+## Implementation Details
+
+### Dataset
 
 The object SemanticDataset is Pytorch Dataset wrapper for SemanticKITTI and SemanticUSL datasets.
 It is used for loading the data and creating the global map of the dataset.
@@ -166,7 +186,7 @@ Dataset uses two new [dataclasses](https://docs.python.org/3/library/dataclasses
   creating
   the global map of the dataset.
 
-## Sample class
+### Sample class
 
 The `Sample` class is used for storing the data of a single sample. It contains everything that is needed for training
 and visualization of the dataset.
@@ -182,19 +202,11 @@ There are 3 main types of data that can be loaded in the `Sample` class:
 - `depth_image_data`: This data are used for visualization of the depth image. The data are loaded from the dataset
   and stored permanently in the `Sample` class by function `load_depth_image`.
 
-## Sequence class
+### Sequence class
 
 The `Sequence` class is used for storing information about a structure of a single sequence. The structure
 of a sequence is defined by the `sequence_structure` parameter in the configuration file. It is used
 loading the data and creating `Sample` objects by calling the `get_samples` function.
-
-### TODO:
-
-- [x] Create dataset wrapper for SemanticKITTI and SemanticUSL datasets
-- [x] Create global map of the dataset
-- [ ] Visualize the global map of the dataset
-- [ ] Add singularity directory for creating singularity image from environment.yaml
-- [ ] Check scripts for training, evaluation and visualization of the models
 
 
 
