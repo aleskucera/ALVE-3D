@@ -94,18 +94,18 @@ The main configuration file is `conf/config.yaml`. This file contains the follow
           will
           be used.
 
-        - **Supported configurations**: The project supports the following configurations:
-            - `train`/`test` on `master` with `local` connection - This configuration is used for development on a local
-              machine. The development configuration files will be loaded. The monitoring of the progress will be used.
-            - `train`/`test` on `master` with `remote` connection - This configuration is used for supervision of the
-              training and the testing on the RCI cluster. The monitoring of the progress will be used.
-            - `train`/`test` on `slave` with `remote` connection - This configuration will be activated on the RCI
-              cluster
-              when previous configuration is used. This configuration is used for training and testing of the model on
-              the
-              RCI cluster.
-            - `train`/`test` on `slave` with `local` connection - This configuration is used for development on the RCI
-              cluster. The development configuration files will be loaded. The monitoring software will not be used.
+  **Supported configurations**: The project supports the following configurations:
+    - `train`/`test` on `master` with `local` connection - This configuration is used for development on a local
+      machine. The development configuration files will be loaded. The monitoring of the progress will be used.
+    - `train`/`test` on `master` with `remote` connection - This configuration is used for supervision of the
+      training and the testing on the RCI cluster. The monitoring of the progress will be used.
+    - `train`/`test` on `slave` with `remote` connection - This configuration will be activated on the RCI
+      cluster
+      when previous configuration is used. This configuration is used for training and testing of the model on
+      the
+      RCI cluster.
+    - `train`/`test` on `slave` with `local` connection - This configuration is used for development on the RCI
+      cluster. The development configuration files will be loaded. The monitoring software will not be used.
 
 #### Monitoring
 
