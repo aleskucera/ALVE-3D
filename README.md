@@ -78,10 +78,11 @@ The main configuration file is `conf/config.yaml`. This file contains the follow
 - **other variables**: These are the variables that are defined directly in the `config.yaml` file or in the one of
   the `run`
   configuration files. These variables are used for determining, what should be run in the project.
-    1. **action**: This variable is used for determining, what should be run in the project. The possible values are:
-        - `train`: This value is used for training of the model.
-        - `test`: This value is used for testing of the model.
-        - *one of the demos*: This value is read when the `demo.py` is run.
+
+    1. **action**: This variable is used for determining, what action should be performed. The possible values are:
+        - `train`: This value is used for training of the model. (only when running `main.py`)
+        - `test`: This value is used for testing of the model. (only when running `main.py`)
+
     2. **node**: This variable is used for determining, what node is the project running on. The possible values
        are:
         - `master` (PC): This value is used for running the project on a local machine.
@@ -91,21 +92,29 @@ The main configuration file is `conf/config.yaml`. This file contains the follow
        possible values are:
         - `local`: This value is used for running the project on a local machine.
         - `remote`: When this value is used, it indicates, that the communication between the master and the slave
-          will
-          be used.
+          will be used.
 
-  **Supported configurations**: The project supports the following configurations:
-    - `train`/`test` on `master` with `local` connection - This configuration is used for development on a local
-      machine. The development configuration files will be loaded. The monitoring of the progress will be used.
-    - `train`/`test` on `master` with `remote` connection - This configuration is used for supervision of the
-      training and the testing on the RCI cluster. The monitoring of the progress will be used.
-    - `train`/`test` on `slave` with `remote` connection - This configuration will be activated on the RCI
-      cluster
-      when previous configuration is used. This configuration is used for training and testing of the model on
-      the
-      RCI cluster.
-    - `train`/`test` on `slave` with `local` connection - This configuration is used for development on the RCI
-      cluster. The development configuration files will be loaded. The monitoring software will not be used.
+---
+
+*Supported configurations* - The project supports the following configurations:
+
+- `train`/`test` on `master` with `local` connection - This configuration is used for development on a local
+  machine. The development configuration files will be loaded. The monitoring of the progress will be used.
+
+- `train`/`test` on `master` with `remote` connection - This configuration is used for supervision of the
+  training and the testing on the RCI cluster. The monitoring of the progress will be used.
+
+- `train`/`test` on `slave` with `remote` connection - This configuration will be activated on the RCI
+  cluster when previous configuration is used. This configuration is used for training and testing of the model on
+  the RCI cluster.
+
+- `train`/`test` on `slave` with `local` connection - This configuration is used for development on the RCI
+  cluster. The development configuration files will be loaded. The monitoring software will not be used.
+
+> **Note**: These configurations are only for `main.py`. When running the `demo.py` script, the `action` variable is
+> used for determining, what demo should be run.
+
+---
 
 #### Monitoring
 
@@ -114,6 +123,8 @@ monitoring. When running the project on the local machine (the `master` node is 
 automatically, even when the computing will be done on the RCI cluster (the `remote` connection is used). This is
 possible by synchronization of the Tensorboard logs between the local machine and the RCI cluster. More information
 logging can be found in the [Logging](#logging) section.
+
+---
 
 #### Logging
 
