@@ -1,5 +1,4 @@
 <h1 align="center">ALVE-3D</h1>
-<h3 align="center">(Active Learning with Viewpoint Entropy for 3D Semantic Segmentation)</h3>
 
 ---
 
