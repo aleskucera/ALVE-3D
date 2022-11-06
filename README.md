@@ -37,8 +37,6 @@ for all other requirements, please see `environment.yaml`. You can recreate the 
 
 ### Repository Structure
 
-This is the main structure of the repository:
-
     .
     ├── conf
     ├── data
@@ -54,17 +52,17 @@ This is the main structure of the repository:
     ├── environment.yaml
     └── main.py
 
-- `conf`: This folder contains the configuration files for the experiments. The configuration files are in YAML format.
+- `conf`: Folder containing the configuration files for the experiments. The configuration files are in YAML format.
   The project depends on [Hydra](https://hydra.cc/) for configuration management.
-- `data`: This folder contains the symbolic links to the datasets.
+- `data`: Folder containing the symbolic links to the datasets.
   It is recommended to create symbolic links to the datasets in this folder, but you can also change the paths
   in the configuration files.
-- `models`: This folder contains models that are used in the experiments.
+- `models`: Folder containing the models that are used in the experiments.
   For evaluation of the pretrained models, please use the pretrained directory.
-- `scripts`: This folder contains the scripts for training, evaluation and visualization of the models on RCI cluster.
-- `src`: This folder contains the source code of the project.
-- `demo.py`: This script is used for demo of the finished features of the project.
-- `main.py`: This is the main script of the project. It is used for training and testing of the model.
+- `scripts`: Folder containing the scripts for training, evaluation and visualization of the models on RCI cluster.
+- `src`: Folder containing the source code of the project.
+- `demo.py`: Script is used for demo of the finished features of the project.
+- `main.py`: The main script of the project. It is used for training and testing of the model.
 
 ### Basic Principles
 
