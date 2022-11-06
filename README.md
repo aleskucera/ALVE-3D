@@ -138,14 +138,14 @@ logging can be found in the [Logging](#logging) section.
 
 #### Logging
 
-The project uses Hydra logging for logging. The logging is configured in the `conf/hydra` files. The logging is
-configured that the logs will be saved in the `outputs/{date}/{time}` directory. The `date` and `time` are the date and
-the time
-when the project was started. Then there are the following subdirectories:
+The project uses Hydra logging. It is configured in the `conf/hydra` files so that the logs will be saved in
+the `outputs/{date}/{time}` directory. The `date` and `time` are the date and the time when the project was started.
+Then there are the following subdirectories:
 
 - `master`: This directory contains the logs of the `master` node when is used.
 - `slave`: This directory contains the logs of the `slave` node when is used.
-- *tensorboard file*: This file is used for the Tensorboard. It is created when the Tensorboard is used.
+- *tensorboard file*: This file is used for the Tensorboard. It is created when the Tensorboard is used (when the
+  `master` node is used).
 
 ## Usage
 
@@ -183,8 +183,7 @@ Dataset uses two new [dataclasses](https://docs.python.org/3/library/dataclasses
   can be found in the Sample section.
 - `Sequence`: This dataclass is used for storing information about a structure of a single sequence. The structure of a
   sequence is defined by the `sequence_structure` parameter in the configuration file. The structure is used for
-  creating
-  the global map of the dataset.
+  creating the global map of the dataset.
 
 ### Sample class
 
