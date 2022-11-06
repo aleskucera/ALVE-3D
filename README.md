@@ -58,16 +58,19 @@ for all other requirements, please see `environment.yaml`. You can recreate the 
     └── main.py
 
 - `conf`: Folder containing the configuration files for the experiments. The configuration files are in YAML format.
-  The project depends on [Hydra](https://hydra.cc/) for configuration management.
+  The project depends on [Hydra](https://hydra.cc/) for configuration management. More details about the configuration
+  in the [Configuration](#configuration) section.
 - `data`: Folder containing the symbolic links to the datasets.
   It is recommended to create symbolic links to the datasets in this folder, but you can also change the paths
   in the configuration files.
 - `models`: Folder containing the models that are used in the experiments.
   For evaluation of the pretrained models, please use the pretrained directory.
+- `outputs`: Folder containing logs of the experiments. More details in the [Logging](#logging) section.
 - `scripts`: Folder containing the scripts for training, evaluation and visualization of the models on RCI cluster.
 - `src`: Folder containing the source code of the project.
 - `demo.py`: Script is used for demo of the finished features of the project.
-- `main.py`: The main script of the project. It is used for training and testing of the model.
+- `main.py`: The main script of the project. It is used for training and testing of the model. More details in
+  the [Usage](#usage) section.
 
 ### Basic Principles
 
