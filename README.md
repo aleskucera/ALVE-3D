@@ -171,6 +171,29 @@ You can also run the `demo.py` script for demo of the finished features of the p
 - `sample_formats`: Demo of 3 different sample formats.
 - `paths`: Demo of the absolute paths in the configuration files.
 
+### Simulation Demo
+
+The simulation demo is used for testing of the remote communication between the `master` and the `slave` node. The
+communication is tested by sending noisy harmonic signals from the `slave` node to the `master` node. The `master` node
+is used for visualization of the signals.
+
+For running the simulation, please follow these steps:
+
+1. Clone the repository to the RCI cluster to your `home` directory.
+2. Configure the `conf/connect/default.yaml` file so that the script can connect via
+
+        ssh {user}@{host}
+
+   and enter the repository directory by executing
+
+        cd {repo}
+
+3. Run the `demo.py` script by
+
+        python demo.py action=simulation
+
+4. Visualize the signals by opening the Tensorboard in the browser on http://localhost:6006.
+
 ## Implementation Details
 
 ### Dataset
