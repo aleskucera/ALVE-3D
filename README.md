@@ -179,8 +179,14 @@ is used for visualization of the signals.
 
 For running the simulation, please follow these steps:
 
-1. Clone the repository to the RCI cluster to your `home` directory.
-2. Configure the `conf/connect/default.yaml` file so that the script can connect via
+1. Create singularity image by executing the following command:
+
+        sh singularity/build.sh
+
+   in the project root directory.
+2. Clone the repository to the RCI cluster to your `home` directory.
+3. Copy the singularity image to the `~/ALVE-3D/singularity` directory.
+4. Configure the `conf/connect/default.yaml` file so that the script can connect via
 
         ssh {user}@{host}
 
@@ -188,11 +194,11 @@ For running the simulation, please follow these steps:
 
         cd {repo}
 
-3. Run the `demo.py` script by
+5. Run the `demo.py` script by
 
         python demo.py action=simulation
 
-4. Visualize the signals by opening the Tensorboard in the browser on http://localhost:6006.
+6. Visualize the signals by opening the Tensorboard in the browser on http://localhost:6006.
 
 ## Implementation Details
 
