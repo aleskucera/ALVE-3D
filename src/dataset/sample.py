@@ -53,6 +53,11 @@ class Sample:
         self.points = scan.points
         self.colors = scan.sem_label_color
 
+    def load_laserscan(self, scan: SemLaserScan):
+        scan.open_scan(self.points_path)
+        scan.open_label(self.label_path)
+        scan.colorize()
+
     def to_absolute_position(self) -> None:
         """Transform the points from the sensor frame to the world frame
         :return: None

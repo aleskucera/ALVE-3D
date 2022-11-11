@@ -1,5 +1,6 @@
 defaults:
   - _self_
+  - vis: default
   - path: default
   - kitti: default
   - model: fcn_resnet50

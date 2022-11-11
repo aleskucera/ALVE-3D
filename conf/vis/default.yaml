@@ -1,0 +1,6 @@
+entropy: False
+semantics: True
+instances: True
+predictions: False
+
+sequence: 4

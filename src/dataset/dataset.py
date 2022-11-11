@@ -39,7 +39,15 @@ class SemanticDataset(Dataset):
         # Apply augmentations
         # if self.split == 'train':
         #     sample.augment()
-        return sample.x, sample.y
+        return sample.x, sample.y, index
+
+    def colorize_laserscan(self, index) -> None:
+        """ Colorize the point cloud and the labels
+        :param index: index of the sample
+        :return: the sample
+        """
+        sample = deepcopy(self.samples[index])
+        sample.load_laserscan(self.scan)
 
     def get_sem_cloud(self, index):
         """ Get the semantic point cloud for visualization

@@ -7,7 +7,7 @@ import atexit
 import logging
 
 import hydra
-# import open3d as o3d
+import open3d as o3d
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 from torch.utils.tensorboard import SummaryWriter

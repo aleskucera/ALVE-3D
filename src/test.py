@@ -2,6 +2,8 @@ import os
 import logging
 
 import torch.nn
+import open3d as o3d
+import numpy as np
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 
@@ -23,6 +25,6 @@ def test_model(cfg: DictConfig):
     model_path = os.path.join(cfg.path.models, 'pretrained', cfg.test.model_name)
     model = torch.load(model_path).to(device)
 
-    tester = Tester(model=model, test_loader=test_loader, device=device,
+    tester = Tester(model=model, dataset=test_ds, test_loader=test_loader, device=device,
                     num_classes=33, output_path=cfg.path.output)
-    tester.test()
+    tester.visualize_entropy()
