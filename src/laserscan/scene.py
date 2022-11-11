@@ -56,3 +56,15 @@ class ImageWidget(Widget):
     def set_data(self, data):
         self.vis.set_data(data)
         self.vis.update()
+
+
+class Counter:
+    def __init__(self, start=0):
+        self.value = start
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        self.value += 1
+        return self.value

@@ -1,6 +1,4 @@
 entropy: False
 semantics: True
-instances: True
+instances: False
 predictions: False
-
-sequence: 4

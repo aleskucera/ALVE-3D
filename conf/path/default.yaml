@@ -3,6 +3,6 @@ src: 'src'
 dataset: 'data'
 config: 'config'
 models: 'models'
-kitti: 'data/SemanticKITTI/sequences'
-usl: 'data/SemanticUSL/sequences'
+kitti: 'data/SemanticKITTI'
+usl: 'data/SemanticUSL'
 output: ???

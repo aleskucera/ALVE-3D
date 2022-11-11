@@ -7,6 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchmetrics import Accuracy, JaccardIndex, MetricCollection
 
 from .state import State
+from .utils import parse_data
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class Trainer:
             # ----------- Train Phase ------------
             self.model.train()
             for data in tqdm(self.train_loader):
-                image_batch, label_batch = _parse_data(data, self.device)
+                image_batch, label_batch, _ = parse_data(data, self.device)
 
                 # Forward pass
                 output = self.model(image_batch)['out']
@@ -53,7 +54,7 @@ class Trainer:
             self.model.eval()
             with torch.no_grad():
                 for data in tqdm(self.val_loader):
-                    image_batch, label_batch = _parse_data(data, self.device)
+                    image_batch, label_batch, _ = parse_data(data, self.device)
 
                     # Forward pass
                     output = self.model(image_batch)['out']
@@ -83,10 +84,3 @@ class Trainer:
 
     def save(self, path):
         torch.save(self.model.state_dict(), path)
-
-
-def _parse_data(data: tuple, device: torch.device):
-    image_batch, label_batch = data
-    image_batch = image_batch.to(device)
-    label_batch = label_batch.to(device)
-    return image_batch, label_batch

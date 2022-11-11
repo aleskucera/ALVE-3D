@@ -21,10 +21,14 @@ def process_label(func):
 
 class SemLaserScan(LaserScan):
 
-    def __init__(self, sem_color_dict: dict, project=False, colorize=False, H=64, W=1024, fov_up=3.0, fov_down=-25.0):
+    def __init__(self, project=True, colorize=False, sem_color_dict: dict = None,
+                 H=64, W=1024, fov_up=3.0, fov_down=-25.0):
         super(SemLaserScan, self).__init__(project, colorize, H, W, fov_up, fov_down)
-        self.sem_color_map = dict_to_color_map(sem_color_dict)
-        self.inst_color_map = instances_color_map()
+
+        if colorize:
+            assert sem_color_dict is not None, "Colorize arg is True but no color dict is given"
+            self.sem_color_map = dict_to_color_map(sem_color_dict)
+            self.inst_color_map = instances_color_map()
 
         # Cloud attributes
         self.sem_label = None

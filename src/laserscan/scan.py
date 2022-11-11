@@ -19,7 +19,7 @@ def process_data(func):
 
 
 class LaserScan:
-    def __init__(self, project=False, colorize=False, H=64, W=1024, fov_up=3.0, fov_down=-25.0):
+    def __init__(self, project=True, colorize=False, H=64, W=1024, fov_up=3.0, fov_down=-25.0):
         self.proj_H = H
         self.proj_W = W
 

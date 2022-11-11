@@ -50,7 +50,7 @@ def main(cfg: DictConfig):
 
     if cfg.node == 'master':
         start_tensorboard(cfg.path.output)
-        time.sleep(10)
+        time.sleep(5)
 
         if cfg.connection == 'remote':
             supervise_remote(cfg)

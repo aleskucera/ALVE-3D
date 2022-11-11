@@ -20,7 +20,7 @@ def process_prediction(func):
 
 class PredictionLaserScan(LaserScan):
 
-    def __init__(self, project=False, colorize=False, H=64, W=1024, fov_up=3.0, fov_down=-25.0):
+    def __init__(self, project=True, colorize=False, H=64, W=1024, fov_up=3.0, fov_down=-25.0):
         super(PredictionLaserScan, self).__init__(project, colorize, H, W, fov_up, fov_down)
 
         self.prediction = None

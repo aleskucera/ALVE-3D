@@ -2,24 +2,13 @@
 # This file is covered by the LICENSE file in the root of this project.
 
 from vispy import app
-from .scene import Scene, CloudWidget, ImageWidget
-
-
-class Counter:
-    def __init__(self, start=0):
-        self.value = start
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        self.value += 1
-        return self.value
+from .scene import Scene, CloudWidget, ImageWidget, Counter
 
 
 class ScanVis:
     def __init__(self, scan, scan_names, label_names: list = None, offset: int = 0,
-                 semantics: bool = False, instances: bool = False, entropy: bool = False):
+                 semantics: bool = False, instances: bool = False,
+                 entropy: bool = False, predictions: bool = False):
 
         self.scan = scan
         assert scan.colorize, "Scan must be colorized"
@@ -33,6 +22,7 @@ class ScanVis:
         self.entropy = entropy
         self.semantics = semantics
         self.instances = instances
+        self.predictions = predictions
 
         self.action = 'none'
 
@@ -41,7 +31,7 @@ class ScanVis:
         self.scene.connect(self.key_press, self.draw)
 
         # Image Scene
-        self.img_scene = Scene(size=(1024, 64 * self.num_widgets))
+        self.img_scene = Scene(size=(scan.proj_W, scan.proj_H * self.num_widgets))
         self.img_scene.connect(self.key_press, self.draw)
 
         c = Counter()
@@ -63,10 +53,17 @@ class ScanVis:
             self.inst_w = CloudWidget(scene=self.scene, pos=(0, idx))
             self.inst_img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
 
+        # Entropy
         if self.entropy:
             idx = next(c)
             self.entropy_w = CloudWidget(scene=self.scene, pos=(0, idx))
             self.entropy_img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
+
+        # Predictions
+        if self.predictions:
+            idx = next(c)
+            self.pred_w = CloudWidget(scene=self.scene, pos=(0, idx))
+            self.pred_img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
 
         self.update_scan()
 
@@ -94,6 +91,9 @@ class ScanVis:
         if self.entropy:
             self.entropy_w.set_data(self.scan.points, self.scan.entropy_color[..., ::-1])
             self.entropy_img_w.set_data(self.scan.proj_entropy_color[..., ::-1])
+        if self.predictions:
+            self.pred_w.set_data(self.scan.points, self.scan.prediction_color[..., ::-1])
+            self.pred_img_w.set_data(self.scan.proj_prediction_color[..., ::-1])
 
     def key_press(self, event):
         self.scene.canvas.events.key_press.block()
@@ -129,4 +129,8 @@ class ScanVis:
 
     @staticmethod
     def run():
+        print("\nControls:")
+        print("\tN: Next Scan")
+        print("\tB: Previous Scan")
+        print("\tQ: Quit\n")
         app.run()

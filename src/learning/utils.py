@@ -1,3 +1,5 @@
+import torch
+import numpy as np
 from torch.nn import Conv2d
 from omegaconf import DictConfig
 import torchvision.models.segmentation as tms
@@ -27,3 +29,32 @@ def create_model(cfg: DictConfig):
 def _load_model(architecture: str, pretrained: bool = True):
     model = eval(f'tms.{architecture}')(pretrained=pretrained)
     return model
+
+
+def parse_data(data: tuple, device: torch.device):
+    image_batch, label_batch, idx_batch = data
+    image_batch = image_batch.to(device)
+    label_batch = label_batch.to(device)
+    return image_batch, label_batch, idx_batch
+
+
+def sort_entropies(entropies: np.ndarray) -> np.ndarray:
+    order = np.argsort(entropies[:, 0])[::-1]
+    return entropies[order]
+
+
+def create_entropy_batch(output: torch.Tensor, idx_batch: torch.Tensor) -> np.ndarray:
+    entropy_batch = calculate_entropy(output)
+    entropy_batch = entropy_batch.cpu().numpy()[..., np.newaxis]
+
+    idx_batch = idx_batch.cpu().numpy()[..., np.newaxis]
+
+    data_batch = np.concatenate((entropy_batch, idx_batch), axis=1)
+    return data_batch
+
+
+def calculate_entropy(output, eps=1e-6) -> torch.Tensor:
+    prob = torch.nn.functional.softmax(output, dim=1)
+    prob = torch.clamp(prob, eps, 1.0 - eps)
+    h = - torch.sum(prob * torch.log10(prob), dim=1)
+    return h.mean(axis=(1, 2))

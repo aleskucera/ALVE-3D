@@ -15,11 +15,8 @@ def train_model(cfg: DictConfig):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     log.info(f'Using device {device}')
 
-    train_ds = SemanticDataset(cfg.path.kitti, cfg.kitti, 'train', cfg.train.dataset_size)
-    val_ds = SemanticDataset(cfg.path.kitti, cfg.kitti, 'valid', cfg.train.dataset_size)
-
-    log.info(f'Train dataset size: {len(train_ds)}')
-    log.info(f'Validation dataset size: {len(val_ds)}')
+    train_ds = SemanticDataset(cfg.path.kitti, cfg.kitti, split='train', size=cfg.train.dataset_size)
+    val_ds = SemanticDataset(cfg.path.kitti, cfg.kitti, split='valid', size=cfg.train.dataset_size)
 
     train_loader = DataLoader(train_ds, batch_size=cfg.train.batch_size, shuffle=True, num_workers=os.cpu_count() // 2)
     val_loader = DataLoader(val_ds, batch_size=cfg.train.batch_size, shuffle=True, num_workers=os.cpu_count() // 2)
