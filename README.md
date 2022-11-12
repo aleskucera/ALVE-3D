@@ -83,12 +83,12 @@ The main configuration file is `conf/config.yaml`. This file contains the follow
   extension. The configuration files are loaded in the order they are specified in the list.
 - **other**: These are the configuration parameters that are somewhat more important. The example is the `action`
   parameter. It specifies the action that should be performed and doesn't load any configuration file. The `action`
-  parameter can be specified in the command line by
-
-        python {file_name} action={action_name}
-
-  where `{file_name}` is the name of the script and `{action_name}` is the name of the action. More details about the
+  parameter can be specified in the command line by specifying the `action={action_name}`. More details about the
   options of the `action` parameter can be found in the [Usage](#usage) section.
+
+> **Note**: The `action` parameter is not the only parameter that can be specified in the command line. All the
+> parameters can be specified in the command line. The syntax is `parameter=value`. For example, if you want to
+> specify the dataset configuration file to SemanticKITTI, you can use `ds=kitti`.
 
 ### Monitoring
 
