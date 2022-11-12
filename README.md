@@ -24,11 +24,8 @@ The framework is will be evaluated on SemanticKITTI and SemanticUSL datasets.
         - [Monitoring](#monitoring)
         - [Logging](#logging)
 - [Usage](#usage)
+    - [Available Launch Files](#available-launch-files)
     - [Available Demos](#available-demos)
-- [Implementation Details](#implementation-details)
-    - [Dataset](#dataset)
-    - [Sample Class](#sample-class)
-    - [Sequence Class](#sequence-class)
 
 ## Requirements
 
@@ -61,8 +58,6 @@ for all other requirements, please see `environment.yaml`. You can recreate the 
   The project depends on [Hydra](https://hydra.cc/) for configuration management. More details about the configuration
   in the [Configuration](#configuration) section.
 - `data`: Folder containing the symbolic links to the datasets.
-  It is recommended to create symbolic links to the datasets in this folder, but you can also change the paths
-  in the configuration files.
 - `models`: Folder containing the models that are used in the experiments.
   For evaluation of the pretrained models, please use the pretrained directory.
 - `outputs`: Folder containing logs of the experiments. More details in the [Logging](#logging) section.
@@ -78,166 +73,67 @@ for all other requirements, please see `environment.yaml`. You can recreate the 
 
 This section describes the basic principles of the project. For faster development, the [Hydra](https://hydra.cc/) is
 used for configuration management. Before running the project, you should set the configuration file. Let's dive into
-the
-details.
+the details.
 
 The main configuration file is `conf/config.yaml`. This file contains the following sections:
 
 - `defaults`: These are default configuration files. The items have the following syntax `directory:filename`. The
   directory
   is the relative path to the `conf` directory. The filename is the name of the configuration file without the
-  extension.
-  The configuration files are loaded in the order they are specified in the list.
-- **other variables**: These are the variables that are defined directly in the `config.yaml` file or in the one of
-  the `run`
-  configuration files. These variables are used for determining, what should be run in the project.
+  extension. The configuration files are loaded in the order they are specified in the list.
+- **other**: These are the configuration parameters that are somewhat more important. The example is the `action`
+  parameter. It specifies the action that should be performed and doesn't load any configuration file. The `action`
+  parameter can be specified in the command line by
 
-    1. **action**: This variable is used for determining, what action should be performed. The possible values are:
-        - `train`: This value is used for training of the model. (only when running `main.py`)
-        - `test`: This value is used for testing of the model. (only when running `main.py`)
+        python {file_name} action={action_name}
 
-    2. **node**: This variable is used for determining, what node is the project running on. The possible values
-       are:
-        - `master` (PC): This value is used for running the project on a local machine.
-        - `slave` (RCI): This value is used for running the project on a cluster.
+  where `{file_name}` is the name of the script and `{action_name}` is the name of the action. More details about the
+  options of the `action` parameter can be found in the [Usage](#usage) section.
 
-    3. **connection**: This variable is used for determining, what connection is used for running the project. The
-       possible values are:
-        - `local`: This value is used for running the project on a local machine.
-        - `remote`: When this value is used, it indicates, that the communication between the master and the slave
-          will be used.
+### Monitoring
 
----
+The project uses [Tensorboard](https://www.tensorflow.org/tensorboard) for the monitoring. The Tensorboard is started
+automatically when needed and the logs are saved in the `outputs` directory. The Tensorboard can be accessed on
+url `http://localhost:6006`. After the action which uses the Tensorboard is finished, all the Tensorboard processes are
+killed.
 
-*Supported configurations* - The project supports the following configurations:
+### Logging
 
-- `train`/`test` on `master` with `local` connection - This configuration is used for development on a local
-  machine. The development configuration files will be loaded. The monitoring of the progress will be used.
-
-- `train`/`test` on `master` with `remote` connection - This configuration is used for supervision of the
-  training and the testing on the RCI cluster. The monitoring of the progress will be used.
-
-- `train`/`test` on `slave` with `remote` connection - This configuration will be activated on the RCI
-  cluster when previous configuration is used. This configuration is used for training and testing of the model on
-  the RCI cluster.
-
-- `train`/`test` on `slave` with `local` connection - This configuration is used for development on the RCI
-  cluster. The development configuration files will be loaded. The monitoring software will not be used.
-
-> **Note**: These configurations are only for `main.py`. When running the `demo.py` script, the `action` variable is
-> used for determining, what demo should be run. More about supported demos can be found in the [Usage](#usage).
-
----
-
-#### Monitoring
-
-There was mentioned monitoring software. The project uses [Tensorboard](https://www.tensorflow.org/tensorboard) for the
-monitoring. When running the project on the local machine (the `master` node is used), the Tensorboard will be started
-automatically, even when the computing will be done on the RCI cluster (the `remote` connection is used). This is
-possible by synchronization of the Tensorboard logs between the local machine and the RCI cluster. More information
-logging can be found in the [Logging](#logging) section.
-
----
-
-#### Logging
-
-The project uses Hydra logging. It is configured in the `conf/hydra` files so that the logs will be saved in
-the `outputs/{date}/{time}` directory. The `date` and `time` are the date and the time when the project was started.
-Then there are the following subdirectories:
-
-- `master`: This directory contains the logs of the `master` node when is used.
-- `slave`: This directory contains the logs of the `slave` node when is used.
-- *tensorboard file*: This file is used for the Tensorboard. It is created when the Tensorboard is used (when the
-  `master` node is used).
+The project uses Hydra logging. It is configured in the `conf/hydra` files so that the logs will usually be saved
+in `outputs/{date}/{action}-{time}-{info}` directory. The `date` and `time` are the date and the time when the project
+was started. The `info` is the information about the configuration. The `action` is the name of the action that was
+performed.
 
 ## Usage
 
 The project can be used for training and testing of the model. Run the `main.py` script for training and testing of the
 model by:
 
-    python main.py action={action} node={node} connection={connection}
+    python main.py launch={launch_file}
 
-more information about the configuration variables can be found in the [Configuration](#configuration) section.
+where `{launch_file}` is the name of the launch file without the extension. The launch files are located in
+the `conf/lauch` directory.
+
+#### Available Launch Files
+
+- `train`: Train the model.
+- `test`: Test the model.
+- `train_dev`: Train the model on the development set.
+- `test_dev`: Test the model on the development set.
 
 You can also run the `demo.py` script for demo of the finished features of the project by:
 
     python demo.py action={action}
 
+> **Note**: The difference between `action` and `launch` parameter is that the `launch` parameter is used for
+> determining and overriding multiple configuration parameters at once including the `action` parameter. You can see
+> that in the launch files.
+
 #### Available Demos
 
-- `simulation`: Demo of the remote communication between the `master` and the `slave` node.
-- `global_cloud`: Demo of the global point cloud visualization.
-- `sample`: Demo of the sample visualization.
-- `sample_formats`: Demo of 3 different sample formats.
 - `paths`: Demo of the absolute paths in the configuration files.
-
-### Simulation Demo
-
-The simulation demo is used for testing of the remote communication between the `master` and the `slave` node. The
-communication is tested by sending noisy harmonic signals from the `slave` node to the `master` node. The `master` node
-is used for visualization of the signals.
-
-For running the simulation, please follow these steps:
-
-1. Create singularity image by executing the following command:
-
-        sh singularity/build.sh
-
-   in the project root directory.
-2. Clone the repository to the RCI cluster to your `home` directory.
-3. Copy the singularity image to the `~/ALVE-3D/singularity` directory.
-4. Configure the `conf/connect/default.yaml` file so that the script can connect via
-
-        ssh {user}@{host}
-
-   and enter the repository directory by executing
-
-        cd {repo}
-
-5. Run the `demo.py` script by
-
-        python demo.py action=simulation
-
-6. Visualize the signals by opening the Tensorboard in the browser on http://localhost:6006.
-
-## Implementation Details
-
-### Dataset
-
-The object SemanticDataset is Pytorch Dataset wrapper for SemanticKITTI and SemanticUSL datasets.
-It is used for loading the data and creating the global map of the dataset.
-
-Dataset uses two new [dataclasses](https://docs.python.org/3/library/dataclasses.html) for storing the data:
-
-- `Sample`: This dataclass is used for storing the data of a single sample. It contains everything that is needed for
-  training and evaluation of the model. For better performance, only the essential data are stored permanently in the
-  dataset and the rest of are loaded on demand (e.g. point clouds, labels, etc.). More information about the dataclass
-  can be found in the Sample section.
-- `Sequence`: This dataclass is used for storing information about a structure of a single sequence. The structure of a
-  sequence is defined by the `sequence_structure` parameter in the configuration file. The structure is used for
-  creating the global map of the dataset.
-
-### Sample class
-
-The `Sample` class is used for storing the data of a single sample. It contains everything that is needed for training
-and visualization of the dataset.
-For better performance, only the essential data are stored permanently in the dataset and the rest of are loaded on
-demand (e.g. point clouds, labels, etc.).
-There are 3 main types of data that can be loaded in the `Sample` class:
-
-- `learning_data`: This data are used for training and evaluation of the model. The data are loaded from the dataset
-  and stored permanently in the `Sample` class by function `load_learning_data`.
-- `semantic_cloud_data`: This data are used for visualization of the semantic point cloud. The data are loaded from the
-  dataset
-  and stored permanently in the `Sample` class by function `load_semantic_cloud`.
-- `depth_image_data`: This data are used for visualization of the depth image. The data are loaded from the dataset
-  and stored permanently in the `Sample` class by function `load_depth_image`.
-
-### Sequence class
-
-The `Sequence` class is used for storing information about a structure of a single sequence. The structure
-of a sequence is defined by the `sequence_structure` parameter in the configuration file. It is used
-loading the data and creating `Sample` objects by calling the `get_samples` function.
+- `dataset`: Demo of the SemanticDataset and its visualization.
+- `select_indices`: Demo of the selection of the indices of the samples based on the entropy.
 
 
 
