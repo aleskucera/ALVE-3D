@@ -126,7 +126,7 @@ You can also run the `demo.py` script for demo of the finished features of the p
     python demo.py action={action}
 
 > **Note**: The difference between `action` and `launch` parameter is that the `launch` parameter is used for
-> determining and overriding multiple configuration parameters at once including the `action` parameter. You can see
+> overriding multiple configuration parameters at once including the `action` parameter. You can see
 > that in the launch files.
 
 #### Available Demos
