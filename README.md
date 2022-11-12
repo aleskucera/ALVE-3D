@@ -90,14 +90,14 @@ The main configuration file is `conf/config.yaml`. This file contains the follow
 > parameters can be specified in the command line. The syntax is `parameter=value`. For example, if you want to
 > specify the dataset configuration file to SemanticKITTI, you can use `ds=kitti`.
 
-### Monitoring
+#### Monitoring
 
 The project uses [Tensorboard](https://www.tensorflow.org/tensorboard) for the monitoring. The Tensorboard is started
 automatically when needed and the logs are saved in the `outputs` directory. The Tensorboard can be accessed on
 url `http://localhost:6006`. After the action which uses the Tensorboard is finished, all the Tensorboard processes are
 killed.
 
-### Logging
+#### Logging
 
 The project uses Hydra logging. It is configured in the `conf/hydra` files so that the logs will usually be saved
 in `outputs/{date}/{action}-{time}-{info}` directory. The `date` and `time` are the date and the time when the project
