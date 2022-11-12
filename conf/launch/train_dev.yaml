@@ -4,4 +4,3 @@ defaults:
   - override /train: dev
 
 action: train
-connection: local

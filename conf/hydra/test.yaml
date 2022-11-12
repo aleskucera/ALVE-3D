@@ -1,2 +1,2 @@
 run:
-  dir: outputs/${now:%d.%m.%Y}/Test-${now:%H:%M}-${test.name}/${node}
+  dir: outputs/${now:%d.%m.%Y}/Test-${now:%H:%M}-${test.name}

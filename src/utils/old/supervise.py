@@ -5,7 +5,6 @@ import subprocess
 
 from fabric import Connection
 from omegaconf import DictConfig
-from .utils import remote_paths
 
 log = logging.getLogger(__name__)
 

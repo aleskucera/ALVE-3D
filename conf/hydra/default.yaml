@@ -1,2 +1,2 @@
 run:
-  dir: outputs/${now:%d.%m.%Y}/${action}-${now:%H:%M}/${node}
+  dir: outputs/${now:%d.%m.%Y}/${action}-${now:%H:%M}

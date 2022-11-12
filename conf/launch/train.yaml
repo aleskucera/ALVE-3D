@@ -3,4 +3,3 @@ defaults:
   - override /hydra: train
 
 action: train
-connection: remote

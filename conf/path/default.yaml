@@ -1,8 +1,9 @@
 root: ''
 src: 'src'
+data: 'data'
 dataset: 'data'
 config: 'config'
 models: 'models'
-kitti: 'data/SemanticKITTI'
-usl: 'data/SemanticUSL'
-output: ???
+scripts: 'scripts'
+singularity: 'singularity'
+output: ???  # will be set during runtime
