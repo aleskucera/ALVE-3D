@@ -69,11 +69,11 @@ for all other requirements, please see `environment.yaml`. You can recreate the 
 
 ### Basic Principles
 
-#### Configuration
-
 This section describes the basic principles of the project. For faster development, the [Hydra](https://hydra.cc/) is
-used for configuration management. Before running the project, you should set the configuration file. Let's dive into
-the details.
+used for configuration management and logging. Before running the project, you should set the configuration file. Let's
+dive into the details.
+
+#### Configuration
 
 The main configuration file is `conf/config.yaml`. This file contains the following sections:
 
