@@ -5,7 +5,7 @@ import numpy as np
 
 from torch.utils.data import Dataset
 from omegaconf import DictConfig
-from laserscan import SemLaserScan
+from src.laserscan import SemLaserScan
 from .utils import dict_to_label_map, open_sequence
 
 log = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ class SemanticDataset(Dataset):
         image = self.scan.proj_depth[np.newaxis, ...]
         label = self.label_map[self.scan.proj_sem_label].astype(np.long)
 
-        # TODO: Add transformations
+        # TODO: Add augmentation
 
         return image, label, index
 
