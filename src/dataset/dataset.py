@@ -75,12 +75,19 @@ class SemanticDataset(Dataset):
         # ----------- USE INDICES -----------
 
         if self.indices is not None:
-            self.indices.sort()
+            self.choose_data()
             log.info(f"Using samples {self.indices} for {self.split} split")
 
-            assert max(self.indices) < len(self.points), "Index out of range"
-
-            self.points = [self.points[i] for i in self.indices]
-            self.labels = [self.labels[i] for i in self.indices]
-
         log.info(f"Dataset initialized with {len(self.points)} samples")
+
+    def choose_data(self, indices=None):
+        if indices:
+            self.indices = indices
+        assert self.indices is not None
+
+        self.indices.sort()
+
+        assert max(self.indices) < len(self.points), "Index out of range"
+
+        self.points = [self.points[i] for i in self.indices]
+        self.labels = [self.labels[i] for i in self.indices]

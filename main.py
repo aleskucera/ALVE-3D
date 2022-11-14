@@ -8,7 +8,7 @@ import hydra
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src import train_model, test_model, set_paths, start_tensorboard, \
+from src import train_model, train_model_active, test_model, set_paths, start_tensorboard, \
     terminate_tensorboard
 
 log = logging.getLogger(__name__)
@@ -33,6 +33,8 @@ def main(cfg: DictConfig):
 
     if cfg.action == 'train':
         train_model(cfg)
+    elif cfg.action == 'train_active':
+        train_model_active(cfg)
     elif cfg.action == 'test':
         test_model(cfg)
     else:
