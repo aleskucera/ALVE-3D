@@ -5,7 +5,7 @@ import numpy as np
 
 from torch.utils.data import Dataset
 from omegaconf import DictConfig
-from laserscan import SemLaserScan
+from src.laserscan import SemLaserScan
 from .utils import dict_to_label_map, open_sequence
 
 log = logging.getLogger(__name__)
