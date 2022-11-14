@@ -43,7 +43,7 @@ class SemanticDataset(Dataset):
         image = self.scan.proj_depth[np.newaxis, ...]
         label = self.label_map[self.scan.proj_sem_label].astype(np.long)
 
-        # TODO: Add transformations
+        # TODO: Add augmentation
 
         return image, label, index
 

@@ -58,9 +58,10 @@ def show_paths(cfg: DictConfig) -> None:
 
 def show_dataset(cfg: DictConfig) -> None:
     # dataset attributes
-    size = 1000
-    sequences = [0, 1, 2, 3, 4]
-    indices = random.sample(range(1, size), 10)
+    # size = 200
+    size = None
+    sequences = [3, 12, 21, 32]
+    indices = random.sample(range(1, 1000), 10)
 
     # create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path,
