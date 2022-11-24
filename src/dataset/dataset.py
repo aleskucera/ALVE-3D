@@ -91,3 +91,100 @@ class SemanticDataset(Dataset):
 
         self.points = [self.points[i] for i in self.indices]
         self.labels = [self.labels[i] for i in self.indices]
+
+
+def inspect_semantic_kitti360():
+    import open3d as o3d
+    from kitti360scripts.helpers.labels import id2label
+    import matplotlib.pyplot as plt
+
+    # id       color
+    color_map = {
+        0: (0, 0, 0),
+        1: (0, 0, 0),
+        2: (0, 0, 0),
+        3: (0, 0, 0),
+        4: (0, 0, 0),
+        5: (111, 74, 0),
+        6: (81, 0, 81),
+        7: (128, 64, 128),
+        8: (244, 35, 232),
+        9: (250, 170, 160),
+        10: (230, 150, 140),
+        11: (70, 70, 70),
+        12: (102, 102, 156),
+        13: (190, 153, 153),
+        14: (180, 165, 180),
+        15: (150, 100, 100),
+        16: (150, 120, 90),
+        17: (153, 153, 153),
+        18: (153, 153, 153),
+        19: (250, 170, 30),
+        20: (220, 220, 0),
+        21: (107, 142, 35),
+        22: (152, 251, 152),
+        23: (70, 130, 180),
+        24: (220, 20, 60),
+        25: (255, 0, 0),
+        26: (0, 0, 142),
+        27: (0, 0, 70),
+        28: (0, 60, 100),
+        29: (0, 0, 90),
+        30: (0, 0, 110),
+        31: (0, 80, 100),
+        32: (0, 0, 230),
+        33: (119, 11, 32),
+        34: (64, 128, 128),
+        35: (190, 153, 153),
+        36: (150, 120, 90),
+        37: (153, 153, 153),
+        38: (0, 64, 64),
+        39: (0, 128, 192),
+        40: (128, 64, 0),
+        41: (64, 64, 128),
+        42: (102, 0, 0),
+        43: (51, 0, 51),
+        44: (32, 32, 32),
+        -1: (0, 0, 142),
+    }
+
+    data_dir = os.environ['KITTI360_DATASET']
+    # data_dir = "/home/ruslan/data/datasets/KITTI/KITTI-360/"
+    scan = SemLaserScan(colorize=True, sem_color_dict=color_map, H=64, W=1024, fov_up=13.4, fov_down=-13.4)
+
+    for seq in ['2013_05_28_drive_0000_sync']:
+        pts_folder = os.path.join(data_dir, 'SemanticKITTI-360', seq, 'velodyne')
+
+        for pts_file in os.listdir(pts_folder):
+            pts_file = os.path.join(pts_folder, pts_file)
+            ids_file = pts_file.replace('velodyne', 'labels').replace('.bin', '.label')
+
+            points = np.load(pts_file)
+            ids = np.load(ids_file)
+
+            scan.set_points(points)
+            scan.set_label(ids)
+
+            plt.figure(figsize=(20, 10))
+            plt.subplot(2, 1, 1)
+            plt.imshow(scan.proj_depth)
+            plt.title('Depth image')
+
+            plt.subplot(2, 1, 2)
+            plt.imshow(scan.proj_sem_color)
+            plt.title('Semantic classes')
+            plt.show()
+
+            color = np.zeros((ids.size, 3))
+            for uid in np.unique(ids):
+                color[ids == uid] = id2label[uid].color
+
+            pcd = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(points)
+            pcd.colors = o3d.utility.Vector3dVector(color / color.max())
+
+            o3d.visualization.draw_geometries([pcd])
+
+
+if __name__ == "__main__":
+    inspect_semantic_kitti360()
