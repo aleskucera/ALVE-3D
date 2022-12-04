@@ -10,7 +10,4 @@
 #SBATCH --mail-user=kuceral4@fel.cvut.cz  # where send info about job
 #SBATCH --mail-type=ALL                   # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
-# Change limit for opened files
-ulimit -n 100000
-
-singularity run --nv singularity/deep_learning_image.sif python main.py launch=train_dev
+singularity run --nv singularity/deep_learning_image.sif python main.py launch=train
