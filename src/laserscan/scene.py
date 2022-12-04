@@ -1,4 +1,9 @@
-from vispy.scene import visuals, SceneCanvas, ViewBox
+try:
+    from vispy.scene import visuals, ViewBox, SceneCanvas
+except ImportError:
+    visuals = None
+    ViewBox = None
+    SceneCanvas = None
 
 
 class Scene:
