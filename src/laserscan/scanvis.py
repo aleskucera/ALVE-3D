@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 # This file is covered by the LICENSE file in the root of this project.
 
-from vispy import app
+try:
+    from vispy import app
+except ImportError:
+    app = None
+
 from .scene import Scene, CloudWidget, ImageWidget, Counter
 
 
