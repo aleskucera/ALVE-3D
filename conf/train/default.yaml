@@ -5,4 +5,4 @@ batch_size: 64
 dataset_size: null      # null means all
 n_inputs: 1
 n_outputs: 20
-patience: 10
+patience: 20
