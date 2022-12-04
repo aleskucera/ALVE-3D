@@ -1,11 +1,11 @@
 import os
 import logging
 
-import numpy as np
 import torch.nn
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
-from torchmetrics import Accuracy, JaccardIndex, MetricCollection
+from torchmetrics import MetricCollection
+from torchmetrics.classification import MulticlassAccuracy, MulticlassJaccardIndex
 
 from .dataset import SemanticDataset
 from .learning import Trainer, create_model, Selector
@@ -30,8 +30,10 @@ def train_model(cfg: DictConfig):
 
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), cfg.train.learning_rate)
-    metrics = MetricCollection([Accuracy(mdmc_average='samplewise', top_k=1),
-                                JaccardIndex(num_classes=cfg.ds.num_classes).to(device)])
+
+    acc = MulticlassAccuracy(num_classes=cfg.ds.num_classes, mdmc_average='samplewise').to(device)
+    iou = MulticlassJaccardIndex(num_classes=cfg.ds.num_classes).to(device)
+    metrics = MetricCollection([acc, iou])
 
     trainer = Trainer(model=model, criterion=criterion, optimizer=optimizer,
                       metrics=metrics, device=device, log_path=cfg.path.output,
@@ -55,8 +57,10 @@ def train_model_active(cfg: DictConfig):
 
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), cfg.train.learning_rate)
-    metrics = MetricCollection([Accuracy(mdmc_average='samplewise', top_k=1),
-                                JaccardIndex(num_classes=cfg.ds.num_classes).to(device)])
+
+    acc = MulticlassAccuracy(num_classes=cfg.ds.num_classes, mdmc_average='samplewise').to(device)
+    iou = MulticlassJaccardIndex(num_classes=cfg.ds.num_classes).to(device)
+    metrics = MetricCollection([acc, iou])
 
     ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size)
 
@@ -109,8 +113,9 @@ def test_model(cfg):
     model_path = os.path.join(cfg.path.models, 'pretrained', cfg.test.model_name)
     model = torch.load(model_path).to(device)
 
-    metrics = MetricCollection([Accuracy(mdmc_average='samplewise', top_k=1),
-                                JaccardIndex(num_classes=cfg.ds.num_classes).to(device)])
+    acc = MulticlassAccuracy(num_classes=cfg.ds.num_classes, mdmc_average='samplewise').to(device)
+    iou = MulticlassJaccardIndex(num_classes=cfg.ds.num_classes).to(device)
+    metrics = MetricCollection([acc, iou])
 
     trainer = Trainer(model=model, metrics=metrics, device=device,
                       log_path=cfg.path.output, test_loader=test_loader)

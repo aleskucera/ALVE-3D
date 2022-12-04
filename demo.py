@@ -60,8 +60,8 @@ def show_dataset(cfg: DictConfig) -> None:
     # dataset attributes
     # size = 200
     size = None
-    sequences = [3, 12, 21, 32]
-    indices = random.sample(range(1, 1000), 10)
+    sequences = [1]
+    indices = random.sample(range(1, 100), 10)
 
     # create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path,

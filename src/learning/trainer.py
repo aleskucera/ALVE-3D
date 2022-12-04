@@ -39,7 +39,9 @@ def test_requirements(func):
 
 class Trainer:
     def __init__(self, model, metrics, device, log_path, criterion=None, optimizer=None,
-                 train_loader=None, val_loader=None, test_loader=None, patience=8, main_metric='JaccardIndex'):
+                 train_loader=None, val_loader=None, test_loader=None,
+                 patience=20, main_metric='MulticlassJaccardIndex'):
+
         self.model = model
         self.device = device
 

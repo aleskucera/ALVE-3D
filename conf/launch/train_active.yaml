@@ -3,4 +3,4 @@ defaults:
   - override /hydra: train
   - override /train: dev
 
-action: train
+action: train_active
