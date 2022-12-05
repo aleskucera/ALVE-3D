@@ -6,7 +6,7 @@ import numpy as np
 from torch.utils.data import Dataset
 from omegaconf import DictConfig
 from src.laserscan import SemLaserScan
-from .utils import dict_to_label_map, open_sequence
+from .utils import dict_to_label_map, open_sequence, apply_augmentations
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +43,8 @@ class SemanticDataset(Dataset):
         image = self.scan.proj_depth[np.newaxis, ...]
         label = self.label_map[self.scan.proj_sem_label].astype(np.long)
 
-        # TODO: Add augmentation
+        if self.split == 'train':
+            image, label = apply_augmentations(image, label)
 
         return image, label, index
 

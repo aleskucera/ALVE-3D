@@ -5,7 +5,7 @@ defaults:
   - ds: kitti
   - test: default
   - train: default
-  - model: fcn_resnet50
+  - model: deeplabv3_resnet101
 
   # Common settings
   - path: default
