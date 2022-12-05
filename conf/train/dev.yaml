@@ -1,7 +1,7 @@
 learning_rate: 0.001    # 1e-3
 weight_decay: 0.0001    # 1e-4
 epochs: 200
-batch_size: 1
+batch_size: 2
 dataset_size: 16
 n_inputs: 1
 n_outputs: 20
