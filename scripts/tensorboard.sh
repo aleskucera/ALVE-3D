@@ -1,3 +1,3 @@
 module load TensorFlow
 
-tensorboad --logdir=~/ALVE-3D/outputs/ --port=6006
+tensorboard --logdir=~/ALVE-3D/outputs/ --port=6006
