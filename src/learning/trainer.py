@@ -69,10 +69,12 @@ class Trainer:
             self._val_epoch(epoch)
 
             # Save best models
-            if self.state.main_metric_exceeded() and epoch > 10:
-                log.info(f'Loss Decreasing, saving model to {save_path}')
-                model_name = os.path.join(save_path, f'model_{epoch}.pth')
-                self._save_model(os.path.join(save_path, model_name))
+            if self.state.main_metric_exceeded():
+                iou = self.state.metrics["MulticlassJaccardIndex"].item()
+                model_name = f'deeplabv3_e-{epoch}_iou-{iou:.3f}.pth'
+                model_path = os.path.join(save_path, model_name)
+                log.info(f'New best model found, saving to {model_path}')
+                self._save_model(model_path)
 
             # Early stopping
             if self.state.stagnant(patience=self.patience):

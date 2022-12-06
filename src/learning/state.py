@@ -7,7 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 class State:
     def __init__(self, writer: SummaryWriter, metrics: MetricCollection,
-                 logger: logging.Logger, main_metric: str = 'JaccardIndex') -> None:
+                 logger: logging.Logger, main_metric: str = 'MulticlassJaccardIndex') -> None:
 
         # Logging
         self.writer = writer
@@ -50,7 +50,6 @@ class State:
     def reset(self) -> None:
         """ Reset loss and metrics """
         self.loss = 0
-        self.metrics = None
         self.num_batches = 0
         self.metric_collection.reset()
 
@@ -63,7 +62,10 @@ class State:
     def main_metric_exceeded(self) -> bool:
         """ Check if main metric has improved """
         main_metric_history = self.metric_history[self.main_metric]
-        return main_metric_history[-1] > max(main_metric_history)
+        if len(main_metric_history) > 1:
+            return main_metric_history[-1] > max(main_metric_history[:-1])
+        else:
+            return False
 
     def log(self, index: int, phase: str) -> None:
         """ Log loss and metrics """
