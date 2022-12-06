@@ -77,7 +77,7 @@ class Trainer:
             # Early stopping
             if self.state.stagnant(patience=self.patience):
                 log.info('Training Stagnant, stopping training')
-                break
+                # break
 
     @test_requirements
     def test(self) -> dict:
