@@ -2,7 +2,6 @@ import os
 import logging
 
 import torch
-import matplotlib
 from tqdm import tqdm
 
 from omegaconf import DictConfig
@@ -14,8 +13,6 @@ from .state import State
 from .utils import parse_data
 from src.laserscan import LaserScan
 from src.dataset import SemanticDataset
-
-matplotlib.use('Qt5Agg')
 
 if torch.cuda.is_available():
     gpu_count = torch.cuda.device_count()
