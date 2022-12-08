@@ -8,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 
-from laserscan import ScanVis, LaserScan
+from src.laserscan import ScanVis, LaserScan
 
 
 class State:

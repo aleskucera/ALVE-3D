@@ -12,8 +12,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from .state import State
 from .utils import parse_data
-from laserscan import LaserScan
-from dataset import SemanticDataset
+from src.laserscan import LaserScan
+from src.dataset import SemanticDataset
 
 matplotlib.use('Qt5Agg')
 
