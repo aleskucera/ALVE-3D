@@ -13,13 +13,16 @@ def instances_color_map():
     return color_map
 
 
-def map_color(data, vmin=0, vmax=1, color_map='viridis'):
+def map_color(data, color_map='viridis', data_range=(0, 19), bad=(0,)):
     cmap = plt.get_cmap(color_map)
-    norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+    cmap.set_bad(color='black')
+    norm = mpl.colors.Normalize(vmin=0, vmax=1)
     m = cm.ScalarMappable(norm=norm, cmap=cmap)
 
-    # Normalize data
-    data = (data - data.min()) / (data.max() - data.min())
+    # # Normalize data
+    data = (data - data_range[0]) / (data_range[1] - data_range[0])
+    for b in bad:
+        data = np.ma.masked_where(data == b, data)
 
     # Map data to color
     color = m.to_rgba(data)

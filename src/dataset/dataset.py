@@ -5,8 +5,8 @@ import numpy as np
 
 from torch.utils.data import Dataset
 from omegaconf import DictConfig
-from src.laserscan import SemLaserScan
-from .utils import dict_to_label_map, open_sequence, apply_augmentations
+from src.laserscan import LaserScan
+from .utils import open_sequence, apply_augmentations
 
 log = logging.getLogger(__name__)
 
@@ -28,8 +28,7 @@ class SemanticDataset(Dataset):
         self.points = []
         self.labels = []
 
-        self.label_map = dict_to_label_map(cfg.learning_map)
-        self.scan = SemLaserScan()
+        self.scan = LaserScan(label_map=cfg.learning_map)
 
         self.init()
 
@@ -37,11 +36,11 @@ class SemanticDataset(Dataset):
         points_path = self.points[index]
         label_path = self.labels[index]
 
-        self.scan.open_scan(points_path)
+        self.scan.open_points(points_path)
         self.scan.open_label(label_path)
 
         image = self.scan.proj_depth[np.newaxis, ...]
-        label = self.label_map[self.scan.proj_sem_label].astype(np.long)
+        label = self.scan.proj_sem_label.astype(np.long)
 
         if self.split == 'train':
             image, label = apply_augmentations(image, label)

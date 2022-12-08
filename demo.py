@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 
 import os
-import time
-import math
 import random
-import atexit
 import logging
 
 import torch
@@ -12,19 +9,10 @@ import hydra
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 from hydra.core.hydra_config import HydraConfig
-from torch.utils.tensorboard import SummaryWriter
 
-from src import SemanticDataset, set_paths, start_tensorboard, \
-    terminate_tensorboard, SemLaserScan, ScanVis, Selector
+from src import SemanticDataset, set_paths, LaserScan, ScanVis, Selector, create_model
 
 log = logging.getLogger(__name__)
-
-
-@atexit.register
-def exit_function():
-    """ Terminate all running tensorboard processes when the program exits. """
-    terminate_tensorboard()
-    log.info('Terminated all running tensorboard processes.')
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -39,10 +27,6 @@ def main(cfg: DictConfig):
         show_dataset(cfg)
     elif cfg.action == 'select_indices':
         select_indices(cfg)
-    elif cfg.action == 'monitoring':
-        start_tensorboard(cfg.path.output)
-        time.sleep(5)
-        computational_simulation(cfg)
     else:
         raise ValueError('Invalid demo type.')
 
@@ -60,30 +44,19 @@ def show_dataset(cfg: DictConfig) -> None:
     # dataset attributes
     # size = 200
     size = None
-    sequences = [1]
+    sequences = None
     indices = random.sample(range(1, 100), 10)
 
     # create dataset
-    dataset = SemanticDataset(dataset_path=cfg.ds.path,
-                              sequences=sequences, cfg=cfg.ds, indices=indices, size=size)
+    dataset = SemanticDataset(dataset_path=cfg.ds.path, sequences=sequences, cfg=cfg.ds,
+                              split='train', indices=indices, size=size)
 
     # create semantic laser scan
-    scan = SemLaserScan(colorize=True, sem_color_dict=cfg.ds.color_map)
+    scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
 
     # create scan visualizer
-    vis = ScanVis(scan=scan, scan_names=dataset.points, label_names=dataset.labels, semantics=True)
+    vis = ScanVis(scan=scan, scans=dataset.points, labels=dataset.labels, raw_cloud=True, instances=True)
     vis.run()
-
-
-def computational_simulation(cfg: DictConfig) -> None:
-    writer = SummaryWriter(cfg.path.output)
-    for i in range(500):
-        x = i / 10
-        a = random.random()
-        writer.add_scalar('Sin(x)', a * math.sin(x), i)
-        writer.add_scalar('Cos(x)', a * math.cos(x), i)
-        log.info(f'Iteration {i} completed')
-        time.sleep(0.5)
 
 
 def select_indices(cfg: DictConfig):
@@ -94,7 +67,9 @@ def select_indices(cfg: DictConfig):
     test_loader = DataLoader(test_ds, batch_size=16, shuffle=False, num_workers=os.cpu_count() // 2)
 
     model_path = os.path.join(cfg.path.models, 'pretrained', cfg.test.model_name)
-    model = torch.load(model_path).to(device)
+    model = create_model(cfg)
+    model.load_state_dict(torch.load(model_path))
+    model = model.to(device)
 
     tester = Selector(model=model, loader=test_loader, device=device)
     entropies = tester.calculate_entropies()

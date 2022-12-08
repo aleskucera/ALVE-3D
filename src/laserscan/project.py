@@ -21,10 +21,21 @@ def project_scan(points: np.ndarray, remissions: np.ndarray, H: int, W: int, fov
     proj_idx = np.full((H, W), -1, dtype=np.int32)
     proj_xyz = np.zeros((H, W, 3), dtype=np.float32)
 
+    # order in decreasing depth
+    indices = np.arange(len(points))
+    order = np.argsort(-r)
+
+    r = r[order]
+    points = points[order]
+    indices = indices[order]
+    proj_x = proj_x[order]
+    proj_y = proj_y[order]
+    remissions = remissions[order]
+
     # fill in projection matrix
     proj_depth[proj_y, proj_x] = r
     proj_remission[proj_y, proj_x] = remissions
-    proj_idx[proj_y, proj_x] = np.arange(len(points))
+    proj_idx[proj_y, proj_x] = indices
     proj_mask = proj_depth > 0
     proj_xyz[proj_y, proj_x] = points
 

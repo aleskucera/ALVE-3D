@@ -1,32 +1,37 @@
 #!/usr/bin/env python3
-# This file is covered by the LICENSE file in the root of this project.
-
 try:
     from vispy import app
 except ImportError:
     app = None
 
+from .scan import LaserScan
 from .scene import Scene, CloudWidget, ImageWidget, Counter
 
 
 class ScanVis:
-    def __init__(self, scan, scan_names, label_names: list = None, offset: int = 0,
-                 semantics: bool = False, instances: bool = False,
-                 entropy: bool = False, predictions: bool = False):
+    def __init__(self, scan: LaserScan, scans: iter, labels: iter = None, predictions: iter = None,
+                 entropies: iter = None, offset: int = 0, raw_cloud: bool = False, semantics: bool = True,
+                 instances: bool = False):
 
         self.scan = scan
         assert scan.colorize, "Scan must be colorized"
 
-        self.scan_names = scan_names
-        self.label_names = label_names
-        self.total = len(scan_names)
+        self.scans = scans
+        self.labels = labels
+        self.entropies = entropies
+        self.predictions = predictions
+        self.total = len(scans)
 
         self.offset = offset
 
-        self.entropy = entropy
-        self.semantics = semantics
-        self.instances = instances
-        self.predictions = predictions
+        self.raw_cloud = raw_cloud
+
+        if labels is not None:
+            self.semantics = semantics
+            self.instances = instances
+        else:
+            self.semantics = False
+            self.instances = False
 
         self.action = 'none'
 
@@ -40,10 +45,11 @@ class ScanVis:
 
         c = Counter()
 
-        # Raw
-        idx = c.value
-        self.scan_w = CloudWidget(scene=self.scene, pos=(0, idx))
-        self.img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
+        # Raw Cloud
+        if self.raw_cloud:
+            idx = next(c)
+            self.scan_w = CloudWidget(scene=self.scene, pos=(0, idx))
+            self.img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
 
         # Semantics
         if self.semantics:
@@ -58,13 +64,13 @@ class ScanVis:
             self.inst_img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
 
         # Entropy
-        if self.entropy:
+        if self.entropies is not None:
             idx = next(c)
             self.entropy_w = CloudWidget(scene=self.scene, pos=(0, idx))
             self.entropy_img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
 
         # Predictions
-        if self.predictions:
+        if self.predictions is not None:
             idx = next(c)
             self.pred_w = CloudWidget(scene=self.scene, pos=(0, idx))
             self.pred_img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
@@ -72,32 +78,54 @@ class ScanVis:
         self.update_scan()
 
     def update_scan(self):
-        self.scan.open_scan(self.scan_names[self.offset])
-
-        if self.semantics or self.instances:
-            self.scan.open_label(self.label_names[self.offset])
-
         # Update the title
         title = f"Scan {self.offset} / {self.total}"
         self.scene.update_title(title)
         self.img_scene.update_title(title)
 
-        # plot scan
-        self.scan_w.set_data(self.scan.points, self.scan.color)
-        self.img_w.set_data(self.scan.proj_color)
+        # Update the scan
+        if isinstance(self.scans[0], str):
+            self.scan.open_points(self.scans[self.offset])
+        else:
+            self.scan.set_points(self.scans[self.offset])
 
-        if self.semantics:
-            self.sem_w.set_data(self.scan.points, self.scan.sem_label_color[..., ::-1])
-            self.sem_img_w.set_data(self.scan.proj_sem_color[..., ::-1])
-        if self.instances:
-            self.inst_w.set_data(self.scan.points, self.scan.inst_label_color[..., ::-1])
-            self.inst_img_w.set_data(self.scan.proj_inst_color[..., ::-1])
-        if self.entropy:
+        if self.raw_cloud:
+            self.scan_w.set_data(self.scan.points, self.scan.color)
+            self.img_w.set_data(self.scan.proj_color)
+
+        # Update the labels
+        if self.labels is not None:
+            if isinstance(self.labels[0], str):
+                self.scan.open_label(self.labels[self.offset])
+            else:
+                self.scan.set_label(self.labels[self.offset])
+
+            if self.semantics:
+                self.sem_w.set_data(self.scan.points, self.scan.sem_label_color[..., ::-1])
+                self.sem_img_w.set_data(self.scan.proj_sem_color[..., ::-1])
+            if self.instances:
+                self.inst_w.set_data(self.scan.points, self.scan.inst_label_color[..., ::-1])
+                self.inst_img_w.set_data(self.scan.proj_inst_color[..., ::-1])
+
+        # Update the entropies
+        if self.entropies is not None:
+            if isinstance(self.entropies[0], str):
+                self.scan.open_entropy(self.entropies[self.offset])
+            else:
+                self.scan.set_entropy(self.entropies[self.offset])
+
             self.entropy_w.set_data(self.scan.points, self.scan.entropy_color[..., ::-1])
             self.entropy_img_w.set_data(self.scan.proj_entropy_color[..., ::-1])
-        if self.predictions:
-            self.pred_w.set_data(self.scan.points, self.scan.prediction_color[..., ::-1])
-            self.pred_img_w.set_data(self.scan.proj_prediction_color[..., ::-1])
+
+        # Update the predictions
+        if self.predictions is not None:
+            if isinstance(self.predictions[0], str):
+                self.scan.open_prediction(self.predictions[self.offset])
+            else:
+                self.scan.set_prediction(self.predictions[self.offset])
+
+                self.pred_w.set_data(self.scan.points, self.scan.pred_color[..., ::-1])
+                self.pred_img_w.set_data(self.scan.proj_pred_color[..., ::-1])
 
     def key_press(self, event):
         self.scene.canvas.events.key_press.block()
@@ -124,7 +152,18 @@ class ScanVis:
 
     @property
     def num_widgets(self):
-        return 1 + self.semantics + self.instances + self.entropy
+        num = 0
+        if self.raw_cloud:
+            num += 1
+        if self.semantics:
+            num += 1
+        if self.instances:
+            num += 1
+        if self.entropies is not None:
+            num += 1
+        if self.predictions is not None:
+            num += 1
+        return num
 
     def destroy(self):
         self.scene.canvas.close()

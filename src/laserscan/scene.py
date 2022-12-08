@@ -64,7 +64,7 @@ class ImageWidget(Widget):
 
 
 class Counter:
-    def __init__(self, start=0):
+    def __init__(self, start=-1):
         self.value = start
 
     def __iter__(self):

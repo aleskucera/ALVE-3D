@@ -17,30 +17,29 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 log.info(f'Using device {device}')
 
 
-# get gpu count
-
 def train_model(cfg: DictConfig):
+    # Create datasets
     train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size)
     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='valid', size=cfg.train.dataset_size)
 
-    train_loader = DataLoader(train_ds, batch_size=cfg.train.batch_size,
-                              shuffle=True, num_workers=gpu_count * 4)
-    val_loader = DataLoader(val_ds, batch_size=cfg.train.batch_size,
-                            shuffle=True, num_workers=gpu_count * 4)
-
+    # Create model and allow it to be trained on multiple GPUs
     model = create_model(cfg)
     model.to(device)
 
-    criterion = torch.nn.CrossEntropyLoss()
+    # Create criterion, optimizer and scheduler
+    weights = calculate_weights(cfg)
+    criterion = torch.nn.CrossEntropyLoss(weight=weights, ignore_index=0).to(device)
     optimizer = torch.optim.Adam(model.parameters(), cfg.train.learning_rate)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
 
-    acc = MulticlassAccuracy(num_classes=cfg.ds.num_classes, mdmc_average='samplewise').to(device)
-    iou = MulticlassJaccardIndex(num_classes=cfg.ds.num_classes).to(device)
+    acc = MulticlassAccuracy(num_classes=cfg.ds.num_classes, ignore_index=0,
+                             validate_args=False).to(device)
+    iou = MulticlassJaccardIndex(num_classes=cfg.ds.num_classes, ignore_index=0,
+                                 validate_args=False).to(device)
     metrics = MetricCollection([acc, iou])
 
-    trainer = Trainer(model=model, criterion=criterion, optimizer=optimizer,
-                      metrics=metrics, device=device, log_path=cfg.path.output,
-                      train_loader=train_loader, val_loader=val_loader)
+    trainer = Trainer(model=model, metrics=metrics, cfg=cfg, train_ds=train_ds, val_ds=val_ds,
+                      criterion=criterion, optimizer=optimizer, scheduler=scheduler)
 
     trainer.train(cfg.train.epochs, cfg.path.models)
 
@@ -110,20 +109,30 @@ def train_model_active(cfg: DictConfig):
 def test_model(cfg):
     test_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='valid', size=cfg.test.dataset_size)
 
-    test_loader = DataLoader(test_ds, batch_size=cfg.test.batch_size,
-                             shuffle=False, num_workers=gpu_count * 4)
-
     model_path = os.path.join(cfg.path.models, 'pretrained', cfg.test.model_name)
-    model = torch.load(model_path).to(device)
+    model = create_model(cfg)
+    model.load_state_dict(torch.load(model_path))
+    model.to(device)
 
-    acc = MulticlassAccuracy(num_classes=cfg.ds.num_classes, mdmc_average='samplewise').to(device)
-    iou = MulticlassJaccardIndex(num_classes=cfg.ds.num_classes).to(device)
+    acc = MulticlassAccuracy(num_classes=cfg.ds.num_classes, ignore_index=0,
+                             validate_args=False).to(device)
+    iou = MulticlassJaccardIndex(num_classes=cfg.ds.num_classes, ignore_index=0,
+                                 validate_args=False).to(device)
+
     metrics = MetricCollection([acc, iou])
 
-    trainer = Trainer(model=model, metrics=metrics, device=device,
-                      log_path=cfg.path.output, test_loader=test_loader)
-    metric_history = trainer.test()
+    trainer = Trainer(model=model, metrics=metrics, cfg=cfg, val_ds=test_ds)
+    trainer.test(vis=True)
 
-    for metric, values in metric_history.items():
-        log.info(f'{metric}: {values}')
-        log.info(f'{metric} mean: {sum(values) / len(values)}')
+
+def calculate_weights(cfg: DictConfig) -> torch.Tensor:
+    content = cfg.ds.content
+    label_map = cfg.ds.learning_map
+    num_classes = cfg.ds.num_classes
+    weights = torch.zeros(num_classes)
+    for k, v in label_map.items():
+        weights[v] += content[k]
+
+    weights = 1 / weights
+    weights = weights / weights.sum()
+    return weights
