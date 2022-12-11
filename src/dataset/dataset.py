@@ -1,150 +1,190 @@
 import os
+import logging
 
 import numpy as np
-from tqdm import tqdm
-from copy import deepcopy
-from omegaconf import DictConfig
-from torch.utils.data import Dataset
 
-from .sequence import Sequence
-from .laserscan import SemLaserScan
+from torch.utils.data import Dataset
+from omegaconf import DictConfig
+from src.laserscan import LaserScan
+from .utils import open_sequence, apply_augmentations
+
+log = logging.getLogger(__name__)
 
 
 class SemanticDataset(Dataset):
-    def __init__(self, path: str, cfg: DictConfig, split: str = None, size: int = None):
-        """ Initialize the dataset
-        :param path: path to the dataset (the directory containing the sequences)
-        :param split: train, val or test
-        :param cfg: configuration
-        """
+    def __init__(self, dataset_path: str, cfg: DictConfig, sequences: list = None,
+                 split: str = None, size: int = None, indices: list = None):
 
         self.cfg = cfg
-        self.path = path
         self.size = size
         self.split = split
+        self.indices = indices
+        self.path = dataset_path
 
-        # Create scan object for reading the data
-        self.scan = _create_semantic_laser_scan(cfg)
+        if sequences is None:
+            sequences = cfg.split[split]
+        self.sequences = sequences
 
-        # Initialize the list of sequences to load
-        self.sequences = _init_sequences(self.path, cfg.split[split], cfg.sequence_structure)
+        self.points = []
+        self.labels = []
 
-        # Get the dict of samples from the sequences
-        self.samples = _get_samples(self.sequences, size=size)
+        self.scan = LaserScan(label_map=cfg.learning_map)
+
+        self.init()
 
     def __getitem__(self, index):
-        sample = deepcopy(self.samples[index])
-        sample.load_learning_data(self.scan, self.cfg.learning_map)
+        points_path = self.points[index]
+        label_path = self.labels[index]
 
-        # Apply augmentations
-        # if self.split == 'train':
-        #     sample.augment()
-        return sample.x, sample.y
+        self.scan.open_points(points_path)
+        self.scan.open_label(label_path)
 
-    def get_sem_cloud(self, index):
-        """ Get the semantic point cloud for visualization
-        :param index: index of the sample
-        :return: the semantic point cloud sample
-        """
-        sample = deepcopy(self.samples[index])
-        sample.load_semantic_cloud(self.scan)
-        return sample
+        image = self.scan.proj_depth[np.newaxis, ...]
+        label = self.scan.proj_sem_label.astype(np.long)
 
-    def get_sem_depth(self, index):
-        """ Get the semantic depth image for visualization
-        :param index: index of the sample
-        :return: the semantic depth image sample
-        """
-        sample = deepcopy(self.samples[index])
-        sample.load_semantic_depth(self.scan)
-        return sample
+        if self.split == 'train':
+            image, label = apply_augmentations(image, label)
 
-    def create_global_cloud(self, sequence_index: int, step: int = 50) -> tuple:
-        """ Create a global point cloud from the sequence
-        :param sequence_index: sequence index
-        :param step: step between two points
-        :return: point cloud
-        """
-        colors = []
-        global_cloud = []
-
-        # Load samples from the sequence
-        seq = self.sequences[sequence_index]
-        samples = _get_samples([seq], step=step)
-
-        # Loop through the samples and store the points and their colors
-        for s in tqdm(samples.values()):
-            sample = deepcopy(s)
-            sample.load_semantic_cloud(self.scan)
-
-            # Transform the points
-            sample.to_absolute_position()
-            global_cloud.append(sample.points)
-            colors.append(sample.colors)
-
-        # Concatenate the points and colors
-        global_cloud = np.concatenate(global_cloud, axis=0)
-        colors = np.concatenate(colors, axis=0)
-        return global_cloud, colors
+        return image, label, index
 
     def __len__(self):
-        return len(self.samples)
+        return len(self.points)
+
+    def init(self):
+        log.info(f"Initializing dataset from path {self.path}")
+
+        # ----------- LOAD -----------
+
+        path = os.path.join(self.path, 'sequences')
+        for seq in self.sequences:
+            seq_path = os.path.join(path, f"{seq:02d}")
+            points, labels = open_sequence(seq_path)
+            self.points += points
+            self.labels += labels
+
+        log.info(f"Found {len(self.points)} samples")
+        assert len(self.points) == len(self.labels), "Number of points and labels must be equal"
+
+        # ----------- CROP -----------
+
+        self.points = self.points[:self.size]
+        self.labels = self.labels[:self.size]
+
+        log.info(f"Cropped dataset to {len(self.points)} samples")
+
+        # ----------- USE INDICES -----------
+
+        if self.indices is not None:
+            self.choose_data()
+            log.info(f"Using samples {self.indices} for {self.split} split")
+
+        log.info(f"Dataset initialized with {len(self.points)} samples")
+
+    def choose_data(self, indices=None):
+        if indices:
+            self.indices = indices
+        assert self.indices is not None
+
+        self.indices.sort()
+
+        assert max(self.indices) < len(self.points), "Index out of range"
+
+        self.points = [self.points[i] for i in self.indices]
+        self.labels = [self.labels[i] for i in self.indices]
 
 
-def _create_semantic_laser_scan(cfg: DictConfig) -> SemLaserScan:
-    """ Create a semantic laser scan object
-    :param cfg: configuration
-    :return: semantic laser scan object
-    """
-    scan = SemLaserScan(
-        nclasses=len(cfg.labels),
-        sem_color_dict=cfg.color_map,
-        project=True,
-        H=cfg.laser_scan.H,
-        W=cfg.laser_scan.W,
-        fov_up=cfg.laser_scan.fov_up,
-        fov_down=cfg.laser_scan.fov_down)
-    return scan
+def inspect_semantic_kitti360():
+    import open3d as o3d
+    from kitti360scripts.helpers.labels import id2label
+    import matplotlib.pyplot as plt
+
+    # id       color
+    color_map = {
+        0: (0, 0, 0),
+        1: (0, 0, 0),
+        2: (0, 0, 0),
+        3: (0, 0, 0),
+        4: (0, 0, 0),
+        5: (111, 74, 0),
+        6: (81, 0, 81),
+        7: (128, 64, 128),
+        8: (244, 35, 232),
+        9: (250, 170, 160),
+        10: (230, 150, 140),
+        11: (70, 70, 70),
+        12: (102, 102, 156),
+        13: (190, 153, 153),
+        14: (180, 165, 180),
+        15: (150, 100, 100),
+        16: (150, 120, 90),
+        17: (153, 153, 153),
+        18: (153, 153, 153),
+        19: (250, 170, 30),
+        20: (220, 220, 0),
+        21: (107, 142, 35),
+        22: (152, 251, 152),
+        23: (70, 130, 180),
+        24: (220, 20, 60),
+        25: (255, 0, 0),
+        26: (0, 0, 142),
+        27: (0, 0, 70),
+        28: (0, 60, 100),
+        29: (0, 0, 90),
+        30: (0, 0, 110),
+        31: (0, 80, 100),
+        32: (0, 0, 230),
+        33: (119, 11, 32),
+        34: (64, 128, 128),
+        35: (190, 153, 153),
+        36: (150, 120, 90),
+        37: (153, 153, 153),
+        38: (0, 64, 64),
+        39: (0, 128, 192),
+        40: (128, 64, 0),
+        41: (64, 64, 128),
+        42: (102, 0, 0),
+        43: (51, 0, 51),
+        44: (32, 32, 32),
+        -1: (0, 0, 142),
+    }
+
+    data_dir = os.environ['KITTI360_DATASET']
+    # data_dir = "/home/ruslan/data/datasets/KITTI/KITTI-360/"
+    scan = SemLaserScan(colorize=True, sem_color_dict=color_map, H=64, W=1024, fov_up=13.4, fov_down=-13.4)
+
+    for seq in ['2013_05_28_drive_0000_sync']:
+        pts_folder = os.path.join(data_dir, 'SemanticKITTI-360', seq, 'velodyne')
+
+        for pts_file in os.listdir(pts_folder):
+            pts_file = os.path.join(pts_folder, pts_file)
+            ids_file = pts_file.replace('velodyne', 'labels').replace('.bin', '.label')
+
+            points = np.load(pts_file)
+            ids = np.load(ids_file)
+
+            scan.set_points(points)
+            scan.set_label(ids)
+
+            plt.figure(figsize=(20, 10))
+            plt.subplot(2, 1, 1)
+            plt.imshow(scan.proj_depth)
+            plt.title('Depth image')
+
+            plt.subplot(2, 1, 2)
+            plt.imshow(scan.proj_sem_color)
+            plt.title('Semantic classes')
+            plt.show()
+
+            color = np.zeros((ids.size, 3))
+            for uid in np.unique(ids):
+                color[ids == uid] = id2label[uid].color
+
+            pcd = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(points)
+            pcd.colors = o3d.utility.Vector3dVector(color / color.max())
+
+            o3d.visualization.draw_geometries([pcd])
 
 
-def _init_sequences(path: str, seq_list: list, seq_structure: DictConfig) -> list:
-    """ Initialize the sequences
-    :param path: path to the sequences
-    :param seq_list: list of sequences to load
-    :param seq_structure: structure of the sequences
-    :return: list of Sequence objects
-    """
-    sequences = []
-    for seq in seq_list:
-        seq_name = f"{seq:02d}"
-        seq_path = os.path.join(path, seq_name)
-        sequences.append(Sequence(name=seq_name,
-                                  path=seq_path,
-                                  points_dir=os.path.join(seq_path, seq_structure.points_dir),
-                                  labels_dir=os.path.join(seq_path, seq_structure.labels_dir),
-                                  calib_file=os.path.join(seq_path, seq_structure.calib_file),
-                                  poses_file=os.path.join(seq_path, seq_structure.poses_file),
-                                  times_file=os.path.join(seq_path, seq_structure.times_file)))
-    return sequences
-
-
-def _get_samples(sequences: list, size: int = None, step: int = 1, ) -> dict:
-    """ Get the samples from the sequences and store them in a dict
-    :param sequences: list of Sequence objects
-    :param step: step between two samples (for subsampling)
-    :return: dict of samples
-    """
-    samples, samples_list, index = {}, [], 0
-    size = size if size is not None else float('inf')
-    # Load the samples from the sequences
-    for seq in sequences:
-        samples_list += seq.get_samples()
-
-    # Subsample the samples and store them in a dict until the size is reached
-    for s in samples_list[::step]:
-        samples[index] = s
-        index += 1
-        if index >= size:
-            return samples
-
-    return samples
+if __name__ == "__main__":
+    inspect_semantic_kitti360()

@@ -1,7 +1,6 @@
 # @package _global_
 defaults:
   - override /hydra: test
-  - override /test: dev
 
 action: test
-connection: local
+

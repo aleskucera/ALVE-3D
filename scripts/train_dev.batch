@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --nodes=1                         # 1 node
-#SBATCH --ntasks-per-node=128             # 64 tasks per node
+#SBATCH --ntasks-per-node=8               # 8 CPUs per node
 #SBATCH --time=1:00:00                    # time limits: 8 hours
 #SBATCH --error=myJob.err                 # standard error file
 #SBATCH --output=myJob.out                # standard output file
@@ -10,7 +10,4 @@
 #SBATCH --mail-user=kuceral4@fel.cvut.cz  # where send info about job
 #SBATCH --mail-type=ALL                   # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
-# Change limit for opened files
-ulimit -n 100000
-
-singularity run --nv singularity/deep_learning_image.sif python src/main.py --action train --dev
+singularity run --nv singularity/alve-3d.sif python main.py launch=train_dev

@@ -1,3 +1,3 @@
+from .selector import Selector
 from .trainer import Trainer
-from .model import create_model
-from .tester import Tester
+from .utils import create_model

@@ -1,3 +1,4 @@
-name: deeplabv3_iou_0.199
-model_name: deeplabv3_resnet101_lr_0.0001_bs_16_epoch_74_SemanticKITTI_SemanticUSL_depth_labels_None_iou_0.199.pth
+name: deeplabv3_iou_0.363
+model_name: deeplabv3_e-58_iou-0.363.pth
 dataset_size: null
+batch_size: 20

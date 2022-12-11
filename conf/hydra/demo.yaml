@@ -1,2 +1,0 @@
-run:
-  dir: outputs/${now:%d.%m.%Y}/Demo-${demo}-${now:%H:%M}/${node}

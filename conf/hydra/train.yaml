@@ -1,2 +1,2 @@
 run:
-  dir: outputs/${now:%d.%m.%Y}/Train-${now:%H:%M}-${model.architecture}/${node}
+  dir: outputs/${now:%d.%m.%Y}/Train-${now:%H:%M}-${model.architecture}

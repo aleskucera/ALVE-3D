@@ -1,17 +1,19 @@
 defaults:
   - _self_
-  - path: default
-  - kitti: default
-  - model: fcn_resnet50
-  - train: default
+
+  # Training and testing settings
+  - ds: kitti
   - test: default
+  - train: default
+  - model: deeplabv3_resnet101
+
+  # Common settings
+  - path: default
   - hydra: default
-  - run: default
-  - connect: default
 
-action: None
+  # Configure launch
+  - launch: default
 
-node: master
-connection: remote
+action: none
 
 

@@ -1,2 +1,2 @@
 # Building singularity image from the def file
-sudo singularity build --nv singularity/deep_learning_image.sif singularity/recepie.def
+sudo singularity build --nv singularity/alve-3d.sif singularity/recepie.def
