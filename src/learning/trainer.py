@@ -8,6 +8,7 @@ from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 from torchmetrics import MetricCollection
 from torch.utils.tensorboard import SummaryWriter
+from typing import Tuple
 
 from .state import State
 from .utils import parse_data
@@ -132,7 +133,7 @@ class Trainer:
         self._compute_and_log(epoch, 'val')
 
     def _forward_pass(self, image_batch: torch.Tensor, label_batch: torch.Tensor,
-                      indices: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+                      indices: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         # Forward pass
         output = self.model(image_batch)['out']
         loss = self.criterion(output, label_batch)
