@@ -109,13 +109,15 @@ class Trainer:
             # Extract only inputs and labels
             image_batch, label_batch, indices = parse_data(data, device)
 
+            self.optimizer.zero_grad()
+
             # Forward pass
             loss, output = self._forward_pass(image_batch, label_batch, indices)
 
             # Backward pass
             loss.backward()
             self.optimizer.step()
-            self.optimizer.zero_grad()
+            # self.optimizer.zero_grad()
 
         self._compute_and_log(epoch, 'train')
 
