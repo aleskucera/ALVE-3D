@@ -132,6 +132,10 @@ class State:
         labels = [dataset.labels[idx] for idx in self.worst_samples]
         predictions = torch.argmax(self.worst_predictions, dim=1)
 
+        points = points[:5]
+        labels = labels[:5]
+        predictions = predictions[:5]
+
         # Visualize the worst predictions and save to tensorboard
         for i, (point, label, prediction) in enumerate(zip(points, labels, predictions)):
             self.scan.open_points(point)
