@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import os
+import random
+
 import torch
 import numpy as np
+from scipy.spatial.transform import Rotation as R
+
 from .project import project_scan
 from .colormap import map_color, dict_to_color_map, instances_color_map
 
@@ -53,6 +57,8 @@ class LaserScan:
         self.remissions = None
         self.radius = None
 
+        self.drop_mask = None
+
         # Raw projected data
         self.proj_xyz = None
         self.proj_idx = None
@@ -103,15 +109,17 @@ class LaserScan:
     # ------------------------------  RAW DATA ------------------------------
 
     @arg_check
-    def open_points(self, filename: str) -> None:
+    def open_points(self, filename: str, flip_prob: float = 0, trans_prob: float = 0,
+                    rot_prob: float = 0, drop_prob: float = 0) -> None:
         scan = np.fromfile(filename, dtype=np.float32)
         scan = scan.reshape((-1, 4))
         points = scan[:, :3]
         remissions = scan[:, 3]
-        self.set_points(points, remissions)
+        self.set_points(points, remissions, flip_prob, trans_prob, rot_prob, drop_prob)
 
     @arg_check
-    def set_points(self, points: np.ndarray, remissions: np.ndarray = None) -> None:
+    def set_points(self, points: np.ndarray, remissions: np.ndarray = None, flip_prob: float = 0,
+                   trans_prob: float = 0, rot_prob: float = 0, drop_prob: float = 0) -> None:
         # Points are first 3 columns
         self.points = points
 
@@ -122,6 +130,29 @@ class LaserScan:
             self.remissions = np.zeros((points.shape[0]), dtype=np.float32)
 
         self.radius = np.linalg.norm(self.points, axis=1)
+
+        # Flip points
+        if random.random() < flip_prob:
+            self.points[:, 0] *= -1
+
+        # Translate points
+        if random.random() < trans_prob:
+            self.points[:, 0] += random.uniform(-5, 5)
+            self.points[:, 1] += random.uniform(-3, 3)
+            self.points[:, 2] += random.uniform(-1, 0)
+
+        # Rotate points
+        if random.random() < rot_prob:
+            deg = random.uniform(-180, 180)
+            rot = R.from_euler('z', deg, degrees=True)
+            self.points = rot.apply(self.points)
+
+        # Drop points
+        rng = np.random.default_rng()
+        self.drop_mask = rng.choice([False, True], size=self.points.shape[0], p=[drop_prob, 1 - drop_prob])
+        self.points = self.points[self.drop_mask]
+        self.radius = self.radius[self.drop_mask]
+        self.remissions = self.remissions[self.drop_mask]
 
         # Project data
         projection = project_scan(self.points, self.remissions, self.proj_H,
@@ -158,10 +189,10 @@ class LaserScan:
     @arg_check
     def set_label(self, semantics: np.ndarray, instances: np.ndarray) -> None:
         # semantic label in lower half
-        self.sem_label = semantics
+        self.sem_label = semantics[self.drop_mask]
 
         # instance label in upper half
-        self.inst_label = instances
+        self.inst_label = instances[self.drop_mask]
 
         # Project label
         proj_indices = self.proj_idx[self.proj_mask]

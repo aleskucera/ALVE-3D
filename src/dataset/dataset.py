@@ -2,6 +2,7 @@ import os
 import logging
 
 import numpy as np
+import torch
 
 from torch.utils.data import Dataset
 from omegaconf import DictConfig
@@ -28,6 +29,9 @@ class SemanticDataset(Dataset):
         self.points = []
         self.labels = []
 
+        self.mean = np.array(cfg.mean, dtype=np.float32)
+        self.std = np.array(cfg.std, dtype=np.float32)
+
         self.scan = LaserScan(label_map=cfg.learning_map)
 
         self.init()
@@ -36,16 +40,23 @@ class SemanticDataset(Dataset):
         points_path = self.points[index]
         label_path = self.labels[index]
 
-        self.scan.open_points(points_path)
+        if self.split == 'train':
+            self.scan.open_points(points_path, flip_prob=0.5, trans_prob=0.5, rot_prob=0.5, drop_prob=0.5)
+        else:
+            self.scan.open_points(points_path)
+
         self.scan.open_label(label_path)
 
-        image = self.scan.proj_depth[np.newaxis, ...]
+        # concatenate depth, xyz and remission
+        proj = np.concatenate([self.scan.proj_depth[np.newaxis, ...],
+                               self.scan.proj_xyz.transpose(2, 0, 1),
+                               self.scan.proj_remission[np.newaxis, ...]], axis=0)
+
+        proj = (proj - self.mean[:, np.newaxis, np.newaxis]) / self.std[:, np.newaxis, np.newaxis]
+
         label = self.scan.proj_sem_label.astype(np.long)
 
-        if self.split == 'train':
-            image, label = apply_augmentations(image, label)
-
-        return image, label, index
+        return proj, label, index
 
     def __len__(self):
         return len(self.points)

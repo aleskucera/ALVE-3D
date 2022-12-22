@@ -10,8 +10,12 @@ from torchmetrics import MetricCollection
 from torch.utils.tensorboard import SummaryWriter
 from typing import Tuple
 
+from collections import namedtuple
+from typing import Any
+
 from .state import State
-from .utils import parse_data
+from .utils import parse_data, calculate_weights
+from .lovasz import LovaszSoftmax
 from src.laserscan import LaserScan
 from src.dataset import SemanticDataset
 
@@ -29,8 +33,6 @@ def train_requirements(func):
     def wrapper(self, *args, **kwargs):
         if self.train_ds is None:
             raise RuntimeError('Train dataset is not set')
-        if self.criterion is None:
-            raise RuntimeError('Criterion is not set')
         if self.optimizer is None:
             raise RuntimeError('Optimizer is not set')
         if self.scheduler is None:
@@ -41,10 +43,38 @@ def train_requirements(func):
     return wrapper
 
 
+class ModelWrapper(torch.nn.Module):
+    """
+    Wrapper class for model with dict/list rvalues.
+    """
+
+    def __init__(self, model: torch.nn.Module) -> None:
+        """
+        Init call.
+        """
+        super().__init__()
+        self.model = model
+
+    def forward(self, input_x: torch.Tensor) -> Any:
+        """
+        Wrap forward call.
+        """
+        data = self.model(input_x)
+
+        if isinstance(data, dict):
+            data_named_tuple = namedtuple("ModelEndpoints", sorted(data.keys()))  # type: ignore
+            data = data_named_tuple(**data)  # type: ignore
+
+        elif isinstance(data, list):
+            data = tuple(data)
+
+        return data
+
+
 class Trainer:
     def __init__(self, model: torch.nn.Module, metrics: MetricCollection,
                  cfg: DictConfig, val_ds: SemanticDataset, train_ds: SemanticDataset = None,
-                 criterion: torch.nn.Module = None, optimizer: torch.optim.Optimizer = None,
+                 optimizer: torch.optim.Optimizer = None,
                  scheduler: object = None):
 
         self.cfg = cfg
@@ -52,13 +82,20 @@ class Trainer:
         self.val_ds = val_ds
         self.train_ds = train_ds
 
-        self.criterion = criterion
         self.optimizer = optimizer
         self.scheduler = scheduler
 
         self.writer = SummaryWriter(cfg.path.output)
         self.scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
         self.state = State(writer=self.writer, metrics=metrics, logger=log, scan=self.scan)
+
+        weights = calculate_weights(cfg)
+        self.cross_entropy = torch.nn.CrossEntropyLoss(weight=weights, ignore_index=0).to(device)
+        self.lovasz = LovaszSoftmax(ignore=0).to(device)
+
+        # Add model graph to tensorboard
+        model_wrapper = ModelWrapper(self.model)
+        self.writer.add_graph(model_wrapper, torch.rand(1, 5, 64, 2048).to(device))
 
     @train_requirements
     def train(self, epochs: int, save_path: str) -> None:
@@ -96,7 +133,7 @@ class Trainer:
                 image_batch, label_batch, indices = parse_data(data, device)
 
                 # Forward pass (don't need loss for backward pass)
-                output = self.model(image_batch)['out']
+                output = self.model(image_batch)  # ['out']
                 self.state.accumulate_metrics(output, label_batch, indices)
 
         # Compute metrics, log to tensorboard, console and reset
@@ -137,8 +174,9 @@ class Trainer:
     def _forward_pass(self, image_batch: torch.Tensor, label_batch: torch.Tensor,
                       indices: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         # Forward pass
-        output = self.model(image_batch)['out']
-        loss = self.criterion(output, label_batch)
+        output = self.model(image_batch)  # ['out']
+        loss = self.cross_entropy(output, label_batch)
+        loss += self.lovasz(output, label_batch)
 
         # Accumulate loss and metrics
         self.state.accumulate_loss(loss.item())

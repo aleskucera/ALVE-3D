@@ -42,3 +42,16 @@ def create_model(cfg: DictConfig):
 def _load_model(architecture: str, pretrained: bool = True):
     model = eval(f'tms.{architecture}')(pretrained=pretrained)
     return model
+
+
+def calculate_weights(cfg: DictConfig) -> torch.Tensor:
+    content = cfg.ds.content
+    label_map = cfg.ds.learning_map
+    num_classes = cfg.ds.num_classes
+    epsilon = cfg.train.weight_epsilon
+    weights = torch.zeros(num_classes)
+    for k, v in label_map.items():
+        weights[v] += content[k]
+
+    weights = 1 / (weights + epsilon)
+    return weights

@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from torchmetrics import MetricCollection
 from torchmetrics.classification import MulticlassAccuracy, MulticlassJaccardIndex
 
+from .model import SalsaNext
 from .dataset import SemanticDataset
 from .learning import Trainer, create_model, Selector
 
@@ -23,12 +24,9 @@ def train_model(cfg: DictConfig):
     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='valid', size=cfg.train.dataset_size)
 
     # Create model and allow it to be trained on multiple GPUs
-    model = create_model(cfg)
+    model = SalsaNext(cfg.ds.num_classes)
     model.to(device)
 
-    # Create criterion, optimizer and scheduler
-    weights = calculate_weights(cfg)
-    criterion = torch.nn.CrossEntropyLoss(weight=weights, ignore_index=0).to(device)
     optimizer = torch.optim.Adam(model.parameters(), cfg.train.learning_rate)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
 
@@ -38,8 +36,8 @@ def train_model(cfg: DictConfig):
                                  validate_args=False).to(device)
     metrics = MetricCollection([acc, iou])
 
-    trainer = Trainer(model=model, metrics=metrics, cfg=cfg, train_ds=train_ds, val_ds=val_ds,
-                      criterion=criterion, optimizer=optimizer, scheduler=scheduler)
+    trainer = Trainer(model=model, metrics=metrics, cfg=cfg, train_ds=train_ds,
+                      val_ds=val_ds, optimizer=optimizer, scheduler=scheduler)
 
     trainer.train(cfg.train.epochs, cfg.path.models)
 
@@ -123,16 +121,3 @@ def test_model(cfg):
 
     trainer = Trainer(model=model, metrics=metrics, cfg=cfg, val_ds=test_ds)
     trainer.test(vis=True)
-
-
-def calculate_weights(cfg: DictConfig) -> torch.Tensor:
-    content = cfg.ds.content
-    label_map = cfg.ds.learning_map
-    num_classes = cfg.ds.num_classes
-    weights = torch.zeros(num_classes)
-    for k, v in label_map.items():
-        weights[v] += content[k]
-
-    weights = 1 / weights
-    weights = weights / weights.sum()
-    return weights

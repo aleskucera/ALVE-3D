@@ -45,7 +45,7 @@ def show_dataset(cfg: DictConfig) -> None:
     # size = 200
     size = None
     sequences = None
-    indices = random.sample(range(1, 100), 10)
+    indices = None
 
     # create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path, sequences=sequences, cfg=cfg.ds,

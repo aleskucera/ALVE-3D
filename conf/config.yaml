@@ -5,7 +5,7 @@ defaults:
   - ds: kitti
   - test: default
   - train: default
-  - model: deeplabv3_resnet101
+  - model: salsa_next
 
   # Common settings
   - path: default
