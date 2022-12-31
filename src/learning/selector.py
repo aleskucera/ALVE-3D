@@ -3,6 +3,8 @@ import logging
 import torch
 import numpy as np
 from tqdm import tqdm
+from torchmetrics import MetricCollection
+from torchmetrics.classification import MulticlassAccuracy, MulticlassJaccardIndex
 
 from .utils import parse_data
 
@@ -10,26 +12,39 @@ log = logging.getLogger(__name__)
 
 
 class Selector:
-    def __init__(self, model, loader, device):
+    def __init__(self, model, loader, device, num_classes=20):
         self.model = model
         self.device = device
         self.loader = loader
+        acc = MulticlassAccuracy(num_classes=num_classes, ignore_index=0, validate_args=False).to(device)
+        iou = MulticlassJaccardIndex(num_classes=num_classes, ignore_index=0, validate_args=False).to(device)
+        self.metric_collection = MetricCollection([acc, iou])
 
-    def calculate_entropies(self) -> np.ndarray:
+    def calculate_entropies(self) -> tuple[torch.Tensor, torch.Tensor]:
         entropies = []
+        indices = []
+        ious = []
         self.model.eval()
         with torch.no_grad():
             for data in tqdm(self.loader):
-                image_batch, _, idx_batch = parse_data(data, self.device)
-                output = self.model(image_batch)['out']
+                image_batch, label_batch, idx_batch = parse_data(data, self.device)
+                output = self.model(image_batch)
 
-                # Calculate entropy
-                entropy_batch = create_entropy_batch(output, idx_batch)
+                entropy_batch = calculate_entropy(output)
                 entropies.append(entropy_batch)
 
-        entropies = np.concatenate(entropies, axis=0)
-        entropies = sort_entropies(entropies)
-        return entropies
+                metrics = self.metric_collection(output, label_batch)
+                # iou = metrics["MulticlassJaccardIndex"]
+                # ious.append(iou)
+
+                indices.append(idx_batch)
+
+        # Create tensor of entropies and indices
+        entropies = torch.cat(entropies)
+        indices = torch.cat(indices)
+        # ious = torch.tensor(ious, device=self.device)
+        order = torch.argsort(entropies, descending=True)
+        return entropies[order], indices[order]
 
 
 def sort_entropies(entropies: np.ndarray) -> np.ndarray:
@@ -37,13 +52,17 @@ def sort_entropies(entropies: np.ndarray) -> np.ndarray:
     return entropies[order]
 
 
-def create_entropy_batch(output: torch.Tensor, idx_batch: torch.Tensor) -> np.ndarray:
+def create_entropy_batch(output: torch.Tensor, idx_batch: torch.Tensor) -> torch.Tensor:
     entropy_batch = calculate_entropy(output)
-    entropy_batch = entropy_batch.cpu().numpy()[..., np.newaxis]
 
-    idx_batch = idx_batch.cpu().numpy()[..., np.newaxis]
+    # Concatenate entropy with indices
+    data_batch = torch.vstack([idx_batch, entropy_batch]).T
 
-    data_batch = np.concatenate((entropy_batch, idx_batch), axis=1)
+    # entropy_batch = entropy_batch.cpu().numpy()[..., np.newaxis]
+    #
+    # idx_batch = idx_batch.cpu().numpy()[..., np.newaxis]
+    #
+    # data_batch = np.concatenate((entropy_batch, idx_batch), axis=1)
     return data_batch
 
 

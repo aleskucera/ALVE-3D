@@ -6,9 +6,7 @@ import torchvision.models.segmentation as tms
 
 def parse_data(data: tuple, device: torch.device):
     image_batch, label_batch, idx_batch = data
-    image_batch = image_batch.to(device)
-    label_batch = label_batch.to(device)
-    return image_batch, label_batch, idx_batch
+    return image_batch.to(device), label_batch.to(device), idx_batch.to(device)
 
 
 def create_model2(cfg: DictConfig):

@@ -1,11 +1,10 @@
 import os
 import logging
+from copy import deepcopy
 
 import torch.nn
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
-from torchmetrics import MetricCollection
-from torchmetrics.classification import MulticlassAccuracy, MulticlassJaccardIndex
 
 from .model import SalsaNext
 from .dataset import SemanticDataset
@@ -23,53 +22,29 @@ def train_model(cfg: DictConfig):
     train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size)
     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='valid', size=cfg.train.dataset_size)
 
-    # Create model and allow it to be trained on multiple GPUs
     model = SalsaNext(cfg.ds.num_classes)
     model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), cfg.train.learning_rate)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
 
-    acc = MulticlassAccuracy(num_classes=cfg.ds.num_classes, ignore_index=0,
-                             validate_args=False).to(device)
-    iou = MulticlassJaccardIndex(num_classes=cfg.ds.num_classes, ignore_index=0,
-                                 validate_args=False).to(device)
-    metrics = MetricCollection([acc, iou])
-
-    trainer = Trainer(model=model, metrics=metrics, cfg=cfg, train_ds=train_ds,
+    trainer = Trainer(model=model, cfg=cfg, train_ds=train_ds,
                       val_ds=val_ds, optimizer=optimizer, scheduler=scheduler)
 
     trainer.train(cfg.train.epochs, cfg.path.models)
 
 
 def train_model_active(cfg: DictConfig):
-    from copy import deepcopy
-
-    def select_ids(loader, model, n_querry=4):
-        selector = Selector(model=model, loader=loader, device=device)
-        data = selector.calculate_entropies()
-
-        ids = {int(i) for i in data[:n_querry, 1]}
-        return ids
-
-    model = create_model(cfg)
-    model.to(device)
-
-    criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), cfg.train.learning_rate)
-
-    acc = MulticlassAccuracy(num_classes=cfg.ds.num_classes, mdmc_average='samplewise').to(device)
-    iou = MulticlassJaccardIndex(num_classes=cfg.ds.num_classes).to(device)
-    metrics = MetricCollection([acc, iou])
-
     ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size)
-
     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='valid', size=cfg.train.dataset_size)
 
     unlabelled_ids = set(range(len(ds)))
 
-    val_loader = DataLoader(val_ds, batch_size=cfg.train.batch_size,
-                            shuffle=True, num_workers=gpu_count * 4)
+    model = SalsaNext(cfg.ds.num_classes)
+    model.to(device)
+
+    optimizer = torch.optim.Adam(model.parameters(), cfg.train.learning_rate)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
 
     unlabelled_ds = deepcopy(ds)
     # TODO: need to be tested, change n_iters=5 based on active learning termination criteria
@@ -94,30 +69,28 @@ def train_model_active(cfg: DictConfig):
         log.info(f"Train dataset length: {len(train_ds)}")
         log.info(f"Test dataset length: {len(unlabelled_ds)}")
 
-        train_loader = DataLoader(train_ds, batch_size=cfg.train.batch_size,
-                                  shuffle=True, num_workers=gpu_count * 4)
+        trainer = Trainer(model=model, cfg=cfg, train_ds=train_ds,
+                          val_ds=val_ds, optimizer=optimizer, scheduler=scheduler)
 
-        trainer = Trainer(model=model, criterion=criterion, optimizer=optimizer,
-                          metrics=metrics, device=device, log_path=cfg.path.output,
-                          train_loader=train_loader, val_loader=val_loader)
-
-        trainer.train(cfg.train.epochs, cfg.path.models)
+        best_iou = trainer.train(cfg.train.epochs, cfg.path.models)
+        print(f"Best IoU: {best_iou}")
 
 
 def test_model(cfg):
     test_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='valid', size=cfg.test.dataset_size)
 
     model_path = os.path.join(cfg.path.models, 'pretrained', cfg.test.model_name)
-    model = create_model(cfg)
+    model = SalsaNext(cfg.ds.num_classes)
     model.load_state_dict(torch.load(model_path))
     model.to(device)
 
-    acc = MulticlassAccuracy(num_classes=cfg.ds.num_classes, ignore_index=0,
-                             validate_args=False).to(device)
-    iou = MulticlassJaccardIndex(num_classes=cfg.ds.num_classes, ignore_index=0,
-                                 validate_args=False).to(device)
-
-    metrics = MetricCollection([acc, iou])
-
-    trainer = Trainer(model=model, metrics=metrics, cfg=cfg, val_ds=test_ds)
+    trainer = Trainer(model=model, cfg=cfg, val_ds=test_ds)
     trainer.test(vis=True)
+
+
+def select_ids(loader, model, n_querry=4):
+    selector = Selector(model=model, loader=loader, device=device)
+    entropies, indices = selector.calculate_entropies()
+
+    ids = {int(i) for i in indices[:n_querry]}
+    return ids

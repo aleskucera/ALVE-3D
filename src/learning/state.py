@@ -87,6 +87,10 @@ class State:
         else:
             return False
 
+    def get_best_iou(self) -> float:
+        """ Return best iou """
+        return max(self.metric_history['MulticlassJaccardIndex'])
+
     def log(self, dataset, epoch: int, phase: str, vis: False) -> None:
         """ Log loss and metrics """
         self._log_to_console(epoch, phase)

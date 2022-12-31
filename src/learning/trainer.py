@@ -1,20 +1,22 @@
 import os
 import logging
+from typing import Any
+from typing import Tuple
+from collections import namedtuple
 
 import torch
 from tqdm import tqdm
-
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 from torchmetrics import MetricCollection
 from torch.utils.tensorboard import SummaryWriter
-from typing import Tuple
-
-from collections import namedtuple
-from typing import Any
+from torchmetrics.classification import MulticlassAccuracy, MulticlassJaccardIndex
 
 from .state import State
 from .utils import parse_data, calculate_weights
+from .dice import DiceLoss
+from .focal import FocalLoss
+from .dicebce import DiceBCELoss
 from .lovasz import LovaszSoftmax
 from src.laserscan import LaserScan
 from src.dataset import SemanticDataset
@@ -72,10 +74,9 @@ class ModelWrapper(torch.nn.Module):
 
 
 class Trainer:
-    def __init__(self, model: torch.nn.Module, metrics: MetricCollection,
-                 cfg: DictConfig, val_ds: SemanticDataset, train_ds: SemanticDataset = None,
-                 optimizer: torch.optim.Optimizer = None,
-                 scheduler: object = None):
+    def __init__(self, model: torch.nn.Module, cfg: DictConfig,
+                 val_ds: SemanticDataset, train_ds: SemanticDataset = None,
+                 optimizer: torch.optim.Optimizer = None, scheduler: object = None):
 
         self.cfg = cfg
         self.model = model
@@ -85,20 +86,27 @@ class Trainer:
         self.optimizer = optimizer
         self.scheduler = scheduler
 
-        self.writer = SummaryWriter(cfg.path.output)
-        self.scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
-        self.state = State(writer=self.writer, metrics=metrics, logger=log, scan=self.scan)
-
+        # Losses
         weights = calculate_weights(cfg)
         self.cross_entropy = torch.nn.CrossEntropyLoss(weight=weights, ignore_index=0).to(device)
         self.lovasz = LovaszSoftmax(ignore=0).to(device)
+
+        # Metrics
+        acc = MulticlassAccuracy(num_classes=cfg.ds.num_classes, ignore_index=0, validate_args=False).to(device)
+        iou = MulticlassJaccardIndex(num_classes=cfg.ds.num_classes, ignore_index=0, validate_args=False).to(device)
+        metrics = MetricCollection([acc, iou])
+
+        # Logging
+        self.writer = SummaryWriter(cfg.path.output)
+        self.scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
+        self.state = State(writer=self.writer, metrics=metrics, logger=log, scan=self.scan)
 
         # Add model graph to tensorboard
         model_wrapper = ModelWrapper(self.model)
         self.writer.add_graph(model_wrapper, torch.rand(1, 5, 64, 2048).to(device))
 
     @train_requirements
-    def train(self, epochs: int, save_path: str) -> None:
+    def train(self, epochs: int, save_path: str) -> float:
         """ Train model for a number of epochs and save the best models to path """
 
         # Create dataloaders
@@ -121,6 +129,8 @@ class Trainer:
                 model_path = os.path.join(save_path, model_name)
                 log.info(f'New best model found, saving to {model_path}')
                 self._save_model(model_path)
+
+        return self.state.get_best_iou()
 
     def test(self, vis: bool = False) -> None:
         """ Test model on test set """

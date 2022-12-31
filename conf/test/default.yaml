@@ -1,4 +1,4 @@
-name: deeplabv3_iou_0.363
-model_name: deeplabv3_e-58_iou-0.363.pth
+name: salsa_next_iou-0.564
+model_name: salsa_next_e-144_iou-0.564.pth
 dataset_size: null
-batch_size: 20
+batch_size: 2
