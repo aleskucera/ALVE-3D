@@ -88,7 +88,7 @@ def test_model(cfg):
     trainer.test(vis=True)
 
 
-def select_ids(loader, model, n_querry=4):
+def select_ids(loader, model, n_querry=1000):
     selector = Selector(model=model, loader=loader, device=device)
     entropies, indices = selector.calculate_entropies()
 
