@@ -3,6 +3,7 @@ import logging
 
 import numpy as np
 import torch
+from tqdm import tqdm
 
 from torch.utils.data import Dataset
 from omegaconf import DictConfig
@@ -31,6 +32,7 @@ class SemanticDataset(Dataset):
         self.poses = []
         self.times = []
         self.calib = []
+        self.sequence_indices = []
 
         self.mean = np.array(cfg.mean, dtype=np.float32)
         self.std = np.array(cfg.std, dtype=np.float32)
@@ -78,6 +80,7 @@ class SemanticDataset(Dataset):
             self.poses += poses
             self.times += times
             self.calib += [calib] * len(points)
+            self.sequence_indices += [seq] * len(points)
 
         log.info(f"Found {len(self.points)} samples")
         assert len(self.points) == len(self.labels), "Number of points and labels must be equal"
@@ -108,6 +111,43 @@ class SemanticDataset(Dataset):
 
         self.points = [self.points[i] for i in self.indices]
         self.labels = [self.labels[i] for i in self.indices]
+
+    def get_global_cloud(self, sequence: int):
+        cloud = []
+        label = []
+        step = 50
+
+        points = [self.points[i] for i in range(len(self.points)) if self.sequence_indices[i] == sequence]
+        labels = [self.labels[i] for i in range(len(self.labels)) if self.sequence_indices[i] == sequence]
+        poses = [self.poses[i] for i in range(len(self.poses)) if self.sequence_indices[i] == sequence]
+
+        points = points[::step]
+        labels = labels[::step]
+        poses = poses[::step]
+
+        for p, l, pos in tqdm(zip(points, labels, poses), total=len(points)):
+            self.scan.open_points(p)
+            self.scan.open_label(l)
+
+            pos = np.array(pos).reshape(3, 4)
+            hom_points = np.hstack((self.scan.points, np.ones((self.scan.points.shape[0], 1))))
+            transformed_points = np.matmul(hom_points, pos.T)
+
+            cloud.append(transformed_points[:, :3])
+            label.append(self.scan.sem_label)
+
+        cloud = np.concatenate(cloud, axis=0)
+
+        # Create label as numpy array but use only first 16 bits
+        label = np.concatenate(label, axis=0).astype(np.uint16)
+
+        # # Save point cloud to file
+        # np.save(os.path.join(self.path, f"sequences/{sequence:02d}/global_cloud.bin"), points)
+        #
+        # # Save labels to the file where upper 16 bits are the instance label and lower 16 bits are the semantic label
+        # np.save(os.path.join(self.path, f"sequences/{sequence:02d}/global_label.label"), label)
+
+        return cloud, label
 
 
 def inspect_semantic_kitti360():

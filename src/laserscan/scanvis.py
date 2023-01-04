@@ -87,6 +87,7 @@ class ScanVis:
         if isinstance(self.scans[0], str):
             self.scan.open_points(self.scans[self.offset])
         else:
+            print('Setting points')
             self.scan.set_points(self.scans[self.offset])
 
         if self.raw_cloud:
@@ -96,8 +97,10 @@ class ScanVis:
         # Update the labels
         if self.labels is not None:
             if isinstance(self.labels[0], str):
+                print('Opening labels')
                 self.scan.open_label(self.labels[self.offset])
             else:
+                print('Setting labels')
                 self.scan.set_label(self.labels[self.offset])
 
             if self.semantics:

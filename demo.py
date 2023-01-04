@@ -86,10 +86,15 @@ def common_points(cfg: DictConfig):
     dataset = SemanticDataset(dataset_path=cfg.ds.path, sequences=sequences, cfg=cfg.ds,
                               split='train', indices=indices, size=size)
 
+    # Get global cloud
+    cloud, label = dataset.get_global_cloud(0)
+
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
+    print(f'Cloud shape: {cloud.shape}')
+    print(f'Label shape: {label.shape}')
 
     # create scan visualizer
-    vis = ScanVis(scan=scan, scans=dataset.points, labels=dataset.labels, raw_cloud=True, instances=True)
+    vis = ScanVis(scan=scan, scans=[cloud], labels=[label], raw_cloud=True, instances=True)
     vis.run()
 
 

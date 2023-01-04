@@ -187,12 +187,15 @@ class LaserScan:
         self.set_label(semantics, instances)
 
     @arg_check
-    def set_label(self, semantics: np.ndarray, instances: np.ndarray) -> None:
+    def set_label(self, semantics: np.ndarray, instances: np.ndarray = None) -> None:
         # semantic label in lower half
         self.sem_label = semantics[self.drop_mask]
 
         # instance label in upper half
-        self.inst_label = instances[self.drop_mask]
+        if instances is not None:
+            self.inst_label = instances[self.drop_mask]
+        else:
+            self.inst_label = np.zeros((self.points.shape[0]), dtype=np.int32)
 
         # Project label
         proj_indices = self.proj_idx[self.proj_mask]
