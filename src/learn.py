@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 
 from .model import SalsaNext
 from .dataset import SemanticDataset
-from .learning import Trainer, create_model, Selector
+from .learning import Trainer, Selector
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +35,8 @@ def train_model(cfg: DictConfig):
 
 
 def train_model_active(cfg: DictConfig):
+    print(cfg.active)
+
     ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size)
     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='valid', size=cfg.train.dataset_size)
 
@@ -94,3 +96,10 @@ def select_ids(loader, model, n_querry=1000):
 
     ids = {int(i) for i in indices[:n_querry]}
     return ids
+
+
+def check_termination_condition(cfg, best_iou, dataset_size):
+    if cfg.active.termination_criterion == 'max_samples':
+        return len(dataset_size) >= cfg.active.max_samples
+    elif cfg.active.termination_criterion == 'min_iou':
+        return best_iou >= cfg.active.min_iou

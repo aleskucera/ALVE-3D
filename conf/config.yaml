@@ -6,6 +6,7 @@ defaults:
   - test: default
   - train: default
   - model: salsa_next
+  - active: default
 
   # Common settings
   - path: default

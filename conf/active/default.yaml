@@ -1,0 +1,4 @@
+dataset_size: 1000
+min_iou: 0.5
+select_criteria: quantity # or entropy
+termination_criteria: dataset_size # or min_iou

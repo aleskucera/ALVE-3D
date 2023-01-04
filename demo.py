@@ -26,6 +26,8 @@ def main(cfg: DictConfig):
         show_dataset(cfg)
     elif cfg.action == 'select_indices':
         select_indices(cfg)
+    elif cfg.action == 'common_points':
+        common_points(cfg)
     else:
         raise ValueError('Invalid demo type.')
 
@@ -41,7 +43,6 @@ def show_paths(cfg: DictConfig) -> None:
 
 def show_dataset(cfg: DictConfig) -> None:
     # dataset attributes
-    # size = 200
     size = None
     sequences = None
     indices = None
@@ -70,12 +71,26 @@ def select_indices(cfg: DictConfig):
     model.load_state_dict(torch.load(model_path))
     model = model.to(device)
 
-    tester = Selector(model=model, loader=test_loader, device=device)
-    entropies, indices = tester.calculate_entropies()
-
-    print(f'\nFirst 10 entropies: \n{entropies[:10]}')
-    print(f'\nFirst 10 indices: \n{indices[:10]}')
+    selector = Selector(model=model, loader=test_loader, device=device)
+    # entropies, indices = tester.calculate_entropies()
+    #
+    # print(f'\nFirst 10 entropies: \n{entropies[:10]}')
+    # print(f'\nFirst 10 indices: \n{indices[:10]}')
     # print(f'\nFirst 10 ious: \n{ious[:10]}')
+
+
+def common_points(cfg: DictConfig):
+    size = None
+    sequences = None
+    indices = None
+    dataset = SemanticDataset(dataset_path=cfg.ds.path, sequences=sequences, cfg=cfg.ds,
+                              split='train', indices=indices, size=size)
+
+    scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
+
+    # create scan visualizer
+    vis = ScanVis(scan=scan, scans=dataset.points, labels=dataset.labels, raw_cloud=True, instances=True)
+    vis.run()
 
 
 if __name__ == '__main__':
