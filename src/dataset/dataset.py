@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import Dataset
 from omegaconf import DictConfig
 from src.laserscan import LaserScan
-from .utils import open_sequence, apply_augmentations
+from .utils import open_sequence
 
 log = logging.getLogger(__name__)
 
@@ -28,6 +28,9 @@ class SemanticDataset(Dataset):
 
         self.points = []
         self.labels = []
+        self.poses = []
+        self.times = []
+        self.calib = []
 
         self.mean = np.array(cfg.mean, dtype=np.float32)
         self.std = np.array(cfg.std, dtype=np.float32)
@@ -69,9 +72,12 @@ class SemanticDataset(Dataset):
         path = os.path.join(self.path, 'sequences')
         for seq in self.sequences:
             seq_path = os.path.join(path, f"{seq:02d}")
-            points, labels = open_sequence(seq_path)
+            points, labels, poses, times, calib = open_sequence(seq_path)
             self.points += points
             self.labels += labels
+            self.poses += poses
+            self.times += times
+            self.calib += [calib] * len(points)
 
         log.info(f"Found {len(self.points)} samples")
         assert len(self.points) == len(self.labels), "Number of points and labels must be equal"
