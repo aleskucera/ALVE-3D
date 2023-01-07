@@ -1,9 +1,7 @@
 try:
     from vispy.scene import visuals, ViewBox, SceneCanvas
 except ImportError:
-    visuals = None
-    ViewBox = None
-    SceneCanvas = None
+    visuals, ViewBox, SceneCanvas = None, None, None
 
 
 class Scene:
@@ -26,7 +24,9 @@ class Widget:
         self.pos = pos
 
         self.color_map = color_map
-        self.view_box_keywords = {'border_color': border_color, 'parent': scene.canvas.scene}
+        self.view_box_keywords = dict(border_color=border_color)
+        if scene is not None:
+            self.view_box_keywords = dict(border_color=border_color, parent=scene.canvas.scene)
 
 
 class CloudWidget(Widget):
@@ -50,7 +50,12 @@ class CloudWidget(Widget):
 class ImageWidget(Widget):
     def __init__(self, scene: Scene, pos: tuple, color_map='viridis', border_color='white'):
         super().__init__(scene, pos, color_map, border_color)
-        self._init()
+        self.vis = None
+        self.view = None
+        self.scene_grid = None
+
+        if scene is not None:
+            self._init()
 
     def _init(self):
         self.view = ViewBox(**self.view_box_keywords)
@@ -59,8 +64,9 @@ class ImageWidget(Widget):
         self.view.add(self.vis)
 
     def set_data(self, data):
-        self.vis.set_data(data)
-        self.vis.update()
+        if self.vis is not None:
+            self.vis.set_data(data)
+            self.vis.update()
 
 
 class Counter:

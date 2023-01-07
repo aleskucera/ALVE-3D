@@ -3,6 +3,7 @@ import logging
 import torch
 import numpy as np
 from tqdm import tqdm
+from torch.utils.data import DataLoader
 from torchmetrics import MetricCollection
 from torchmetrics.classification import MulticlassAccuracy, MulticlassJaccardIndex
 
@@ -12,10 +13,10 @@ log = logging.getLogger(__name__)
 
 
 class Selector:
-    def __init__(self, model, loader, device, num_classes: int = 20, criterion: str = "entropy"):
+    def __init__(self, model, dataset, device, num_classes: int = 20, criterion: str = "entropy"):
         self.model = model
         self.device = device
-        self.loader = loader
+        self.dataset = dataset
         self.criterion = criterion
 
         acc = MulticlassAccuracy(num_classes=num_classes, ignore_index=0, validate_args=False).to(device)

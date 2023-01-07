@@ -15,21 +15,21 @@ def open_sequence(path: str):
     poses_path = os.path.join(os.path.join(path, 'poses.txt'))
     times_path = os.path.join(os.path.join(path, 'times.txt'))
     calib_path = os.path.join(os.path.join(path, 'calib.txt'))
+    sp_path = os.path.join(os.path.join(path, 'superpoints'))
 
-    points = os.listdir(points_path)
-    labels = os.listdir(labels_path)
-
-    points = [os.path.join(points_path, point) for point in points]
-    labels = [os.path.join(labels_path, label) for label in labels]
-
-    poses = parse_poses(poses_path)
-    times = parse_times(times_path)
-    calib = parse_calibration(calib_path)
+    points = [os.path.join(points_path, point) for point in os.listdir(points_path)]
+    labels = [os.path.join(labels_path, label) for label in os.listdir(labels_path)]
+    superpoints = [os.path.join(sp_path, sp) for sp in os.listdir(sp_path)]
 
     points.sort()
     labels.sort()
+    superpoints.sort()
 
-    return points, labels, poses, times, calib
+    calib = parse_calibration(calib_path)
+    poses = parse_poses(poses_path, calib['Tr_cam_to_velo'])
+    times = parse_times(times_path)
+
+    return points, labels, poses, times, superpoints
 
 
 def parse_calibration(path: str) -> dict:
@@ -43,16 +43,16 @@ def parse_calibration(path: str) -> dict:
             key, content = line.strip().split(":")
             data = [float(v) for v in content.strip().split()]
             calib[key] = create_transform_matrix(data)
-    calib['Tr_cam2velo'] = np.array([[2.34773698e-04, -9.99944155e-01, -1.05634778e-02, 5.93721868e-02],
-                                     [1.04494074e-02, 1.05653536e-02, -9.99889574e-01, -7.51087914e-02],
-                                     [9.99945389e-01, 1.24365378e-04, 1.04513030e-02, -2.72132796e-01],
-                                     [0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
+    calib['Tr_cam_to_velo'] = np.array([[2.34773698e-04, -9.99944155e-01, -1.05634778e-02, 5.93721868e-02],
+                                        [1.04494074e-02, 1.05653536e-02, -9.99889574e-01, -7.51087914e-02],
+                                        [9.99945389e-01, 1.24365378e-04, 1.04513030e-02, -2.72132796e-01],
+                                        [0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
     return calib
 
 
 def create_transform_matrix(data: list) -> np.ndarray:
     """ Create a transformation matrix from a data list
-    :param data: list containing the translation and rotation of length 12
+    :param data: a list containing the translation and rotation of length 12
     :return: transformation matrix
     """
     matrix = np.eye(4)
@@ -60,15 +60,18 @@ def create_transform_matrix(data: list) -> np.ndarray:
     return matrix
 
 
-def parse_poses(path: str) -> list:
-    """ Read poses from a file
+def parse_poses(path: str, transformation: np.ndarray) -> list:
+    """ Parse poses from a file
     :param path: path to the file
-    :return: poses as a numpy array
+    :param transformation: transformation matrix
+    :return: list of poses
     """
     poses = []
     with open(path, 'r') as f:
         for line in f:
-            poses.append([float(x) for x in line.split()])
+            data = [float(v) for v in line.strip().split()]
+            pose = create_transform_matrix(data)
+            poses.append(np.matmul(pose, transformation))
     return poses
 
 

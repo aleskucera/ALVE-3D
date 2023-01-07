@@ -57,6 +57,10 @@ class LaserScan:
         self.remissions = None
         self.radius = None
 
+        # 3D points that are actually used for projection
+        self.projected_points = None
+        self.projected_color = None
+
         self.drop_mask = None
 
         # Raw projected data
@@ -70,6 +74,9 @@ class LaserScan:
         # Semantic labels
         self.sem_label = None
         self.sem_label_color = None
+
+        # Color that is actually used for projection
+        self.projected_sem_label_color = None
 
         self.inst_label = None
         self.inst_label_color = None
@@ -103,30 +110,40 @@ class LaserScan:
         self.proj_entropy = None
         self.proj_entropy_color = None
 
+        # Superpoints
+        self.superpoints = None
+        self.superpoints_color = None
+
+        # Projected superpoints
+        self.proj_superpoints = None
+        self.proj_superpoints_color = None
+
     def __len__(self):
         return self.points.shape[0]
 
     # ------------------------------  RAW DATA ------------------------------
 
     @arg_check
-    def open_points(self, filename: str, flip_prob: float = 0, trans_prob: float = 0,
-                    rot_prob: float = 0, drop_prob: float = 0) -> None:
+    def open_scan(self, filename: str, flip_prob: float = 0, color: np.ndarray = None,
+                  trans_prob: float = 0, rot_prob: float = 0, drop_prob: float = 0) -> None:
+
+        # Read scan from file
         scan = np.fromfile(filename, dtype=np.float32)
         scan = scan.reshape((-1, 4))
+
+        # Parse scan
         points = scan[:, :3]
         remissions = scan[:, 3]
-        self.set_points(points, remissions, flip_prob, trans_prob, rot_prob, drop_prob)
+
+        self.set_scan(points, remissions, color, flip_prob, trans_prob, rot_prob, drop_prob)
 
     @arg_check
-    def set_points(self, points: np.ndarray, remissions: np.ndarray = None, flip_prob: float = 0,
-                   trans_prob: float = 0, rot_prob: float = 0, drop_prob: float = 0) -> None:
-        # Points are first 3 columns
+    def set_scan(self, points: np.ndarray, remissions: np.ndarray = None, color: np.ndarray = None,
+                 flip_prob: float = 0, trans_prob: float = 0, rot_prob: float = 0, drop_prob: float = 0) -> None:
         self.points = points
+        self.remissions = remissions
 
-        # Remissions are the 4th column
-        if remissions is not None:
-            self.remissions = remissions
-        else:
+        if remissions is None:
             self.remissions = np.zeros((points.shape[0]), dtype=np.float32)
 
         self.radius = np.linalg.norm(self.points, axis=1)
@@ -164,40 +181,62 @@ class LaserScan:
         self.proj_depth = projection['depth']
         self.proj_remission = projection['remission']
 
-        # Colorize data
         if self.colorize:
-            self.color = map_color(self.radius, color_map='twilight',
-                                   data_range=(np.min(self.radius), np.max(self.radius)))
-            self.proj_color = map_color(self.proj_depth, color_map='twilight',
-                                        data_range=(np.min(self.proj_depth), np.max(self.proj_depth)))
+            if color is None:
+                rem_range = (np.min(self.remissions), np.max(self.remissions))
+                self.color = map_color(self.remissions, color_map='twilight', data_range=rem_range)
+            else:
+                self.color = color[self.drop_mask]
 
-    # ------------------------------  SEMANTIC LABELS ------------------------------
+            self.proj_color = self.color[self.proj_idx]
+
+        # # Colorize data
+        # if self.colorize and color is None:
+        #     self.color = map_color(self.remissions, color_map='twilight',
+        #                            data_range=(np.min(self.remissions), np.max(self.remissions)))
+        #     self.proj_color = map_color(self.proj_remission, color_map='twilight',
+        #                                 data_range=(np.min(self.proj_remission), np.max(self.proj_remission)))
+        #
+        # elif self.colorize and color is not None:
+        #     self.color = color
+        #     self.proj_color = map_color(self.proj_depth, color_map='twilight',
+        #                                 data_range=(np.min(self.proj_depth), np.max(self.proj_depth)))
+
+        # self.projected_points = self.proj_xyz[self.proj_mask]
+        # if self.proj_color is not None:
+        #     self.projected_color = self.proj_color[self.proj_mask]
+
+    # ------------------------------  SEMANTIC LABELS ------------------------------------------------------------
     @arg_check
     def open_label(self, filename: str) -> None:
+
+        # Read label from file
         label = np.fromfile(filename, dtype=np.int32)
+
+        # Parse label
         semantics = label & 0xFFFF  # semantic label in lower half
         instances = label >> 16  # instance id in upper half
 
+        # Map labels to train ids
         label_map = np.zeros(max(self.label_map.keys()) + 1, dtype=np.uint8)
         for label, value in self.label_map.items():
             label_map[label] = value
-
         semantics = label_map[semantics]
 
+        # Set attributes
         self.set_label(semantics, instances)
 
     @arg_check
     def set_label(self, semantics: np.ndarray, instances: np.ndarray = None) -> None:
-        # semantic label in lower half
-        self.sem_label = semantics[self.drop_mask]
 
-        # instance label in upper half
-        if instances is not None:
-            self.inst_label = instances[self.drop_mask]
-        else:
+        # Set attributes, so they correspond to the points in the scan
+        self.sem_label = semantics[self.drop_mask]
+        self.inst_label = instances[self.drop_mask]
+
+        if instances is None:
             self.inst_label = np.zeros((self.points.shape[0]), dtype=np.int32)
 
-        # Project label
+        # Project labels
         proj_indices = self.proj_idx[self.proj_mask]
 
         self.proj_sem_label = np.zeros((self.proj_H, self.proj_W), dtype=np.int32)
@@ -214,20 +253,29 @@ class LaserScan:
             self.proj_sem_color = self.color_map[self.proj_sem_label]
             self.proj_inst_color = self.inst_color_map[self.proj_inst_label]
 
+            # self.projected_sem_label_color = self.proj_sem_color[self.proj_mask]
+
     # ------------------------------  PREDICTIONS ------------------------------
     @arg_check
     def open_prediction(self, filename: str) -> None:
+
+        # Read prediction from file
         pred = np.fromfile(filename, dtype=np.int32)
+
+        # Set attributes
         self.set_prediction(pred)
 
     @arg_check
     def set_prediction(self, pred: np.ndarray) -> None:
         self.proj_pred = pred
-        self.proj_pred[self.proj_sem_label == 0] = 0
 
+        # Set predictions for point cloud
         self.pred = np.zeros((self.points.shape[0]), dtype=np.int32)
         self.pred[self.proj_idx[self.proj_mask]] = pred[self.proj_mask]
+
+        # Zero out predictions for points that are unlabeled
         self.pred[self.sem_label == 0] = 0
+        self.proj_pred[self.proj_sem_label == 0] = 0
 
         # Colorize prediction
         if self.colorize:
@@ -236,17 +284,61 @@ class LaserScan:
 
     # ------------------------------  ENTROPY ------------------------------
     @arg_check
-    def open_entropy(self, filename: os.PathLike) -> None:
+    def open_entropy(self, filename: str) -> None:
+
+        # Read entropy from file
         entropy = np.fromfile(filename, dtype=np.float32)
+
+        # Set attributes
         self.set_entropy(entropy)
 
     @arg_check
     def set_entropy(self, entropy: np.ndarray) -> None:
+        self.proj_entropy = entropy
+
+        # Set attributes, so they correspond to the points in the scan
         self.entropy = np.zeros((self.points.shape[0]), dtype=np.float32)
         self.entropy[self.proj_idx[self.proj_mask]] = entropy[self.proj_mask]
-        self.proj_entropy = entropy
+
+        # Zero out predictions for points that are unlabeled
+        self.entropy[self.sem_label == 0] = 0
+        self.proj_entropy[self.proj_sem_label == 0] = 0
 
         # Colorize entropy
         if self.colorize:
-            self.entropy_color = map_color(self.entropy, color_map='jet')
-            self.proj_entropy_color = map_color(self.proj_entropy, color_map='jet')
+            entropy_range = (np.min(self.entropy), np.max(self.entropy))
+            self.entropy_color = map_color(self.entropy, color_map='jet', data_range=entropy_range)
+            self.proj_entropy_color = map_color(self.proj_entropy, color_map='jet', data_range=entropy_range)
+
+    # ------------------------------  SUPERPOINTS ------------------------------
+
+    @arg_check
+    def open_superpoints(self, filename: str) -> None:
+
+        # Read npy file
+        superpoints = np.load(filename)
+
+        # Read superpoints from file
+        # superpoints = np.fromfile(filename, dtype=np.int32)
+        print(f"{filename}: {superpoints.shape}")
+
+        # Set attributes
+        self.set_superpoints(superpoints)
+
+    @arg_check
+    def set_superpoints(self, superpoints: np.ndarray) -> None:
+        self.superpoints = superpoints
+
+        # Project superpoints
+        self.proj_superpoints = np.zeros((self.proj_H, self.proj_W), dtype=np.int32)
+        self.proj_superpoints[self.proj_mask] = self.superpoints[self.proj_idx[self.proj_mask]]
+
+        # Zero out superpoints for points that are unlabeled
+        self.superpoints[self.sem_label == 0] = 0
+        self.proj_superpoints[self.proj_sem_label == 0] = 0
+
+        # Colorize superpoints
+        if self.colorize:
+            sp_range = (np.min(self.superpoints), np.max(self.superpoints))
+            self.superpoints_color = map_color(self.superpoints, color_map='jet', data_range=sp_range)
+            self.proj_superpoints_color = map_color(self.proj_superpoints, color_map='jet', data_range=sp_range)

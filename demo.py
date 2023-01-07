@@ -1,15 +1,19 @@
 #!/usr/bin/env python
-
 import os
 import logging
 
-import torch
 import hydra
+import numpy as np
 from omegaconf import DictConfig
-from torch.utils.data import DataLoader
 from hydra.core.hydra_config import HydraConfig
 
-from src import SemanticDataset, set_paths, LaserScan, ScanVis, Selector, SalsaNext
+try:
+    import open3d as o3d
+except ImportError:
+    o3d = None
+    print("WARNING: Can't import open3d.")
+
+from src import SemanticDataset, set_paths, LaserScan, ScanVis, create_global_cloud, create_superpoints
 
 log = logging.getLogger(__name__)
 
@@ -24,10 +28,10 @@ def main(cfg: DictConfig):
         show_paths(cfg)
     elif cfg.action == 'dataset':
         show_dataset(cfg)
-    elif cfg.action == 'select_indices':
-        select_indices(cfg)
-    elif cfg.action == 'common_points':
-        common_points(cfg)
+    elif cfg.action == 'global_cloud':
+        show_global_cloud(cfg)
+    elif cfg.action == 'superpoints':
+        superpoints(cfg)
     else:
         raise ValueError('Invalid demo type.')
 
@@ -44,7 +48,7 @@ def show_paths(cfg: DictConfig) -> None:
 def show_dataset(cfg: DictConfig) -> None:
     # dataset attributes
     size = None
-    sequences = None
+    sequences = [0]
     indices = None
 
     # create dataset
@@ -55,47 +59,59 @@ def show_dataset(cfg: DictConfig) -> None:
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
 
     # create scan visualizer
-    vis = ScanVis(scan=scan, scans=dataset.points, labels=dataset.labels, raw_cloud=True, instances=True)
+    vis = ScanVis(scan=scan, scans=dataset.points, labels=dataset.labels, raw_cloud=True, instances=False,
+                  projection=False)
     vis.run()
 
 
-def select_indices(cfg: DictConfig):
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+def show_global_cloud(cfg: DictConfig) -> None:
+    sequence = 7
+    file_name = f'global_cloud.npz'
+    path = os.path.join(cfg.ds.path, 'sequences', f'{sequence:02d}', file_name)
+    create_global_cloud(cfg, sequence, path)
 
-    test_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='valid')
-
-    test_loader = DataLoader(test_ds, batch_size=10, shuffle=False, num_workers=4)
-
-    model_path = os.path.join(cfg.path.models, 'pretrained', cfg.test.model_name)
-    model = SalsaNext(cfg.ds.num_classes)
-    model.load_state_dict(torch.load(model_path))
-    model = model.to(device)
-
-    selector = Selector(model=model, loader=test_loader, device=device)
-    # entropies, indices = tester.calculate_entropies()
-    #
-    # print(f'\nFirst 10 entropies: \n{entropies[:10]}')
-    # print(f'\nFirst 10 indices: \n{indices[:10]}')
-    # print(f'\nFirst 10 ious: \n{ious[:10]}')
-
-
-def common_points(cfg: DictConfig):
-    size = None
-    sequences = None
-    indices = None
-    dataset = SemanticDataset(dataset_path=cfg.ds.path, sequences=sequences, cfg=cfg.ds,
-                              split='train', indices=indices, size=size)
-
-    # Get global cloud
-    cloud, label = dataset.get_global_cloud(0)
+    data = np.load(path)
+    cloud, color = data['cloud'], data['color']
 
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
-    print(f'Cloud shape: {cloud.shape}')
-    print(f'Label shape: {label.shape}')
-
-    # create scan visualizer
-    vis = ScanVis(scan=scan, scans=[cloud], labels=[label], raw_cloud=True, instances=True)
+    vis = ScanVis(scan=scan, scans=[cloud], scan_colors=[color], raw_cloud=True, instances=False, projection=False)
     vis.run()
+
+
+def superpoints(cfg: DictConfig):
+    sequence = 4
+    number_of_superpoints = 20000
+
+    path = os.path.join(cfg.ds.path, 'sequences', f'{sequence:02d}', 'superpoints')
+    os.makedirs(path, exist_ok=True)
+
+    create_superpoints(cfg=cfg, sequence=sequence, num_points=number_of_superpoints, directory=path)
+
+    dataset = SemanticDataset(dataset_path=cfg.ds.path, sequences=[sequence], cfg=cfg.ds, split='train')
+
+    scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
+    vis = ScanVis(scan=scan, scans=dataset.points, superpoints=dataset.superpoints, raw_cloud=False)
+    vis.run()
+
+
+# def select_indices(cfg: DictConfig):
+#     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+#
+#     test_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='valid')
+#
+#     test_loader = DataLoader(test_ds, batch_size=10, shuffle=False, num_workers=4)
+#
+#     model_path = os.path.join(cfg.path.models, 'pretrained', cfg.test.model_name)
+#     model = SalsaNext(cfg.ds.num_classes)
+#     model.load_state_dict(torch.load(model_path))
+#     model = model.to(device)
+#
+#     selector = Selector(model=model, loader=test_loader, device=device)
+#     entropies, indices = tester.calculate_entropies()
+#
+#     print(f'\nFirst 10 entropies: \n{entropies[:10]}')
+#     print(f'\nFirst 10 indices: \n{indices[:10]}')
+#     print(f'\nFirst 10 ious: \n{ious[:10]}')
 
 
 if __name__ == '__main__':
