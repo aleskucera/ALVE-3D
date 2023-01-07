@@ -318,10 +318,6 @@ class LaserScan:
         # Read npy file
         superpoints = np.load(filename)
 
-        # Read superpoints from file
-        # superpoints = np.fromfile(filename, dtype=np.int32)
-        print(f"{filename}: {superpoints.shape}")
-
         # Set attributes
         self.set_superpoints(superpoints)
 

@@ -79,8 +79,8 @@ def show_global_cloud(cfg: DictConfig) -> None:
 
 
 def superpoints(cfg: DictConfig):
-    sequence = 4
-    number_of_superpoints = 20000
+    sequence = 3
+    number_of_superpoints = 30000
 
     path = os.path.join(cfg.ds.path, 'sequences', f'{sequence:02d}', 'superpoints')
     os.makedirs(path, exist_ok=True)
