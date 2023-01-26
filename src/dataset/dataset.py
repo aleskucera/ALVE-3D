@@ -94,12 +94,12 @@ class SemanticDataset(Dataset):
         # ----------- USE INDICES -----------
 
         if self.indices is not None:
-            self._choose_data()
+            self.choose_data()
             log.info(f"Using samples {self.indices} for {self.split} split")
 
         log.info(f"Dataset initialized with {len(self.points)} samples")
 
-    def _choose_data(self, indices=None):
+    def choose_data(self, indices=None):
         if indices:
             self.indices = indices
         assert self.indices is not None

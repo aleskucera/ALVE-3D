@@ -1,11 +1,9 @@
 import numpy as np
 
 
-# do spherical projection of pointcloud to depth image
-def project_scan(points: np.ndarray, remissions: np.ndarray, H: int, W: int, fov_up: float, fov_down: float) -> dict:
+def project_scan(points: np.ndarray, H: int, W: int, fov_up: float, fov_down: float) -> dict:
     """ Project a point cloud to a depth image
     :param points: point cloud
-    :param remissions: remissions
     :param H: height of the depth image
     :param W: width of the depth image
     :param fov_up: field of view up
@@ -17,7 +15,6 @@ def project_scan(points: np.ndarray, remissions: np.ndarray, H: int, W: int, fov
 
     # initialize projection images
     proj_depth = np.full((H, W), -1, dtype=np.float32)
-    proj_remission = np.full((H, W), -1, dtype=np.float32)
     proj_idx = np.full((H, W), -1, dtype=np.int32)
     proj_xyz = np.zeros((H, W, 3), dtype=np.float32)
 
@@ -30,16 +27,14 @@ def project_scan(points: np.ndarray, remissions: np.ndarray, H: int, W: int, fov
     indices = indices[order]
     proj_x = proj_x[order]
     proj_y = proj_y[order]
-    remissions = remissions[order]
 
     # fill in projection matrix
     proj_depth[proj_y, proj_x] = r
-    proj_remission[proj_y, proj_x] = remissions
     proj_idx[proj_y, proj_x] = indices
     proj_mask = proj_depth > 0
     proj_xyz[proj_y, proj_x] = points
 
-    projection = {'r': r, 'depth': proj_depth, 'remission': proj_remission,
+    projection = {'r': r, 'depth': proj_depth,
                   'xyz': proj_xyz, 'idx': proj_idx, 'mask': proj_mask}
 
     return projection

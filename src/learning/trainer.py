@@ -14,9 +14,6 @@ from torchmetrics.classification import MulticlassAccuracy, MulticlassJaccardInd
 
 from .state import State
 from .utils import parse_data, calculate_weights
-from .dice import DiceLoss
-from .focal import FocalLoss
-from .dicebce import DiceBCELoss
 from .lovasz import LovaszSoftmax
 from src.laserscan import LaserScan
 from src.dataset import SemanticDataset
@@ -102,8 +99,8 @@ class Trainer:
         self.state = State(writer=self.writer, metrics=metrics, logger=log, scan=self.scan)
 
         # Add model graph to tensorboard
-        model_wrapper = ModelWrapper(self.model)
-        self.writer.add_graph(model_wrapper, torch.rand(1, 5, 64, 2048).to(device))
+        # model_wrapper = ModelWrapper(self.model)
+        # self.writer.add_graph(model_wrapper, torch.rand(1, 5, 64, 2048).to(device))
 
     @train_requirements
     def train(self, epochs: int, save_path: str) -> float:

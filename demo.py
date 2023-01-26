@@ -13,7 +13,8 @@ except ImportError:
     o3d = None
     print("WARNING: Can't import open3d.")
 
-from src import SemanticDataset, set_paths, LaserScan, ScanVis, create_global_cloud, create_superpoints
+from src import SemanticDataset, set_paths, LaserScan, ScanVis, create_global_cloud, create_superpoints, \
+    visualize_kitti360_conversion, convert_kitti360
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +33,10 @@ def main(cfg: DictConfig):
         show_global_cloud(cfg)
     elif cfg.action == 'superpoints':
         superpoints(cfg)
+    elif cfg.action == 'kitti360_conversion_vis':
+        kitti360_conversion_vis(cfg)
+    elif cfg.action == 'kitti360_conversion':
+        kitti360_conversion(cfg)
     else:
         raise ValueError('Invalid demo type.')
 
@@ -59,23 +64,24 @@ def show_dataset(cfg: DictConfig) -> None:
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
 
     # create scan visualizer
-    vis = ScanVis(scan=scan, scans=dataset.points, labels=dataset.labels, raw_cloud=True, instances=False,
-                  projection=False)
+    vis = ScanVis(scan=scan, scans=dataset.points, labels=dataset.labels, raw_cloud=True, instances=False)
     vis.run()
 
 
 def show_global_cloud(cfg: DictConfig) -> None:
-    sequence = 7
+    sequence = 1
     file_name = f'global_cloud.npz'
     path = os.path.join(cfg.ds.path, 'sequences', f'{sequence:02d}', file_name)
-    create_global_cloud(cfg, sequence, path)
+    # create_global_cloud(cfg, sequence, path)
 
     data = np.load(path)
     cloud, color = data['cloud'], data['color']
 
-    scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
-    vis = ScanVis(scan=scan, scans=[cloud], scan_colors=[color], raw_cloud=True, instances=False, projection=False)
-    vis.run()
+    if o3d is not None:
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(cloud)
+        pcd.colors = o3d.utility.Vector3dVector(color)
+        o3d.visualization.draw_geometries([pcd])
 
 
 def superpoints(cfg: DictConfig):
@@ -85,7 +91,7 @@ def superpoints(cfg: DictConfig):
     path = os.path.join(cfg.ds.path, 'sequences', f'{sequence:02d}', 'superpoints')
     os.makedirs(path, exist_ok=True)
 
-    create_superpoints(cfg=cfg, sequence=sequence, num_points=number_of_superpoints, directory=path)
+    # create_superpoints(cfg=cfg, sequence=sequence, num_points=number_of_superpoints, directory=path)
 
     dataset = SemanticDataset(dataset_path=cfg.ds.path, sequences=[sequence], cfg=cfg.ds, split='train')
 
@@ -94,24 +100,14 @@ def superpoints(cfg: DictConfig):
     vis.run()
 
 
-# def select_indices(cfg: DictConfig):
-#     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-#
-#     test_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='valid')
-#
-#     test_loader = DataLoader(test_ds, batch_size=10, shuffle=False, num_workers=4)
-#
-#     model_path = os.path.join(cfg.path.models, 'pretrained', cfg.test.model_name)
-#     model = SalsaNext(cfg.ds.num_classes)
-#     model.load_state_dict(torch.load(model_path))
-#     model = model.to(device)
-#
-#     selector = Selector(model=model, loader=test_loader, device=device)
-#     entropies, indices = tester.calculate_entropies()
-#
-#     print(f'\nFirst 10 entropies: \n{entropies[:10]}')
-#     print(f'\nFirst 10 indices: \n{indices[:10]}')
-#     print(f'\nFirst 10 ious: \n{ious[:10]}')
+def kitti360_conversion_vis(cfg: DictConfig):
+    seq = 0
+    visualize_kitti360_conversion(cfg, seq)
+
+
+def kitti360_conversion(cfg: DictConfig):
+    seq = 0
+    convert_kitti360(cfg, seq)
 
 
 if __name__ == '__main__':

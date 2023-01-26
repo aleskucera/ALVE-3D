@@ -61,14 +61,13 @@ class LaserScan:
         self.projected_points = None
         self.projected_color = None
 
-        self.drop_mask = None
-
         # Raw projected data
         self.proj_xyz = None
         self.proj_idx = None
         self.proj_color = None
         self.proj_depth = None
         self.proj_mask = None
+        self.drop_mask = None
         self.proj_remission = None
 
         # Semantic labels
@@ -128,12 +127,19 @@ class LaserScan:
                   trans_prob: float = 0, rot_prob: float = 0, drop_prob: float = 0) -> None:
 
         # Read scan from file
-        scan = np.fromfile(filename, dtype=np.float32)
-        scan = scan.reshape((-1, 4))
+        if filename.endswith('.bin'):
+            scan = np.fromfile(filename, dtype=np.float32)
+            scan = scan.reshape((-1, 4))
+        elif filename.endswith('.npy'):
+            scan = np.load(filename)
+        else:
+            raise ValueError('Invalid file extension')
 
         # Parse scan
         points = scan[:, :3]
         remissions = scan[:, 3]
+        if scan.shape[1] == 7:
+            color = scan[:, 4:7]
 
         self.set_scan(points, remissions, color, flip_prob, trans_prob, rot_prob, drop_prob)
 
@@ -172,46 +178,37 @@ class LaserScan:
         self.remissions = self.remissions[self.drop_mask]
 
         # Project data
-        projection = project_scan(self.points, self.remissions, self.proj_H,
+        projection = project_scan(self.points, self.proj_H,
                                   self.proj_W, self.proj_fov_up, self.proj_fov_down)
 
         self.proj_idx = projection['idx']
         self.proj_xyz = projection['xyz']
         self.proj_mask = projection['mask']
         self.proj_depth = projection['depth']
-        self.proj_remission = projection['remission']
+        self.proj_remission = np.full((self.proj_H, self.proj_W), -1, dtype=np.float32)
+        self.proj_remission[self.proj_mask] = self.remissions[self.proj_idx[self.proj_mask]]
 
         if self.colorize:
             if color is None:
                 rem_range = (np.min(self.remissions), np.max(self.remissions))
                 self.color = map_color(self.remissions, color_map='twilight', data_range=rem_range)
+                self.proj_color = self.color[self.proj_idx]
             else:
                 self.color = color[self.drop_mask]
-
-            self.proj_color = self.color[self.proj_idx]
-
-        # # Colorize data
-        # if self.colorize and color is None:
-        #     self.color = map_color(self.remissions, color_map='twilight',
-        #                            data_range=(np.min(self.remissions), np.max(self.remissions)))
-        #     self.proj_color = map_color(self.proj_remission, color_map='twilight',
-        #                                 data_range=(np.min(self.proj_remission), np.max(self.proj_remission)))
-        #
-        # elif self.colorize and color is not None:
-        #     self.color = color
-        #     self.proj_color = map_color(self.proj_depth, color_map='twilight',
-        #                                 data_range=(np.min(self.proj_depth), np.max(self.proj_depth)))
-
-        # self.projected_points = self.proj_xyz[self.proj_mask]
-        # if self.proj_color is not None:
-        #     self.projected_color = self.proj_color[self.proj_mask]
+                self.proj_color = np.zeros((self.proj_H, self.proj_W, 3), dtype=np.float32)
+                self.proj_color[self.proj_mask] = self.color[self.proj_idx[self.proj_mask]]
 
     # ------------------------------  SEMANTIC LABELS ------------------------------------------------------------
     @arg_check
     def open_label(self, filename: str) -> None:
 
         # Read label from file
-        label = np.fromfile(filename, dtype=np.int32)
+        if filename.endswith('.label'):
+            label = np.fromfile(filename, dtype=np.int32)
+        elif filename.endswith('.npy'):
+            label = np.load(filename)
+        else:
+            raise ValueError('Invalid file extension')
 
         # Parse label
         semantics = label & 0xFFFF  # semantic label in lower half
@@ -222,6 +219,9 @@ class LaserScan:
         for label, value in self.label_map.items():
             label_map[label] = value
         semantics = label_map[semantics]
+
+        semantics = semantics.flatten()
+        instances = instances.flatten()
 
         # Set attributes
         self.set_label(semantics, instances)
@@ -252,8 +252,6 @@ class LaserScan:
 
             self.proj_sem_color = self.color_map[self.proj_sem_label]
             self.proj_inst_color = self.inst_color_map[self.proj_inst_label]
-
-            # self.projected_sem_label_color = self.proj_sem_color[self.proj_mask]
 
     # ------------------------------  PREDICTIONS ------------------------------
     @arg_check
