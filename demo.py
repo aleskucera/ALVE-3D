@@ -14,7 +14,7 @@ except ImportError:
     print("WARNING: Can't import open3d.")
 
 from src import SemanticDataset, set_paths, LaserScan, ScanVis, create_global_cloud, create_superpoints, \
-    visualize_kitti360_conversion, convert_kitti360
+    visualize_kitti360_conversion, convert_kitti360, create_config
 
 log = logging.getLogger(__name__)
 
@@ -31,8 +31,8 @@ def main(cfg: DictConfig):
         show_dataset(cfg)
     elif cfg.action == 'global_cloud':
         show_global_cloud(cfg)
-    elif cfg.action == 'superpoints':
-        superpoints(cfg)
+    elif cfg.action == 'kitti360_config':
+        create_kitti360_config()
     elif cfg.action == 'kitti360_conversion_vis':
         kitti360_conversion_vis(cfg)
     elif cfg.action == 'kitti360_conversion':
@@ -58,7 +58,7 @@ def show_dataset(cfg: DictConfig) -> None:
 
     # create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path, sequences=sequences, cfg=cfg.ds,
-                              split='train', indices=indices, size=size)
+                              split='val', indices=indices, size=size)
 
     # create semantic laser scan
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
@@ -69,7 +69,7 @@ def show_dataset(cfg: DictConfig) -> None:
 
 
 def show_global_cloud(cfg: DictConfig) -> None:
-    sequence = 1
+    sequence = 0
     file_name = f'global_cloud.npz'
     path = os.path.join(cfg.ds.path, 'sequences', f'{sequence:02d}', file_name)
     # create_global_cloud(cfg, sequence, path)
@@ -84,22 +84,6 @@ def show_global_cloud(cfg: DictConfig) -> None:
         o3d.visualization.draw_geometries([pcd])
 
 
-def superpoints(cfg: DictConfig):
-    sequence = 3
-    number_of_superpoints = 30000
-
-    path = os.path.join(cfg.ds.path, 'sequences', f'{sequence:02d}', 'superpoints')
-    os.makedirs(path, exist_ok=True)
-
-    # create_superpoints(cfg=cfg, sequence=sequence, num_points=number_of_superpoints, directory=path)
-
-    dataset = SemanticDataset(dataset_path=cfg.ds.path, sequences=[sequence], cfg=cfg.ds, split='train')
-
-    scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
-    vis = ScanVis(scan=scan, scans=dataset.points, superpoints=dataset.superpoints, raw_cloud=False)
-    vis.run()
-
-
 def kitti360_conversion_vis(cfg: DictConfig):
     seq = 0
     visualize_kitti360_conversion(cfg, seq)
@@ -108,6 +92,10 @@ def kitti360_conversion_vis(cfg: DictConfig):
 def kitti360_conversion(cfg: DictConfig):
     seq = 0
     convert_kitti360(cfg, seq)
+
+
+def create_kitti360_config():
+    create_config()
 
 
 if __name__ == '__main__':

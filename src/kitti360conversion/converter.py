@@ -1,12 +1,12 @@
 import os
+import logging
 
 import scipy
 import numpy as np
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import matplotlib.pyplot as plt
 from omegaconf import DictConfig
-from src.laserscan.project import project_scan
 from mpl_toolkits.axes_grid1 import ImageGrid
 from numpy.lib.recfunctions import structured_to_unstructured
 
@@ -16,30 +16,18 @@ except ImportError:
     o3d = None
     print("WARNING: Can't import open3d.")
 
-try:
-    from kitti360scripts.helpers.ply import read_ply
-    from kitti360scripts.helpers.labels import id2label
-    from kitti360scripts.helpers.annotation import Annotation3DPly, global2local
+from .ply import read_ply
+from .labels import id2label
+from src.laserscan.project import project_scan
 
-except ImportError:
-    print("WARNING: Can't import kitti360scripts. Import kitti360scripts by running "
-          "'pip install git+https://github.com/autonomousvision/kitti360Scripts.git'.")
-    read_ply, id2label, Annotation3DPly, global2local = None, None, None, None
-
-
-def visualize_kitti360_conversion(cfg: DictConfig, sequence: int):
-    converter = Kitti360Converter(cfg, sequence)
-    converter.run()
-
-
-def convert_kitti360(cfg: DictConfig, sequence: int):
-    converter = Kitti360Converter(cfg, sequence)
-    converter.convert()
+log = logging.getLogger(__name__)
+STATIC_NEIGHBOR_THRESHOLD = 0.2
+DYNAMIC_NEIGHBOR_THRESHOLD = 0.1
 
 
 class Kitti360Converter:
     def __init__(self, cfg: DictConfig, sequence: int):
-        # Sequence paths
+        # ----------------- KITTI-360 structure attributes -----------------
         self.cfg = cfg
         self.sequence = sequence
         self.seq_name = f'2013_05_28_drive_{sequence:04d}_sync'
@@ -47,10 +35,16 @@ class Kitti360Converter:
         self.velodyne_path = os.path.join(cfg.ds.path, 'data_3d_raw', self.seq_name, 'velodyne_points', 'data')
         self.semantics_path = os.path.join(cfg.ds.path, 'data_3d_semantics')
 
+        self.train_windows_path = os.path.join(self.semantics_path, 'train', '2013_05_28_drive_train.txt')
+        self.val_windows_path = os.path.join(self.semantics_path, 'train', '2013_05_28_drive_val.txt')
+
+        # Transformations from camera to world frame file
         self.poses_path = os.path.join(cfg.ds.path, 'data_poses', self.seq_name, 'cam0_to_world.txt')
+
+        # Transformation from velodyne to camera frame file
         self.calib_path = os.path.join(cfg.ds.path, 'calibration', 'calib_cam_to_velo.txt')
 
-        # Sequence windows
+        # Sequence windows (global clouds)
         static_windows_path = os.path.join(self.semantics_path, 'train', self.seq_name, 'static')
         dynamic_windows_path = os.path.join(self.semantics_path, 'train', self.seq_name, 'dynamic')
 
@@ -60,26 +54,32 @@ class Kitti360Converter:
         self.static_windows.sort()
         self.dynamic_windows.sort()
 
+        # For each window, get the range of scans that it contains
         self.window_ranges = [get_window_range(window) for window in self.static_windows]
+        self.train_windows = read_txt(self.train_windows_path, self.seq_name)
+        self.val_windows = read_txt(self.val_windows_path, self.seq_name)
 
         # Sequence info
         self.num_scans = len(os.listdir(self.velodyne_path))
         self.num_windows = len(self.static_windows)
 
-        # Transformations
-        self.T_cam2velo = np.concatenate([np.loadtxt(self.calib_path).reshape(3, 4), [[0, 0, 0, 1]]], axis=0)
-        self.T_velo2cam = np.linalg.inv(self.T_cam2velo)
-        self.poses = read_poses(self.poses_path, self.T_velo2cam, self.num_scans)
+        self.static_points = None
+
+        self.semantic = None
+        self.instances = None
+
+        # ----------------- Transformations -----------------
+
+        self.T_cam_to_velo = np.concatenate([np.loadtxt(self.calib_path).reshape(3, 4), [[0, 0, 0, 1]]], axis=0)
+        self.T_velo_to_cam = np.linalg.inv(self.T_cam_to_velo)
+        self.poses = read_poses(self.poses_path, self.T_velo_to_cam, self.num_scans)
+
+        # ----------------- Visualization attributes -----------------
 
         # Point clouds for visualization
         self.scan = o3d.geometry.PointCloud()
         self.static_window = o3d.geometry.PointCloud()
         self.dynamic_window = o3d.geometry.PointCloud()
-
-        self.static_points = None
-
-        self.semantic = None
-        self.instances = None
 
         self.semantic_color = None
         self.instance_color = None
@@ -88,6 +88,7 @@ class Kitti360Converter:
         self.scan_num = 0
         self.window_num = 0
 
+        # Color map for instance labels
         self.cmap = cm.get_cmap('Set1')
         self.cmap_length = 9
 
@@ -100,6 +101,15 @@ class Kitti360Converter:
         }
 
     def convert(self):
+        """Convert KITTI-360 dataset to SemanticKITTI format. This function will create a sequence directory in the
+        KITTI-360 dataset directory.
+
+        The sequence directory will contain the following files:
+            - velodyne: Velodyne scans
+            - labels: SemanticKITTI labels
+            - info.npz: Sequence info (poses, train and val samples)
+        """
+
         # Create output directories
         sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
 
@@ -109,17 +119,36 @@ class Kitti360Converter:
         labels_dir = os.path.join(sequence_path, 'labels')
         os.makedirs(labels_dir, exist_ok=True)
 
-        poses_file = os.path.join(sequence_path, 'poses.txt')
+        info_file = os.path.join(sequence_path, 'info.npz')
+
+        all_indices = get_list(self.window_ranges)
+        train_indices = split_indices([get_window_range(window) for window in self.train_windows], all_indices)
+        val_indices = split_indices([get_window_range(window) for window in self.val_windows], all_indices)
+
+        poses = self.poses[all_indices]
+
+        # Save info file
+        np.savez(info_file, poses=poses, train=train_indices, val=val_indices)
 
         for i, window_file in enumerate(self.static_windows):
-            print(f'Converting window {i + 1}/{self.num_windows}')
-            window = read_ply(window_file)
-            window_points = structured_to_unstructured(window[['x', 'y', 'z']])
-            window_colors = structured_to_unstructured(window[['red', 'green', 'blue']]) / 255
-            self.semantic = structured_to_unstructured(window[['semantic']])
-            self.instances = structured_to_unstructured(window[['instance']])
+            # Read window
+            log.info(f'Converting window {i + 1}/{self.num_windows}')
 
-            print(f'Window range: {self.window_ranges[i]}')
+            # Read static window
+            static_window = read_ply(self.static_windows[self.window_num])
+
+            static_points = structured_to_unstructured(static_window[['x', 'y', 'z']])
+            static_colors = structured_to_unstructured(static_window[['red', 'green', 'blue']]) / 255
+
+            self.semantic = structured_to_unstructured(static_window[['semantic']])
+            self.instances = structured_to_unstructured(static_window[['instance']])
+
+            # Read dynamic window
+            dynamic_window = read_ply(self.dynamic_windows[self.window_num])
+            dynamic_points = structured_to_unstructured(dynamic_window[['x', 'y', 'z']])
+
+            # For each scan in the window, find the points that belong to it and write them to a files
+            log.info(f'Window range: {self.window_ranges[i]}')
             start, end = self.window_ranges[i]
             for j in tqdm(range(start, end)):
                 scan = read_scan(self.velodyne_path, j)
@@ -131,17 +160,29 @@ class Kitti360Converter:
                 hom_scan_points = np.matmul(self.poses[j], hom_scan_points.T).T
                 transformed_scan_points = hom_scan_points[:, :3]
 
-                # Find neighbours in the static window
-                tree = scipy.spatial.cKDTree(window_points)
+                # Find neighbors in the dynamic window
+                tree = scipy.spatial.cKDTree(dynamic_points)
                 dists, indices = tree.query(transformed_scan_points, k=1)
-                mask = np.logical_and(dists >= 0, dists <= 0.3)
+                mask = np.logical_and(dists >= 0, dists <= DYNAMIC_NEIGHBOR_THRESHOLD)
 
-                rgb = window_colors[indices[mask]]
+                # Remove dynamic points from scan
+                scan_points = scan_points[~mask]
+                scan_intensity = scan_intensity[~mask]
+                transformed_scan_points = transformed_scan_points[~mask]
+
+                # Find neighbours in the static window
+                tree = scipy.spatial.cKDTree(static_points)
+                dists, indices = tree.query(transformed_scan_points, k=1)
+                mask = np.logical_and(dists >= 0, dists <= STATIC_NEIGHBOR_THRESHOLD)
+
+                # Get the color of the nearest neighbour
+                rgb = static_colors[indices[mask]]
 
                 # Save the scan
                 scan = np.concatenate([scan_points[mask], scan_intensity[mask], rgb], axis=1, dtype=np.float32)
                 np.save(os.path.join(velodyne_dir, f'{j:06d}.npy'), scan)
 
+                # Save the labels
                 labels = np.zeros((scan.shape[0], 1), dtype=np.int32)
                 semantics = self.semantic[indices[mask]].astype(np.int32)
                 instances = self.instances[indices[mask]].astype(np.int32)
@@ -150,9 +191,6 @@ class Kitti360Converter:
                 labels = labels | (instances << 16)
 
                 np.save(os.path.join(labels_dir, f'{j:06d}.npy'), labels)
-
-        # Save the poses
-        np.save(poses_file, self.poses)
 
     def update_window(self):
 
@@ -278,14 +316,14 @@ class Kitti360Converter:
         return False
 
     def next_scan(self, vis):
-        self.scan_num += 20
+        self.scan_num += 30
         self.update_scan()
         vis.update_geometry(self.scan)
         vis.update_renderer()
         return False
 
     def prev_scan(self, vis):
-        self.scan_num -= 20
+        self.scan_num -= 30
         self.update_scan()
         vis.update_geometry(self.scan)
         vis.update_renderer()
@@ -296,11 +334,11 @@ class Kitti360Converter:
         vis.destroy_window()
         return True
 
-    def run(self):
+    def visualize(self):
         self.update_window()
         self.update_scan()
         o3d.visualization.draw_geometries_with_key_callbacks(
-            [self.static_window, self.dynamic_window, self.scan],
+            [self.static_window, self.scan],
             self.key_callbacks)
 
 
@@ -326,6 +364,13 @@ def read_poses(poses_path: str, T_velo2cam: np.ndarray, sequence_length: int) ->
     return poses
 
 
+def read_txt(file: str, sequence_name: str):
+    """ Read file with one value per line. """
+    with open(file, 'r') as f:
+        lines = f.readlines()
+    return [os.path.basename(line.strip()) for line in lines if sequence_name in line]
+
+
 def get_window_range(path: str):
     """ Parse string of form '/path/to/file/start_end.ply' and return range of integers. """
     file_name = os.path.basename(path)
@@ -342,3 +387,26 @@ def read_scan(velodyne_path: str, i: int):
     file = os.path.join(velodyne_path, f'{i:010d}.bin')
     scan = np.fromfile(file, dtype=np.float32).reshape(-1, 4)
     return scan
+
+
+def global2local(globalId):
+    semanticId = globalId // 1000
+    instanceId = globalId % 1000
+    if isinstance(globalId, np.ndarray):
+        return semanticId.astype(int), instanceId.astype(int)
+    else:
+        return int(semanticId), int(instanceId)
+
+
+def get_list(ranges: list[tuple[int, int]]) -> list[int]:
+    """ Create list of sorted values without duplicates. """
+    values = []
+    for start, end in ranges:
+        values.extend(range(start, end + 1))
+    return sorted(set(values))
+
+
+def split_indices(ranges: list[tuple[int, int]], all_indices: list) -> np.ndarray:
+    """ Create list of sorted indices without duplicates. """
+    indices = get_list(ranges)
+    return np.searchsorted(all_indices, indices)
