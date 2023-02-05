@@ -86,8 +86,8 @@ def transform_points(scan, points: list, poses: list) -> list:
     return transformed_points
 
 
-def down_sample_points(pcd: o3d.geometry.PointCloud, voxel_size: float = 0.2, std_ratio: float = 1.15,
-                       nb_points: int = 20) -> o3d.geometry.PointCloud:
+def down_sample_points(pcd, voxel_size: float = 0.2, std_ratio: float = 1.15,
+                       nb_points: int = 20):
     down_pcd = pcd.voxel_down_sample(voxel_size=voxel_size)
 
     # Remove outliers
@@ -100,7 +100,7 @@ def down_sample_points(pcd: o3d.geometry.PointCloud, voxel_size: float = 0.2, st
     return down_pcd
 
 
-def get_features(pcd: o3d.geometry.PointCloud) -> np.ndarray:
+def get_features(pcd) -> np.ndarray:
     # Estimate normals
     pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.8, max_nn=50))
     pcd.orient_normals_towards_camera_location(camera_location=np.array([0, 0, 0]))
