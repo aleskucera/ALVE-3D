@@ -77,9 +77,10 @@ class Kitti360Converter:
         # ----------------- Visualization attributes -----------------
 
         # Point clouds for visualization
-        self.scan = o3d.geometry.PointCloud()
-        self.static_window = o3d.geometry.PointCloud()
-        self.dynamic_window = o3d.geometry.PointCloud()
+        if o3d is not None:
+            self.scan = o3d.geometry.PointCloud()
+            self.static_window = o3d.geometry.PointCloud()
+            self.dynamic_window = o3d.geometry.PointCloud()
 
         self.semantic_color = None
         self.instance_color = None

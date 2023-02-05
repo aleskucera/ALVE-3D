@@ -1,10 +1,15 @@
 import numpy as np
-import open3d as o3d
 from tqdm import tqdm
 from omegaconf import DictConfig
 
 from src.laserscan import LaserScan
 from .dataset import SemanticDataset
+
+try:
+    import open3d as o3d
+except ImportError:
+    o3d = None
+    print("WARNING: Can't import open3d.")
 
 STEP = 5
 VOXEL_SIZE = 0.5
