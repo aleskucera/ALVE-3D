@@ -90,8 +90,9 @@ def kitti360_conversion_vis(cfg: DictConfig):
 
 
 def kitti360_conversion(cfg: DictConfig):
-    seq = 0
-    convert_kitti360(cfg, seq)
+    sequences = [0, 2]
+    for seq in sequences:
+        convert_kitti360(cfg, seq)
 
 
 def create_kitti360_config():
