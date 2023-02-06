@@ -72,7 +72,7 @@ def show_global_cloud(cfg: DictConfig) -> None:
     sequence = 0
     file_name = f'global_cloud.npz'
     path = os.path.join(cfg.ds.path, 'sequences', f'{sequence:02d}', file_name)
-    # create_global_cloud(cfg, sequence, path)
+    create_global_cloud(cfg, sequence, path)
 
     data = np.load(path)
     cloud, color = data['cloud'], data['color']
@@ -85,12 +85,12 @@ def show_global_cloud(cfg: DictConfig) -> None:
 
 
 def kitti360_conversion_vis(cfg: DictConfig):
-    seq = 0
+    seq = 2
     visualize_kitti360_conversion(cfg, seq)
 
 
 def kitti360_conversion(cfg: DictConfig):
-    sequences = [0, 2]
+    sequences = [2]
     for seq in sequences:
         convert_kitti360(cfg, seq)
 

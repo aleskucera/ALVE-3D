@@ -72,7 +72,7 @@ class Kitti360Converter:
 
         self.T_cam_to_velo = np.concatenate([np.loadtxt(self.calib_path).reshape(3, 4), [[0, 0, 0, 1]]], axis=0)
         self.T_velo_to_cam = np.linalg.inv(self.T_cam_to_velo)
-        self.poses = read_poses(self.poses_path, self.T_velo_to_cam, self.num_scans)
+        self.poses = read_poses(self.poses_path, self.T_velo_to_cam)
 
         # ----------------- Visualization attributes -----------------
 
@@ -343,7 +343,7 @@ class Kitti360Converter:
             self.key_callbacks)
 
 
-def read_poses(poses_path: str, T_velo2cam: np.ndarray, sequence_length: int) -> np.ndarray:
+def read_poses(poses_path: str, T_velo2cam: np.ndarray) -> np.ndarray:
     """Read poses from poses.txt file. The poses are transformations from the velodyne coordinate
     system to the world coordinate system.
     :return: array of poses (Nx4x4), where N is the number of velodyne scans
@@ -355,6 +355,7 @@ def read_poses(poses_path: str, T_velo2cam: np.ndarray, sequence_length: int) ->
     lidar_poses = compressed_poses[:, 1:].reshape(-1, 4, 4)
 
     # Create a full list of poses (with missing poses with value of the last known pose)
+    sequence_length = np.max(frames) + 1
     poses = np.zeros((sequence_length, 4, 4), dtype=np.float32)
 
     last_valid_pose = lidar_poses[0]

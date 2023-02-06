@@ -1,5 +1,6 @@
 import logging
 
+import wandb
 import torch
 import numpy as np
 from torchmetrics import MetricCollection
@@ -103,6 +104,7 @@ class State:
         # Log loss to tensorboard
         if self.loss != 0:
             self.writer.add_scalar(f'Loss/{phase}', self.loss, epoch)
+            wandb.log({f'Loss/{phase}': self.loss})
 
         # Log metrics to tensorboard
         for metric_name, metric_value in self.metrics.items():
@@ -141,8 +143,8 @@ class State:
         predictions = predictions[:5]
 
         # Visualize the worst predictions and save to tensorboard
-        for i, (point, label, prediction) in enumerate(zip(points, labels, predictions)):
-            self.scan.open_points(point)
+        for i, (scan, label, prediction) in enumerate(zip(points, labels, predictions)):
+            self.scan.open_scan(scan)
             self.scan.open_label(label)
             self.scan.set_prediction(prediction)
 
@@ -165,6 +167,7 @@ class State:
 
             # Save figure to tensorboard
             self.writer.add_figure(f'Epoch: {epoch}/{phase}', fig, global_step=i)
+            wandb.log({f'Epoch: {epoch}/{phase}': [wandb.Image(fig)]})
 
         if vis:
             scan_vis = ScanVis(scan=self.scan, scans=points, labels=labels, predictions=predictions)

@@ -4,6 +4,7 @@ import time
 import atexit
 import logging
 
+import wandb
 import hydra
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
@@ -30,15 +31,15 @@ def main(cfg: DictConfig):
 
     start_tensorboard(cfg.path.output)
     time.sleep(5)
-
-    if cfg.action == 'train':
-        train_model(cfg)
-    elif cfg.action == 'train_active':
-        train_model_active(cfg)
-    elif cfg.action == 'test':
-        test_model(cfg)
-    else:
-        log.error(f'The action "{cfg.action}" is not supported')
+    with wandb.init(project='ALVE-3D'):
+        if cfg.action == 'train':
+            train_model(cfg)
+        elif cfg.action == 'train_active':
+            train_model_active(cfg)
+        elif cfg.action == 'test':
+            test_model(cfg)
+        else:
+            log.error(f'The action "{cfg.action}" is not supported')
 
     input("\nPress ENTER to exit\n")
 

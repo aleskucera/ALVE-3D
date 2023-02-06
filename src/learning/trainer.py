@@ -4,6 +4,7 @@ from typing import Any
 from typing import Tuple
 from collections import namedtuple
 
+import wandb
 import torch
 from tqdm import tqdm
 from omegaconf import DictConfig
@@ -111,6 +112,9 @@ class Trainer:
                                   shuffle=True, num_workers=gpu_count * 4)
         val_loader = DataLoader(self.val_ds, batch_size=self.cfg.train.batch_size,
                                 shuffle=False, num_workers=gpu_count * 4)
+
+        # Magic
+        wandb.watch(self.model, log_freq=10)
 
         # Train for a number of epochs
         for epoch in range(epochs):
