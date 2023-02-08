@@ -4,7 +4,7 @@ import time
 import atexit
 import logging
 
-# import wandb
+import wandb
 import hydra
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig

@@ -4,7 +4,7 @@ from typing import Any
 from typing import Tuple
 from collections import namedtuple
 
-# import wandb
+import wandb
 import torch
 from tqdm import tqdm
 from omegaconf import DictConfig
