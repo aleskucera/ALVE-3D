@@ -90,7 +90,7 @@ def log_dataset(cfg: DictConfig) -> None:
     :param cfg: Configuration object.
     """
 
-    split = None
+    split = 'train'
     sequence = 3
     run_name = f'Sequence {sequence} - {split}'
 
