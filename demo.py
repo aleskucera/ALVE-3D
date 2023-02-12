@@ -105,7 +105,6 @@ def log_dataset(cfg: DictConfig) -> None:
     with wandb.init(project='Sequence Visualization', name=run_name):
         # Generate random number
         i = np.random.randint(0, len(dataset))
-        i = 0
         scan.open_scan(dataset.scans[i])
         scan.open_label(dataset.labels[i])
 
