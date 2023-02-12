@@ -30,7 +30,9 @@ def open_sequence(path: str, split: str = None):
 
     if os.path.exists(info_path):
         info = np.load(info_path, allow_pickle=True)
-        print(info.keys())
+        print(info['val'].shape)
+        print(info['train'].shape)
+        print(info['poses'].shape)
         poses = [pose for pose in info['poses']]
         if split is not None:
             split_indices = info[split]
