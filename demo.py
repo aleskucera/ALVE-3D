@@ -69,7 +69,7 @@ def show_dataset(cfg: DictConfig) -> None:
 
     split = 'val'
     size = None
-    sequences = [2]
+    sequences = [3]
     indices = None
 
     # Create dataset
@@ -89,7 +89,7 @@ def log_dataset(cfg: DictConfig) -> None:
     :param cfg: Configuration object.
     """
 
-    split = 'train'
+    split = None
     sequence = 3
     run_name = f'Sequence {sequence} - {split}'
 
