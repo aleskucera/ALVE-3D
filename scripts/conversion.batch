@@ -9,4 +9,4 @@
 #SBATCH --mail-user=kuceral4@fel.cvut.cz  # where send info about job
 #SBATCH --mail-type=ALL                   # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
-singularity run --nv singularity/alve-3d.sif python main.py launch=convert conversion.sequence=3
+singularity run --nv singularity/alve-3d.sif python main.py launch=convert conversion.sequence=0
