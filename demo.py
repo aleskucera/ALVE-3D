@@ -69,7 +69,7 @@ def show_dataset(cfg: DictConfig) -> None:
 
     split = 'val'
     size = None
-    sequences = [0]
+    sequences = [2]
     indices = None
 
     # Create dataset
