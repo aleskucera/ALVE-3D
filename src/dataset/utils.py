@@ -30,9 +30,9 @@ def open_sequence(path: str, split: str = None):
 
     if os.path.exists(info_path):
         info = np.load(info_path, allow_pickle=True)
-        print(info['val'].shape)
-        print(info['train'].shape)
-        print(info['poses'].shape)
+        print(f'Val shape: {info["val"].shape}, max: {np.max(info["val"])}, min: {np.min(info["val"])}')
+        print(f'Train shape: {info["train"].shape}, max: {np.max(info["train"])}, min: {np.min(info["train"])}')
+        print(f'Pose shape: {info["poses"].shape}, max: {np.max(info["poses"])}, min: {np.min(info["poses"])}')
         poses = [pose for pose in info['poses']]
         if split is not None:
             split_indices = info[split]
