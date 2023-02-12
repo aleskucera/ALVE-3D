@@ -130,21 +130,14 @@ class Kitti360Converter:
         train_indices = split_indices([get_window_range(window) for window in self.train_windows], all_indices)
         val_indices = split_indices([get_window_range(window) for window in self.val_windows], all_indices)
 
-        print(f'All indices: {len(all_indices)}')
-        print(f'Train indices: {train_indices.shape}')
-        print(f'Val indices: {val_indices.shape}')
-
         poses = self.poses[all_indices]
 
-        print(f'Poses shape {poses.shape}')
-
-        test_scans = np.zeros((np.max(all_indices) + 1, 1))
         # Save info file
         np.savez(info_file, poses=poses, train=train_indices, val=val_indices)
 
         for i, window_file in enumerate(self.static_windows):
             # Read window
-            # log.info(f'Converting window {i + 1}/{self.num_windows}')
+            log.info(f'Converting window {i + 1}/{self.num_windows}')
 
             # Read static window
             static_window = read_ply(self.static_windows[self.window_num])
@@ -160,53 +153,49 @@ class Kitti360Converter:
             dynamic_points = structured_to_unstructured(dynamic_window[['x', 'y', 'z']])
 
             # For each scan in the window, find the points that belong to it and write them to a files
-            # log.info(f'Window range: {self.window_ranges[i]}')
+            log.info(f'Window range: {self.window_ranges[i]}')
             start, end = self.window_ranges[i]
-            for j in range(start, end):
-                # for j in tqdm(range(start, end)):
-                test_scans[j] = 1
-                # scan = read_scan(self.velodyne_path, j)
-                # scan_points = scan[:, :3]
-                # scan_intensity = scan[:, 3][:, np.newaxis]
-                #
-                # # Transform scan to world coordinates
-                # hom_scan_points = np.concatenate([scan_points, np.ones((scan_points.shape[0], 1))], axis=1)
-                # hom_scan_points = np.matmul(self.poses[j], hom_scan_points.T).T
-                # transformed_scan_points = hom_scan_points[:, :3]
-                #
-                # # Find neighbors in the dynamic window
-                # tree = scipy.spatial.cKDTree(dynamic_points)
-                # dists, indices = tree.query(transformed_scan_points, k=1)
-                # mask = np.logical_and(dists >= 0, dists <= self.dynamic_threshold)
-                #
-                # # Remove dynamic points from scan
-                # scan_points = scan_points[~mask]
-                # scan_intensity = scan_intensity[~mask]
-                # transformed_scan_points = transformed_scan_points[~mask]
-                #
-                # # Find neighbours in the static window
-                # tree = scipy.spatial.cKDTree(static_points)
-                # dists, indices = tree.query(transformed_scan_points, k=1)
-                # mask = np.logical_and(dists >= 0, dists <= self.static_threshold)
-                #
-                # # Get the color of the nearest neighbour
-                # rgb = static_colors[indices[mask]]
-                #
-                # # Save the scan
-                # scan = np.concatenate([scan_points[mask], scan_intensity[mask], rgb], axis=1, dtype=np.float32)
-                # np.save(os.path.join(velodyne_dir, f'{j:06d}.npy'), scan)
-                #
-                # # Save the labels
-                # labels = np.zeros((scan.shape[0], 1), dtype=np.int32)
-                # semantics = self.semantic[indices[mask]].astype(np.int32)
-                # instances = self.instances[indices[mask]].astype(np.int32)
-                #
-                # labels = labels | semantics
-                # labels = labels | (instances << 16)
-                #
-                # np.save(os.path.join(labels_dir, f'{j:06d}.npy'), labels)
+            for j in tqdm(range(start, end)):
+                scan = read_scan(self.velodyne_path, j)
+                scan_points = scan[:, :3]
+                scan_intensity = scan[:, 3][:, np.newaxis]
 
-        print(f'Number of scans in test set: {np.sum(test_scans)}')
+                # Transform scan to world coordinates
+                hom_scan_points = np.concatenate([scan_points, np.ones((scan_points.shape[0], 1))], axis=1)
+                hom_scan_points = np.matmul(self.poses[j], hom_scan_points.T).T
+                transformed_scan_points = hom_scan_points[:, :3]
+
+                # Find neighbors in the dynamic window
+                tree = scipy.spatial.cKDTree(dynamic_points)
+                dists, indices = tree.query(transformed_scan_points, k=1)
+                mask = np.logical_and(dists >= 0, dists <= self.dynamic_threshold)
+
+                # Remove dynamic points from scan
+                scan_points = scan_points[~mask]
+                scan_intensity = scan_intensity[~mask]
+                transformed_scan_points = transformed_scan_points[~mask]
+
+                # Find neighbours in the static window
+                tree = scipy.spatial.cKDTree(static_points)
+                dists, indices = tree.query(transformed_scan_points, k=1)
+                mask = np.logical_and(dists >= 0, dists <= self.static_threshold)
+
+                # Get the color of the nearest neighbour
+                rgb = static_colors[indices[mask]]
+
+                # Save the scan
+                scan = np.concatenate([scan_points[mask], scan_intensity[mask], rgb], axis=1, dtype=np.float32)
+                np.save(os.path.join(velodyne_dir, f'{j:06d}.npy'), scan)
+
+                # Save the labels
+                labels = np.zeros((scan.shape[0], 1), dtype=np.int32)
+                semantics = self.semantic[indices[mask]].astype(np.int32)
+                instances = self.instances[indices[mask]].astype(np.int32)
+
+                labels = labels | semantics
+                labels = labels | (instances << 16)
+
+                np.save(os.path.join(labels_dir, f'{j:06d}.npy'), labels)
 
     def update_window(self):
 
