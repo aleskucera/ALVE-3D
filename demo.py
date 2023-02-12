@@ -67,7 +67,7 @@ def show_dataset(cfg: DictConfig) -> None:
     :param cfg: Configuration object.
     """
 
-    split = 'val'
+    split = None
     size = None
     sequences = [3]
     indices = None
@@ -75,6 +75,7 @@ def show_dataset(cfg: DictConfig) -> None:
     # Create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path, sequences=sequences, cfg=cfg.ds,
                               split=split, indices=indices, size=size)
+    print(dataset.scans[0])
 
     # Create scan object
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
@@ -104,6 +105,7 @@ def log_dataset(cfg: DictConfig) -> None:
     with wandb.init(project='Sequence Visualization', name=run_name):
         # Generate random number
         i = np.random.randint(0, len(dataset))
+        i = 0
         scan.open_scan(dataset.scans[i])
         scan.open_label(dataset.labels[i])
 
