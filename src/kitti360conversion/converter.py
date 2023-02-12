@@ -136,11 +136,10 @@ class Kitti360Converter:
         np.savez(info_file, poses=poses, train=train_indices, val=val_indices)
 
         for i, window_file in enumerate(self.static_windows):
-            # Read window
             log.info(f'Converting window {i + 1}/{self.num_windows}')
 
             # Read static window
-            static_window = read_ply(self.static_windows[self.window_num])
+            static_window = read_ply(window_file)
 
             static_points = structured_to_unstructured(static_window[['x', 'y', 'z']])
             static_colors = structured_to_unstructured(static_window[['red', 'green', 'blue']]) / 255
