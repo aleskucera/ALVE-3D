@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 from tqdm import tqdm
 from omegaconf import DictConfig
@@ -11,25 +13,41 @@ except ImportError:
     o3d = None
     print("WARNING: Can't import open3d.")
 
-STEP = 5
+STEP = 10
 VOXEL_SIZE = 0.5
+
+log = logging.getLogger(__name__)
 
 
 def create_global_cloud(cfg: DictConfig, sequence: int, path: str) -> None:
+    """ Create a global point cloud for a given sequence.
+
+    :param cfg: Configuration object.
+    :param sequence: Sequence number.
+    :param path: Path to save the global cloud.
+    """
     cloud, color = [], []
 
     dataset = SemanticDataset(dataset_path=cfg.ds.path, sequences=[sequence], cfg=cfg.ds, split=None)
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
 
-    print(f'Creating global cloud for sequence {sequence}...')
-    print(f'Number of scans: {len(dataset.points)}')
-    print(f'Number of labels: {len(dataset.labels)}')
-    print(f'Number of poses: {len(dataset.poses)}')
+    log.info(f'Creating global cloud for sequence {sequence}...')
 
     # Get global cloud
-    points = [dataset.points[i] for i in range(len(dataset.points)) if dataset.sequence_indices[i] == sequence][::STEP]
-    labels = [dataset.labels[i] for i in range(len(dataset.labels)) if dataset.sequence_indices[i] == sequence][::STEP]
-    poses = [dataset.poses[i] for i in range(len(dataset.poses)) if dataset.sequence_indices[i] == sequence][::STEP]
+    points = [dataset.scans[i] for i in range(len(dataset.scans)) if dataset.sequence_indices[i] == sequence]
+    labels = [dataset.labels[i] for i in range(len(dataset.labels)) if dataset.sequence_indices[i] == sequence]
+    poses = [dataset.poses[i] for i in range(len(dataset.poses)) if dataset.sequence_indices[i] == sequence]
+
+    print('\nSequence information:')
+    print(f'\tNumber of scans: {len(points)}')
+    print(f'\tNumber of labels: {len(labels)}')
+    print(f'\tNumber of poses: {len(poses)}')
+
+    print(f'\nFiltering scans with step size of {STEP}...\n')
+
+    points = points[::STEP]
+    labels = labels[::STEP]
+    poses = poses[::STEP]
 
     for p, l, pos in tqdm(zip(points, labels, poses), total=len(points)):
         scan.open_scan(p)
@@ -53,7 +71,9 @@ def create_global_cloud(cfg: DictConfig, sequence: int, path: str) -> None:
     pcd.colors = o3d.utility.Vector3dVector(color)
     pcd = pcd.voxel_down_sample(voxel_size=VOXEL_SIZE)
 
-    cloud = np.asarray(pcd.points)
+    cloud = np.asarray(pcd.scans)
     color = np.asarray(pcd.colors)
 
     np.savez(path, cloud=cloud, color=color)
+
+    log.info(f'Global cloud for sequence {sequence} saved to {path}')

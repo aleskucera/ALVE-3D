@@ -21,16 +21,15 @@ from .labels import id2label
 from src.laserscan.project import project_scan
 
 log = logging.getLogger(__name__)
-STATIC_NEIGHBOR_THRESHOLD = 0.2
-DYNAMIC_NEIGHBOR_THRESHOLD = 0.1
 
 
 class Kitti360Converter:
-    def __init__(self, cfg: DictConfig, sequence: int):
+    def __init__(self, cfg: DictConfig):
+
         # ----------------- KITTI-360 structure attributes -----------------
         self.cfg = cfg
-        self.sequence = sequence
-        self.seq_name = f'2013_05_28_drive_{sequence:04d}_sync'
+        self.sequence = cfg.conversion.sequence
+        self.seq_name = f'2013_05_28_drive_{self.sequence:04d}_sync'
 
         self.velodyne_path = os.path.join(cfg.ds.path, 'data_3d_raw', self.seq_name, 'velodyne_points', 'data')
         self.semantics_path = os.path.join(cfg.ds.path, 'data_3d_semantics')
@@ -48,6 +47,7 @@ class Kitti360Converter:
         static_windows_path = os.path.join(self.semantics_path, 'train', self.seq_name, 'static')
         dynamic_windows_path = os.path.join(self.semantics_path, 'train', self.seq_name, 'dynamic')
 
+        # ----------------- Sequence windows -----------------
         self.static_windows = [os.path.join(static_windows_path, f) for f in os.listdir(static_windows_path)]
         self.dynamic_windows = [os.path.join(dynamic_windows_path, f) for f in os.listdir(dynamic_windows_path)]
 
@@ -59,11 +59,13 @@ class Kitti360Converter:
         self.train_windows = read_txt(self.train_windows_path, self.seq_name)
         self.val_windows = read_txt(self.val_windows_path, self.seq_name)
 
+        # ----------------- Conversion attributes -----------------
+        self.static_threshold = cfg.conversion.static_threshold
+        self.dynamic_threshold = cfg.conversion.dynamic_threshold
+
         # Sequence info
         self.num_scans = len(os.listdir(self.velodyne_path))
         self.num_windows = len(self.static_windows)
-
-        self.static_points = None
 
         self.semantic = None
         self.instances = None
@@ -88,6 +90,8 @@ class Kitti360Converter:
         # Visualization parameters
         self.scan_num = 0
         self.window_num = 0
+
+        self.visualization_step = cfg.conversion.visualization_step
 
         # Color map for instance labels
         self.cmap = cm.get_cmap('Set1')
@@ -164,7 +168,7 @@ class Kitti360Converter:
                 # Find neighbors in the dynamic window
                 tree = scipy.spatial.cKDTree(dynamic_points)
                 dists, indices = tree.query(transformed_scan_points, k=1)
-                mask = np.logical_and(dists >= 0, dists <= DYNAMIC_NEIGHBOR_THRESHOLD)
+                mask = np.logical_and(dists >= 0, dists <= self.dynamic_threshold)
 
                 # Remove dynamic points from scan
                 scan_points = scan_points[~mask]
@@ -174,7 +178,7 @@ class Kitti360Converter:
                 # Find neighbours in the static window
                 tree = scipy.spatial.cKDTree(static_points)
                 dists, indices = tree.query(transformed_scan_points, k=1)
-                mask = np.logical_and(dists >= 0, dists <= STATIC_NEIGHBOR_THRESHOLD)
+                mask = np.logical_and(dists >= 0, dists <= self.static_threshold)
 
                 # Get the color of the nearest neighbour
                 rgb = static_colors[indices[mask]]
@@ -201,7 +205,7 @@ class Kitti360Converter:
         static_points = structured_to_unstructured(static_window[['x', 'y', 'z']])
         static_colors = structured_to_unstructured(static_window[['red', 'green', 'blue']]) / 255
 
-        self.semantic = structured_to_unstructured(static_window[['semantic']]).flatten()
+        # self.semantic = structured_to_unstructured(static_window[['semantic']]).flatten()
         self.instances = structured_to_unstructured(static_window[['instance']]).flatten()
 
         # Read dynamic window
@@ -248,7 +252,7 @@ class Kitti360Converter:
         # Find neighbours in the static window
         tree = scipy.spatial.cKDTree(np.array(self.static_window.points))
         dists, indices = tree.query(transformed_scan_points, k=1)
-        mask = np.logical_and(dists >= 0, dists <= 0.3)
+        mask = np.logical_and(dists >= 0, dists <= self.static_threshold)
 
         # Extract RGB values from the static window
         rgb = np.array(self.static_window.colors)[indices[mask]]
@@ -307,7 +311,7 @@ class Kitti360Converter:
         return False
 
     def prev_window(self, vis):
-        self.window_num -= 1
+        self.window_num -= self.visualization_step
         self.update_window()
         vis.update_geometry(self.static_window)
         vis.update_geometry(self.dynamic_window)
@@ -317,14 +321,14 @@ class Kitti360Converter:
         return False
 
     def next_scan(self, vis):
-        self.scan_num += 30
+        self.scan_num += self.visualization_step
         self.update_scan()
         vis.update_geometry(self.scan)
         vis.update_renderer()
         return False
 
     def prev_scan(self, vis):
-        self.scan_num -= 30
+        self.scan_num -= self.visualization_step
         self.update_scan()
         vis.update_geometry(self.scan)
         vis.update_renderer()
@@ -336,6 +340,12 @@ class Kitti360Converter:
         return True
 
     def visualize(self):
+        log.info('Visualizing the KITTI-360 conversion')
+        print('\nControls:')
+        print('  - Press "b" to go to the next scan')
+        print('  - Press "p" to go to the previous scan')
+        print('  - Press "]" to go to the next window')
+        print('  - Press "[" to go to the previous window')
         self.update_window()
         self.update_scan()
         o3d.visualization.draw_geometries_with_key_callbacks(

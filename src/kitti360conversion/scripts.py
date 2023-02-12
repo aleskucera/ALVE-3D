@@ -5,21 +5,19 @@ from .labels import labels
 from .converter import Kitti360Converter
 
 
-def visualize_kitti360_conversion(cfg: DictConfig, sequence: int):
+def visualize_kitti360_conversion(cfg: DictConfig):
     """Visualize conversion of KITTI-360 dataset to SemanticKITTI format
     :param cfg: Config object
-    :param sequence: Sequence number
     """
-    converter = Kitti360Converter(cfg, sequence)
+    converter = Kitti360Converter(cfg)
     converter.visualize()
 
 
-def convert_kitti360(cfg: DictConfig, sequence: int):
+def convert_kitti360(cfg: DictConfig):
     """Convert KITTI-360 dataset to SemanticKITTI format
     :param cfg: Config object
-    :param sequence: Sequence number
     """
-    converter = Kitti360Converter(cfg, sequence)
+    converter = Kitti360Converter(cfg)
     converter.convert()
 
 

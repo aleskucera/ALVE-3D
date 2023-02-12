@@ -25,7 +25,7 @@ class SemanticDataset(Dataset):
             sequences = cfg.split[split]
         self.sequences = sequences
 
-        self.points = []
+        self.scans = []
         self.labels = []
         self.poses = []
         self.sequence_indices = []
@@ -38,7 +38,7 @@ class SemanticDataset(Dataset):
         self.init()
 
     def __getitem__(self, index):
-        points_path = self.points[index]
+        points_path = self.scans[index]
         label_path = self.labels[index]
 
         if self.split == 'train':
@@ -61,7 +61,7 @@ class SemanticDataset(Dataset):
         return proj, label, index
 
     def __len__(self):
-        return len(self.points)
+        return len(self.scans)
 
     def init(self):
         log.info(f"Initializing dataset from path {self.path}")
@@ -72,20 +72,20 @@ class SemanticDataset(Dataset):
         for seq in self.sequences:
             seq_path = os.path.join(path, f"{seq:02d}")
             points, labels, poses = open_sequence(seq_path, self.split)
-            self.points += points
+            self.scans += points
             self.labels += labels
             self.poses += poses
             self.sequence_indices += [seq] * len(points)
 
-        log.info(f"Found {len(self.points)} samples")
-        assert len(self.points) == len(self.labels), "Number of points and labels must be equal"
+        log.info(f"Found {len(self.scans)} samples")
+        assert len(self.scans) == len(self.labels), "Number of points and labels must be equal"
 
         # ----------- CROP -----------
 
-        self.points = self.points[:self.size]
+        self.scans = self.scans[:self.size]
         self.labels = self.labels[:self.size]
 
-        log.info(f"Cropped dataset to {len(self.points)} samples")
+        log.info(f"Cropped dataset to {len(self.scans)} samples")
 
         # ----------- USE INDICES -----------
 
@@ -93,7 +93,7 @@ class SemanticDataset(Dataset):
             self.choose_data()
             log.info(f"Using samples {self.indices} for {self.split} split")
 
-        log.info(f"Dataset initialized with {len(self.points)} samples")
+        log.info(f"Dataset initialized with {len(self.scans)} samples")
 
     def choose_data(self, indices=None):
         if indices:
@@ -102,7 +102,7 @@ class SemanticDataset(Dataset):
 
         self.indices.sort()
 
-        assert max(self.indices) < len(self.points), "Index out of range"
+        assert max(self.indices) < len(self.scans), "Index out of range"
 
-        self.points = [self.points[i] for i in self.indices]
+        self.scans = [self.scans[i] for i in self.indices]
         self.labels = [self.labels[i] for i in self.indices]

@@ -10,7 +10,7 @@ from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
 from src import train_model, train_model_active, test_model, set_paths, start_tensorboard, \
-    terminate_tensorboard
+    terminate_tensorboard, convert_kitti360
 
 log = logging.getLogger(__name__)
 
@@ -31,15 +31,16 @@ def main(cfg: DictConfig):
 
     start_tensorboard(cfg.path.output)
     time.sleep(5)
-    with wandb.init(project='ALVE-3D'):
-        if cfg.action == 'train':
-            train_model(cfg)
-        elif cfg.action == 'train_active':
-            train_model_active(cfg)
-        elif cfg.action == 'test':
-            test_model(cfg)
-        else:
-            log.error(f'The action "{cfg.action}" is not supported')
+    if cfg.action == 'train':
+        train_model(cfg)
+    elif cfg.action == 'test':
+        test_model(cfg)
+    elif cfg.action == 'train_active':
+        train_model_active(cfg)
+    elif cfg.action == 'convert':
+        convert_kitti360(cfg)
+    else:
+        log.error(f'The action "{cfg.action}" is not supported')
 
     input("\nPress ENTER to exit\n")
 

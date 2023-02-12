@@ -27,7 +27,7 @@ def create_superpoints(cfg: DictConfig, sequence: int, num_points: int, director
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=False)
 
     # Get global cloud
-    points = [dataset.points[i] for i in range(len(dataset.points)) if dataset.sequence_indices[i] == sequence]
+    points = [dataset.scans[i] for i in range(len(dataset.scans)) if dataset.sequence_indices[i] == sequence]
     poses = [dataset.poses[i] for i in range(len(dataset.poses)) if dataset.sequence_indices[i] == sequence]
 
     # Transform points to the first frame

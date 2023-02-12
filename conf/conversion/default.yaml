@@ -1,0 +1,6 @@
+sequence: 0
+static_threshold: 0.2
+dynamic_threshold: 0.1
+
+# Only for visualization
+visualization_step: 30
