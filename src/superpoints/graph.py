@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 
 import h5py
@@ -9,6 +10,8 @@ import torchnet as tnt
 from scipy.spatial import Delaunay
 from sklearn.neighbors import NearestNeighbors
 from sklearn.linear_model import RANSACRegressor
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 from src.superpoints.ply_c import libply_c
 from src.superpoints.provider import read_s3dis_format
