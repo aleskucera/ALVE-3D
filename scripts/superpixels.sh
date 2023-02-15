@@ -10,4 +10,4 @@
 #SBATCH --mail-user=kuceral4@fel.cvut.cz  # where send info about job
 #SBATCH --mail-type=ALL                   # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
-singularity run --nv singularity/alve-3d.sif python ./src/superpixels/supervised_partition.py --ROOT_PATH=/mnt/personal/kuceral4/S3DIS
+singularity run --nv singularity/alve-3d.sif python ./src/superpoints/supervised_partition.py --ROOT_PATH=/mnt/personal/kuceral4/S3DIS
