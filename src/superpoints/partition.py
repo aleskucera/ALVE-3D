@@ -12,7 +12,7 @@ from sklearn.cluster import MiniBatchKMeans
 from sklearn.neighbors import NearestNeighbors
 from numpy.lib.recfunctions import structured_to_unstructured
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 from src.kitti360.ply import read_ply
 
