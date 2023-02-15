@@ -1,5 +1,6 @@
 import os
 import sys
+import sys
 import logging
 
 import scipy
@@ -11,7 +12,9 @@ from sklearn.cluster import MiniBatchKMeans
 from sklearn.neighbors import NearestNeighbors
 from numpy.lib.recfunctions import structured_to_unstructured
 
-from src.kitti360conversion.ply import read_ply
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from src.kitti360.ply import read_ply
 
 import matplotlib as mpl
 import matplotlib.cm as cm
