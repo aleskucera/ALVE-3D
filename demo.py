@@ -157,10 +157,10 @@ def create_kitti360_config():
 def show_superpoints(cfg):
     # Create point cloud from .ply file
     rgb_path = "/home/ales/Datasets/FAKE_KITTI/clouds/train/0000000599_0000000846_rgb.ply"
-    superpoints_path = "/home/ales/Datasets/FAKE_KITTI/clouds/train/0000000599_0000000846_partition.ply"
+    # superpoints_path = "/home/ales/Datasets/FAKE_KITTI/clouds/train/0000000599_0000000846_partition.ply"
 
     # rgb_path = "/home/ales/Datasets/S3DIS_copy/clouds/Area_1/conferenceRoom_1_partition.ply"
-    # superpoints_path = "/home/ales/Datasets/S3DIS_copy/clouds/Area_1/conferenceRoom_1_GT.ply"
+    superpoints_path = "/home/ales/Datasets/S3DIS/clouds/Area_1/office_19_partition.ply"
 
     rgb_pcd = o3d.io.read_point_cloud(rgb_path)
     superpoints_pcd = o3d.io.read_point_cloud(superpoints_path)
