@@ -4,6 +4,7 @@ try:
 except ImportError:
     app = None
 
+import matplotlib.pyplot as plt
 from .scan import LaserScan
 from .scene import Scene, CloudWidget, ImageWidget, Counter
 
@@ -103,6 +104,9 @@ class ScanVis:
         if self.raw_cloud:
             self.scan_w.set_data(self.scan.points, self.scan.color)
             self.img_w.set_data(self.scan.proj_color)
+
+            # Save the pojection image
+            plt.imsave(f"proj_{self.offset}.png", self.scan.proj_color)
 
         # Update the labels
         if self.labels is not None:
