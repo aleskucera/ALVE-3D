@@ -284,3 +284,5 @@ dmypy.json
 outputs/
 data/*
 tmp/
+wandb/
+/src/superpoints/results_partition/
