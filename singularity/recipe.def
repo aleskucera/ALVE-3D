@@ -13,6 +13,9 @@ From: continuumio/miniconda3
     . /opt/conda/etc/profile.d/conda.sh
     conda activate $(head -n 1 environment.yaml | cut -f 2 -d ' ')
 
+    apt update
+    apt install g++ gcc cmake -y
+
 %test
     python --version
     python -c "import torch; print(torch.cuda.is_available())"

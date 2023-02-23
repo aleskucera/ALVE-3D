@@ -6,7 +6,8 @@ laser_scan:
 
 # This file is covered by the LICENSE file in the root of this project.
 name: "kitti"
-path: 'data/SemanticKITTI'
+path: '/media/ales/Elements/SemanticKITTI'
+#path: 'data/SemanticKITTI'
 num_classes: 20
 labels:
   0: "unlabeled"

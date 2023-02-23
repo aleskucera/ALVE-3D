@@ -14,7 +14,7 @@ excluded_packages = ['open3d', 'pytorch3d', 'jakteristics']
 print('===============================================')
 print('\tSINGULARITY IMAGE BUILD SCRIPT')
 print('===============================================')
-print('\nParameters:')
+print('\nINFO: Parameters:')
 print(f'\t- working directory: {os.getcwd()}')
 print(f'\t- conda environment: {conda_env}')
 print(f'\t- singularity image: {singularity_image}')
@@ -53,6 +53,7 @@ with open(environment_file, 'r') as f:
     environment = yaml.safe_load(f)
 
 print('\n---- Removing excluded packages from the environment file ----\n')
+
 # Remove the excluded packages from the environment file
 for package in excluded_packages:
     if package in environment['dependencies']:

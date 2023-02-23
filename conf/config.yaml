@@ -2,7 +2,7 @@ defaults:
   - _self_
 
   # Training and testing settings
-  - ds: kitti-360
+  - ds: kitti
   - test: default
   - train: default
   - model: salsa_next
