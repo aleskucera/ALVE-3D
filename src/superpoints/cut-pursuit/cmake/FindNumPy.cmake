@@ -1,4 +1,3 @@
-
 # - Try to find the Python module NumPy
 #
 # This module defines:
