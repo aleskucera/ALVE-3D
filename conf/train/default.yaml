@@ -4,6 +4,4 @@ weight_epsilon: 0.0001   # 1e-4
 epochs: 100
 batch_size: 32
 dataset_size: null      # null means all
-n_inputs: 1
-n_outputs: 20
 patience: 20

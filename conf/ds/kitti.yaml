@@ -4,10 +4,8 @@ laser_scan:
   fov_up: 16.6
   fov_down: -16.6
 
-# This file is covered by the LICENSE file in the root of this project.
 name: "kitti"
-path: '/media/ales/Elements/SemanticKITTI'
-#path: 'data/SemanticKITTI'
+path: 'data/SemanticKITTI'
 num_classes: 20
 labels:
   0: "unlabeled"
