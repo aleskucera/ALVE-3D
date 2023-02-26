@@ -2,60 +2,62 @@ import os
 import yaml
 import subprocess
 
-user = 'kuceral4'
-conda_env = 'ALVE-3D'
-singularity_image = 'alve-3d2.sif'
+# # ===================================== Define the parameters =====================================
+USER = 'kuceral4'
+CONDA_ENV = 'ALVE-3D'
+SINGULARITY_IMAGE = os.path.join(os.getcwd(), 'singularity/alve-3d.sif')
 
-recipe_file = os.path.join(os.getcwd(), 'singularity/recipe.def')
-environment_file = os.path.join(os.getcwd(), 'environment.yaml')
+RECIPE_FILE = os.path.join(os.getcwd(), 'singularity/recipe.def')
+ENVIRONMENT_FILE = os.path.join(os.getcwd(), 'environment.yaml')
 
-excluded_packages = ['open3d', 'pytorch3d', 'jakteristics']
+EXCLUDED_PACKAGES = ['open3d', 'pytorch3d', 'jakteristics']
 
 print('===============================================')
 print('\tSINGULARITY IMAGE BUILD SCRIPT')
 print('===============================================')
 print('\nINFO: Parameters:')
 print(f'\t- working directory: {os.getcwd()}')
-print(f'\t- conda environment: {conda_env}')
-print(f'\t- singularity image: {singularity_image}')
-print(f'\t- recipe file: {recipe_file}')
-print(f'\t- environment file: {environment_file}')
+print(f'\t- conda environment: {CONDA_ENV}')
+print(f'\t- singularity image: {SINGULARITY_IMAGE}')
+print(f'\t- recipe file: {RECIPE_FILE}')
+print(f'\t- environment file: {ENVIRONMENT_FILE}')
 print(f'\t- excluded packages:')
-for package in excluded_packages:
+for package in EXCLUDED_PACKAGES:
     print(f'\t\t- {package}')
-print(f'\t- ssh user: {user}')
+print(f'\t- ssh user: {USER}')
+
+# ===================================== Export the conda environment =====================================
 
 print('\n---- Exporting the Anaconda environment ----\n')
 
+# Check if the conda environment exists
 result = subprocess.run(['conda', 'env', 'list'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
 if result.returncode != 0:
     print('ERROR: Could not list the conda environments')
     exit(1)
-
 out = result.stdout.decode('utf-8')
 err = result.stderr.decode('utf-8')
-
-if conda_env not in out:
+if CONDA_ENV not in out:
     print('ERROR: Could not find the conda environment')
-print(f'INFO: Found conda environment {conda_env}, exporting it to {environment_file}')
+print(f'INFO: Found conda environment {CONDA_ENV}, exporting it to {ENVIRONMENT_FILE}')
 
-result = subprocess.run(['conda', 'env', 'export', '--no-builds', '--name', conda_env, '--file', environment_file],
+# Export the conda environment
+result = subprocess.run(['conda', 'env', 'export', '--no-builds', '--name', CONDA_ENV, '--file', ENVIRONMENT_FILE],
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
 if result.returncode != 0:
     print('ERROR: Could not export the conda environment')
     exit(1)
+print(f'INFO: Environment file written: {ENVIRONMENT_FILE}')
 
-print(f'INFO: Environment file written: {environment_file}')
-
-with open(environment_file, 'r') as f:
-    environment = yaml.safe_load(f)
+# ===================================== Remove excluded packages =====================================
 
 print('\n---- Removing excluded packages from the environment file ----\n')
 
+with open(ENVIRONMENT_FILE, 'r') as f:
+    environment = yaml.safe_load(f)
+
 # Remove the excluded packages from the environment file
-for package in excluded_packages:
+for package in EXCLUDED_PACKAGES:
     if package in environment['dependencies']:
         for conda_package in environment['dependencies']:
             if package in conda_package:
@@ -67,23 +69,30 @@ for package in excluded_packages:
                 print(f'INFO: Removing package {pip_package} from pip dependencies')
                 environment['dependencies'][-1]['pip'].remove(pip_package)
 
-# Write the environment file
-with open(environment_file, 'w') as f:
+# Remove the prefix from the environment file
+if 'prefix' in environment.keys():
+    environment.pop('prefix')
+
+# Save the updated environment file
+with open(ENVIRONMENT_FILE, 'w') as f:
     yaml.dump(environment, f)
+
+# ===================================== Build the singularity image =====================================
 
 print('\n---- Building the Singularity image ----\n')
 
-result = subprocess.run(['sudo', 'singularity', 'build', '--nv', singularity_image, recipe_file])
-
+result = subprocess.run(['sudo', 'singularity', 'build', '--nv', SINGULARITY_IMAGE, RECIPE_FILE])
 if result.returncode != 0:
     print('ERROR: Could not build the singularity image')
     exit(1)
+print(f'INFO: Singularity image built: {SINGULARITY_IMAGE}')
 
-answer = input('Would you like to copy the image to the login3.rci.cvut.cz server? [y/n] ')
+# ===================================== Copy the image to the RCI server =====================================
 
+answer = input('\nWould you like to copy the image to the login3.rci.cvut.cz server? [y/n] ')
 if answer == 'y':
     result = subprocess.run(
-        ['scp', singularity_image, 'kuceral4@login3.rci.cvut.cz:/home/kuceral4/ALVE-3D/singularity'])
+        ['scp', SINGULARITY_IMAGE, 'kuceral4@login3.rci.cvut.cz:/home/kuceral4/ALVE-3D/singularity'])
 
     if result.returncode != 0:
         print('ERROR: Could not copy the image to the login3.rci.cvut.cz server')
