@@ -15,7 +15,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_MODULE_PATH})
 
 find_package(PythonLibs)
 find_package(PythonInterp)
-find_package(NumPy 1.5 REQUIRED)
+# find_package(NumPy 1.5 REQUIRED)
 
 find_package(Boost 1.65.0 COMPONENTS graph REQUIRED) #system filesystem thread serialization
 if (${Boost_MINOR_VERSION} LESS 67 )
