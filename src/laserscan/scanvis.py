@@ -4,12 +4,27 @@ try:
 except ImportError:
     app = None
 
-import matplotlib.pyplot as plt
 from .scan import LaserScan
 from .scene import Scene, CloudWidget, ImageWidget, Counter
 
 
 class ScanVis:
+    """ Visualize a sequence of scans.
+
+    :param scan: LaserScan object.
+    :param scans: Iterable of scans. (file paths or numpy arrays)
+    :param scan_colors: Iterable of scan colors. (file paths or numpy arrays)
+    :param labels: Iterable of labels. (file paths or numpy arrays)
+    :param superpoints: Iterable of superpoints. (file paths or numpy arrays)
+    :param predictions: Iterable of predictions. (file paths or numpy arrays)
+    :param entropies: Iterable of entropies. (file paths or numpy arrays)
+    :param offset: Offset for the scan index - from which index should visualization start. (default: 0)
+    :param raw_cloud: Visualize raw cloud. (default: False)
+    :param semantics: Visualize semantics. (default: True)
+    :param instances: Visualize instances. (default: False)
+    :param projection: Visualize projection. (default: True)
+    """
+
     def __init__(self, scan: LaserScan, scans: iter, scan_colors: iter = None, labels: iter = None,
                  superpoints: iter = None, predictions: iter = None, entropies: iter = None, offset: int = 0,
                  raw_cloud: bool = False, semantics: bool = True, instances: bool = False, projection: bool = True):
@@ -19,12 +34,13 @@ class ScanVis:
 
         self.scans = scans
         self.scan_colors = scan_colors
+
         self.labels = labels
         self.entropies = entropies
         self.predictions = predictions
         self.superpoints = superpoints
-        self.total = len(scans)
 
+        self.total = len(scans)
         self.offset = offset
 
         self.raw_cloud = raw_cloud
@@ -37,6 +53,8 @@ class ScanVis:
             self.semantics = False
             self.instances = False
 
+        # ================= VISUALIZATION SCENES =================
+
         # Point Cloud Scene
         self.scene = Scene()
         self.scene.connect(self.key_press, self.draw)
@@ -46,6 +64,8 @@ class ScanVis:
         if self.projection:
             self.img_scene = Scene(size=(scan.proj_W, scan.proj_H * self.num_widgets))
             self.img_scene.connect(self.key_press, self.draw)
+
+        # ================= VISUALIZATION WIDGETS (WINDOWS) =================
 
         c = Counter()
 
@@ -88,13 +108,16 @@ class ScanVis:
         self.update_scan()
 
     def update_scan(self):
-        # Update the title
+
+        # ======================== TITLE ========================
+
         title = f"Scan {self.offset} / {self.total}"
         self.scene.update_title(title)
         if self.img_scene is not None:
             self.img_scene.update_title(title)
 
-        # Update the scan
+        # ======================== SCAN ========================
+
         color = self.scan_colors[self.offset] if self.scan_colors is not None else None
         if isinstance(self.scans[0], str):
             self.scan.open_scan(self.scans[self.offset], color=color)
@@ -105,10 +128,8 @@ class ScanVis:
             self.scan_w.set_data(self.scan.points, self.scan.color)
             self.img_w.set_data(self.scan.proj_color)
 
-            # Save the pojection image
-            plt.imsave(f"proj_{self.offset}.png", self.scan.proj_color)
+        # ======================== LABELS ========================
 
-        # Update the labels
         if self.labels is not None:
             if isinstance(self.labels[0], str):
                 self.scan.open_label(self.labels[self.offset])
@@ -122,7 +143,19 @@ class ScanVis:
                 self.inst_w.set_data(self.scan.points, self.scan.inst_label_color[..., ::-1])
                 self.inst_img_w.set_data(self.scan.proj_inst_color[..., ::-1])
 
-        # Update the entropies
+        # ======================== SUPERPOINTS ========================
+
+        if self.superpoints is not None:
+            if isinstance(self.superpoints[0], str):
+                self.scan.open_superpoints(self.superpoints[self.offset])
+            else:
+                self.scan.set_superpoints(self.superpoints[self.offset])
+
+            self.superpoint_w.set_data(self.scan.points, self.scan.superpoints_color)
+            self.superpoint_img_w.set_data(self.scan.proj_superpoints_color)
+
+        # ======================== ENTROPY ========================
+
         if self.entropies is not None:
             if isinstance(self.entropies[0], str):
                 self.scan.open_entropy(self.entropies[self.offset])
@@ -132,7 +165,8 @@ class ScanVis:
             self.entropy_w.set_data(self.scan.points, self.scan.entropy_color[..., ::-1])
             self.entropy_img_w.set_data(self.scan.proj_entropy_color[..., ::-1])
 
-        # Update the predictions
+        # ======================== PREDICTIONS ========================
+
         if self.predictions is not None:
             if isinstance(self.predictions[0], str):
                 self.scan.open_prediction(self.predictions[self.offset])
@@ -141,16 +175,6 @@ class ScanVis:
 
                 self.pred_w.set_data(self.scan.points, self.scan.pred_color[..., ::-1])
                 self.pred_img_w.set_data(self.scan.proj_pred_color[..., ::-1])
-
-        # Update the superpoints
-        if self.superpoints is not None:
-            if isinstance(self.superpoints[0], str):
-                self.scan.open_superpoints(self.superpoints[self.offset])
-            else:
-                self.scan.set_superpoints(self.superpoints[self.offset])
-
-            self.superpoint_w.set_data(self.scan.points, self.scan.superpoints_color)
-            self.superpoint_img_w.set_data(self.scan.proj_superpoints_color)
 
     def key_press(self, event):
         self.scene.canvas.events.key_press.block()

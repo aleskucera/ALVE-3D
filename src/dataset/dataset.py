@@ -12,6 +12,16 @@ log = logging.getLogger(__name__)
 
 
 class SemanticDataset(Dataset):
+    """ Wrapper class for the PyTorch Dataset class.
+
+    :param dataset_path: Path to the dataset.
+    :param cfg: Configuration object.
+    :param sequences: List of sequences to load. If None all the sequences in the split are loaded (default: None)
+    :param split: Split to load. If None all the sequences are loaded (default: None)
+    :param size: Number of samples to load. If None all the samples are loaded (default: None)
+    :param indices: List of indices to load. If None all the samples are loaded (default: None)
+    """
+
     def __init__(self, dataset_path: str, cfg: DictConfig, sequences: list = None,
                  split: str = None, size: int = None, indices: list = None):
 
@@ -27,44 +37,54 @@ class SemanticDataset(Dataset):
 
         self.scans = []
         self.labels = []
+
         self.poses = []
         self.sequence_indices = []
 
         self.mean = np.array(cfg.mean, dtype=np.float32)
         self.std = np.array(cfg.std, dtype=np.float32)
 
-        self.scan = LaserScan(label_map=cfg.learning_map, colorize=False, color_map=cfg.color_map_train)
+        self.laser_scan = LaserScan(label_map=cfg.learning_map, colorize=False, color_map=cfg.color_map_train)
 
-        self.init()
+        self._init()
 
     def __getitem__(self, index):
-        points_path = self.scans[index]
+        scan_path = self.scans[index]
         label_path = self.labels[index]
 
+        # Load the scan data into the LaserScan object
         if self.split == 'train':
-            self.scan.open_scan(points_path, flip_prob=0.5, trans_prob=0.5, rot_prob=0.5, drop_prob=0.5)
+            self.laser_scan.open_scan(scan_path, flip_prob=0.5, trans_prob=0.5, rot_prob=0.5, drop_prob=0.5)
         else:
-            self.scan.open_scan(points_path)
+            self.laser_scan.open_scan(scan_path)
 
-        self.scan.open_label(label_path)
+        # Load the label data into the LaserScan object
+        self.laser_scan.open_label(label_path)
 
-        # Concatenate depth, xyz and remission
-        proj = np.concatenate([self.scan.proj_depth[np.newaxis, ...],
-                               self.scan.proj_xyz.transpose(2, 0, 1),
-                               self.scan.proj_remission[np.newaxis, ...]], axis=0)
+        if self.laser_scan.color is not None:
+            # Concatenate depth, xyz, remission and color
+            x = np.concatenate([self.laser_scan.proj_depth[np.newaxis, ...],
+                                self.laser_scan.proj_xyz.transpose(2, 0, 1),
+                                self.laser_scan.proj_remission[np.newaxis, ...],
+                                self.laser_scan.proj_color.transpose(2, 0, 1)], axis=0)
+        else:
+            # Concatenate depth, xyz and remission
+            x = np.concatenate([self.laser_scan.proj_depth[np.newaxis, ...],
+                                self.laser_scan.proj_xyz.transpose(2, 0, 1),
+                                self.laser_scan.proj_remission[np.newaxis, ...]], axis=0)
 
         # Normalize
-        proj = (proj - self.mean[:, np.newaxis, np.newaxis]) / self.std[:, np.newaxis, np.newaxis]
+        # x = (x - self.mean[:, np.newaxis, np.newaxis]) / self.std[:, np.newaxis, np.newaxis]
 
-        label = self.scan.proj_sem_label.astype(np.long)
+        y = self.laser_scan.proj_sem_label.astype(np.long)
 
-        return proj, label, index
+        return x, y, index
 
     def __len__(self):
         return len(self.scans)
 
-    def init(self):
-        log.info(f"Initializing dataset from path {self.path}")
+    def _init(self):
+        log.info(f"INFO: Initializing dataset (split: {self.split}) from path {self.path}")
 
         # ----------- LOAD -----------
 
@@ -72,12 +92,13 @@ class SemanticDataset(Dataset):
         for seq in self.sequences:
             seq_path = os.path.join(path, f"{seq:02d}")
             points, labels, poses = open_sequence(seq_path, self.split)
+
             self.scans += points
             self.labels += labels
             self.poses += poses
             self.sequence_indices += [seq] * len(points)
 
-        log.info(f"Found {len(self.scans)} samples")
+        log.info(f"INFO: Found {len(self.scans)} samples")
         assert len(self.scans) == len(self.labels), "Number of points and labels must be equal"
 
         # ----------- CROP -----------
@@ -85,19 +106,17 @@ class SemanticDataset(Dataset):
         self.scans = self.scans[:self.size]
         self.labels = self.labels[:self.size]
 
-        log.info(f"Cropped dataset to {len(self.scans)} samples")
+        log.info(f"INFO: Cropped dataset to {len(self.scans)} samples")
 
         # ----------- USE INDICES -----------
 
         if self.indices is not None:
-            self.choose_data()
-            log.info(f"Using samples {self.indices} for {self.split} split")
+            self._choose_data()
+            log.info(f"INFO: Using samples {self.indices} for {self.split} split")
 
-        log.info(f"Dataset initialized with {len(self.scans)} samples")
+        log.info(f"INFO: Dataset initialized with {len(self.scans)} samples")
 
-    def choose_data(self, indices=None):
-        if indices:
-            self.indices = indices
+    def _choose_data(self):
         assert self.indices is not None
 
         self.indices.sort()

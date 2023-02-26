@@ -5,6 +5,11 @@ except ImportError:
 
 
 class Scene:
+    """ Scene for visualization.
+
+    :param size: Size of the scene. (default: (800, 600))
+    """
+
     def __init__(self, size=(800, 600)):
         self.canvas = SceneCanvas(keys='interactive', show=True, size=size)
         self.grid = self.canvas.central_widget.add_grid()
@@ -19,6 +24,14 @@ class Scene:
 
 
 class Widget:
+    """ Base class for widgets.
+
+    :param scene: Scene object.
+    :param pos: Position of the widget in the scene.
+    :param color_map: Color map for the widget.
+    :param border_color: Border color for the widget.
+    """
+
     def __init__(self, scene: Scene, pos: tuple, color_map='viridis', border_color='white'):
         self.scene = scene
         self.pos = pos
@@ -30,6 +43,14 @@ class Widget:
 
 
 class CloudWidget(Widget):
+    """ Widget for point cloud visualization.
+
+    :param scene: Scene object.
+    :param pos: Position of the widget in the scene.
+    :param color_map: Color map for the widget.
+    :param border_color: Border color for the widget.
+    """
+
     def __init__(self, scene: Scene, pos: tuple, color_map='viridis', border_color='white'):
         super().__init__(scene, pos, color_map, border_color)
         self._init()
@@ -48,6 +69,14 @@ class CloudWidget(Widget):
 
 
 class ImageWidget(Widget):
+    """ Widget for image visualization.
+
+    :param scene: Scene object.
+    :param pos: Position of the widget in the scene.
+    :param color_map: Color map for the widget.
+    :param border_color: Border color for the widget.
+    """
+
     def __init__(self, scene: Scene, pos: tuple, color_map='viridis', border_color='white'):
         super().__init__(scene, pos, color_map, border_color)
         self.vis = None
@@ -70,6 +99,12 @@ class ImageWidget(Widget):
 
 
 class Counter:
+    """ Simple counter for iteration. Used in ScanVis for assigning
+    widget positions.
+
+    :param start: Start value of the counter. (default: -1)
+    """
+
     def __init__(self, start=-1):
         self.value = start
 

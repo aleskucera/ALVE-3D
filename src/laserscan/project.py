@@ -3,6 +3,7 @@ import numpy as np
 
 def project_scan(points: np.ndarray, H: int, W: int, fov_up: float, fov_down: float) -> dict:
     """ Project a point cloud to a depth image
+
     :param points: point cloud
     :param H: height of the depth image
     :param W: width of the depth image

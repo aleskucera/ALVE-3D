@@ -11,6 +11,12 @@ from .colormap import map_color, dict_to_color_map, instances_color_map
 
 
 def arg_check(func):
+    """ Decorator to check if the arguments are valid.
+    Used in LaserScan class. The validation is done for the following types:
+    - torch.Tensor: Converted to numpy array.
+    - str (indicates file): Check if the file exists.
+    """
+
     def wrapper(self, *args, **kwargs):
         new_args = []
         new_kwargs = {}
@@ -34,6 +40,20 @@ def arg_check(func):
 
 
 class LaserScan:
+    """ LaserScan class to store and manipulate 3D point clouds.
+    The class can be used to load point clouds from SemanticKITTI format.
+    It also provides methods to project the point cloud into a 2D image, and
+    it can be used in ScanVis to visualize the point cloud.
+
+    :param label_map: Dictionary with label map for training.
+    :param color_map: Dictionary with color map for semantic labels mapped to training labels.
+    :param colorize: If True, the point cloud will be colored according to the corresponding color maps.
+    :param H: Height of the projected image.
+    :param W: Width of the projected image.
+    :param fov_up: Field of view up in degrees.
+    :param fov_down: Field of view down in degrees.
+    """
+
     def __init__(self, label_map, color_map=None, colorize=False, H=64, W=1024, fov_up=3.0,
                  fov_down=-25.0):
         self.proj_H = H
@@ -55,11 +75,9 @@ class LaserScan:
         self.points = None
         self.color = None
         self.remissions = None
-        self.radius = None
 
-        # 3D points that are actually used for projection
-        self.projected_points = None
-        self.projected_color = None
+        self.radius = None
+        self.drop_mask = None
 
         # Raw projected data
         self.proj_xyz = None
@@ -67,15 +85,11 @@ class LaserScan:
         self.proj_color = None
         self.proj_depth = None
         self.proj_mask = None
-        self.drop_mask = None
         self.proj_remission = None
 
         # Semantic labels
         self.sem_label = None
         self.sem_label_color = None
-
-        # Color that is actually used for projection
-        self.projected_sem_label_color = None
 
         self.inst_label = None
         self.inst_label_color = None
@@ -120,11 +134,23 @@ class LaserScan:
     def __len__(self):
         return self.points.shape[0]
 
-    # ------------------------------  RAW DATA ------------------------------
+    # =======================================================================
+    # ------------------------------  RAW DATA  ------------------------------
+    # =======================================================================
 
     @arg_check
-    def open_scan(self, filename: str, flip_prob: float = 0, color: np.ndarray = None,
+    def open_scan(self, filename: str, flip_prob: float = 0,
                   trans_prob: float = 0, rot_prob: float = 0, drop_prob: float = 0) -> None:
+        """ Open scan from file. If the file is a .bin file, it is assumed to be in the SemanticKITTI
+        format (x, y, z, remission).
+        If the file is a .npy file, it is assumed to be a numpy array with (x, y, z, remission, r, g, b).
+
+        :param filename: Path to the file.
+        :param flip_prob: Probability of flipping the point cloud along the x-axis.
+        :param trans_prob: Probability of translating the point cloud.
+        :param rot_prob: Probability of rotating the point cloud around the z-axis.
+        :param drop_prob: Probability of points to be dropped.
+        """
 
         # Read scan from file
         if filename.endswith('.bin'):
@@ -140,12 +166,25 @@ class LaserScan:
         remissions = scan[:, 3]
         if scan.shape[1] == 7:
             color = scan[:, 4:7]
+        else:
+            color = None
 
         self.set_scan(points, remissions, color, flip_prob, trans_prob, rot_prob, drop_prob)
 
     @arg_check
     def set_scan(self, points: np.ndarray, remissions: np.ndarray = None, color: np.ndarray = None,
                  flip_prob: float = 0, trans_prob: float = 0, rot_prob: float = 0, drop_prob: float = 0) -> None:
+        """ Set scan from numpy arrays.
+
+        :param points: Numpy array with shape (N, 3) containing the point cloud.
+        :param remissions: Numpy array with shape (N,) containing the remission values.
+        :param color: Numpy array with shape (N, 3) containing the color values.
+        :param flip_prob: Probability of flipping the point cloud along the x-axis.
+        :param trans_prob: Probability of translating the point cloud.
+        :param rot_prob: Probability of rotating the point cloud around the z-axis.
+        :param drop_prob: Probability of points to be dropped.
+        """
+
         self.points = points
         self.remissions = remissions
 
@@ -188,19 +227,43 @@ class LaserScan:
         self.proj_remission = np.full((self.proj_H, self.proj_W), -1, dtype=np.float32)
         self.proj_remission[self.proj_mask] = self.remissions[self.proj_idx[self.proj_mask]]
 
-        if self.colorize:
-            if color is None:
-                rem_range = (np.min(self.remissions), np.max(self.remissions))
-                self.color = map_color(self.remissions, color_map='twilight', data_range=rem_range)
-                self.proj_color = self.color[self.proj_idx]
-            else:
-                self.color = color[self.drop_mask]
-                self.proj_color = np.zeros((self.proj_H, self.proj_W, 3), dtype=np.float32)
-                self.proj_color[self.proj_mask] = self.color[self.proj_idx[self.proj_mask]]
+        if color is None and self.colorize:
+            rem_range = (np.min(self.remissions), np.max(self.remissions))
+            self.color = map_color(self.remissions, color_map='twilight', data_range=rem_range)
+            self.proj_color = self.color[self.proj_idx]
+        elif color is not None:
+            self.color = color[self.drop_mask]
+            self.proj_color = np.zeros((self.proj_H, self.proj_W, 3), dtype=np.float32)
+            self.proj_color[self.proj_mask] = self.color[self.proj_idx[self.proj_mask]]
+        else:
+            self.color = None
+            self.proj_color = None
 
-    # ------------------------------  SEMANTIC LABELS ------------------------------------------------------------
+        self.sem_label = None
+        self.sem_label_color = None
+        self.inst_label = None
+        self.inst_label_color = None
+
+        self.proj_sem_label = None
+        self.proj_sem_color = None
+        self.proj_inst_label = None
+        self.proj_inst_color = None
+
+    # ===============================================================================
+    # ------------------------------  SEMANTIC LABELS  ------------------------------
+    # ===============================================================================
+
     @arg_check
     def open_label(self, filename: str) -> None:
+        """ Open labels from a file. The file can be either a .label file or a .npy file.
+        Expected format is int32, where the lower 16 bits are the semantic label and the upper 16 bits
+        are the instance id.
+
+        It is necessary to load the corresponding scan first before loading the labels to determine
+        the drop mask.
+
+        :param filename: Path to the label file.
+        """
 
         # Read label from file
         if filename.endswith('.label'):
@@ -228,6 +291,16 @@ class LaserScan:
 
     @arg_check
     def set_label(self, semantics: np.ndarray, instances: np.ndarray = None) -> None:
+        """ Set the semantic and instance labels from numpy arrays.
+
+        It is necessary to load the corresponding scan first
+        to determine the drop mask.
+
+        :param semantics: Numpy array with shape (N,) containing the semantic labels.
+        :param instances: Numpy array with shape (N,) containing the instance ids.
+        """
+
+        assert self.sem_label is None and self.inst_label is None, 'Labels already set'
 
         # Set attributes, so they correspond to the points in the scan
         self.sem_label = semantics[self.drop_mask]
@@ -253,7 +326,10 @@ class LaserScan:
             self.proj_sem_color = self.color_map[self.proj_sem_label]
             self.proj_inst_color = self.inst_color_map[self.proj_inst_label]
 
-    # ------------------------------  PREDICTIONS ------------------------------
+    # ===========================================================================
+    # ------------------------------  PREDICTIONS  ------------------------------
+    # ===========================================================================
+
     @arg_check
     def open_prediction(self, filename: str) -> None:
 
