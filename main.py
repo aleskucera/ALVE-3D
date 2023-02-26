@@ -4,12 +4,11 @@ import time
 import atexit
 import logging
 
-import wandb
 import hydra
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src import train_model, train_model_active, test_model, set_paths, start_tensorboard, \
+from src import train_model, test_model, set_paths, start_tensorboard, \
     terminate_tensorboard, convert_kitti360
 
 log = logging.getLogger(__name__)
@@ -35,8 +34,8 @@ def main(cfg: DictConfig):
         train_model(cfg)
     elif cfg.action == 'test':
         test_model(cfg)
-    elif cfg.action == 'train_active':
-        train_model_active(cfg)
+    # elif cfg.action == 'train_active':
+    #     train_model_active(cfg)
     elif cfg.action == 'convert':
         convert_kitti360(cfg)
     else:

@@ -1,4 +1,4 @@
-from .learn import train_model, train_model_active, test_model
+from .learn import train_model, test_model
 from .utils import set_paths, start_tensorboard, terminate_tensorboard
 from .dataset import SemanticDataset, create_global_cloud, create_superpoints
 from .kitti360 import create_config, convert_kitti360, visualize_kitti360_conversion

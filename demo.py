@@ -69,13 +69,12 @@ def show_dataset(cfg: DictConfig) -> None:
 
     split = None
     size = None
-    sequences = [3]
+    sequences = [0]
     indices = None
 
     # Create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path, sequences=sequences, cfg=cfg.ds,
                               split=split, indices=indices, size=size)
-    print(dataset.scans[0])
 
     # Create scan object
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)

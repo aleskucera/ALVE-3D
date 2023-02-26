@@ -43,9 +43,11 @@ def create_config():
     mean = [0, 0, 0, 0, 0]
     std = [1, 1, 1, 1, 1]
 
+    laser_scan = {'H': 64, 'W': 2048, 'fov_up': 16.6, 'fov_down': -16.6}
+
     config = {'name': name, 'path': path, 'labels': id_to_name, 'color_map_train': color_map_train,
               'color_map': color_map, 'learning_map': learning_map, 'learning_map_inv': learning_map_inv,
-              'learning_ignore': learning_ignore, 'mean': mean, 'std': std}
+              'learning_ignore': learning_ignore, 'mean': mean, 'std': std, 'laser_scan': laser_scan}
 
     # create config file
     with open('config.yaml', 'w') as f:

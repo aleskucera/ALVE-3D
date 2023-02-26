@@ -11,8 +11,8 @@ log = logging.getLogger(__name__)
 
 def supervise_remote(cfg: DictConfig):
     # Connect to the remote machine
-    c = Connection(host=cfg.connect.host, user=cfg.connect.user)
-    log.info(f'Connected to {cfg.connect.host} as {cfg.connect.user}')
+    c = Connection(host=cfg.connect.host, user=cfg.connect.USER)
+    log.info(f'Connected to {cfg.connect.host} as {cfg.connect.USER}')
 
     with c.cd(cfg.connect.repo):
         # Get absolute paths on the remote machine
