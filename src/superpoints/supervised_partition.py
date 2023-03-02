@@ -12,7 +12,7 @@ sys.path.append(os.path.join('/opt/conda/envs/ALVE-3D/lib/python3.10/site-packag
 import json
 import h5py
 import torch
-import wandb
+# import wandb
 import numpy as np
 from tqdm import tqdm
 import torchnet as tnt
@@ -208,7 +208,7 @@ class FolderHierarchy:
 def main(args: argparse.Namespace):
     stats = []
     random.seed(0)
-    wandb.init(project='PointNet')
+    # wandb.init(project='PointNet')
     root = os.path.join(args.ROOT_PATH)
     folder_hierarchy = FolderHierarchy(args.odir, args.dataset, root, args.cvfold)
 
@@ -263,7 +263,7 @@ def main(args: argparse.Namespace):
                                                                    is_transition, diff, True, xyz)
             loss1, loss2 = compute_loss(args, diff, is_transition, weights_loss)
 
-            wandb.log({"First Loss - train": loss1.item(), "Second Loss - train": loss2.item()})
+            # wandb.log({"First Loss - train": loss1.item(), "Second Loss - train": loss2.item()})
 
             factor = 1000  # scaling for better usage of float precision
 
@@ -284,13 +284,13 @@ def main(args: argparse.Namespace):
             logging.debug('Batch loss %f, Loader time %f ms, Trainer time %f ms.', loss.item() / factor, t_loader,
                           t_trainer)
 
-            wandb.log({"Batch loss - train": loss.item() / factor, "Loader time - train": t_loader,
-                       "Trainer time - train": t_trainer})
+            # wandb.log({"Batch loss - train": loss.item() / factor, "Loader time - train": t_loader,
+            #            "Trainer time - train": t_trainer})
 
             t0 = time.time()
 
-        wandb.log({"Epoch loss - train": loss_meter.value()[0],
-                   "Epoch n_clusters - train": n_clusters_meter.value()[0]})
+        # wandb.log({"Epoch loss - train": loss_meter.value()[0],
+        #            "Epoch n_clusters - train": n_clusters_meter.value()[0]})
 
         return loss_meter.value()[0], n_clusters_meter.value()[0]
 
