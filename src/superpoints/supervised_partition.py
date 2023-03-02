@@ -63,9 +63,9 @@ def parse_args():
     parser.add_argument('--lr_steps', default='[20,35,45]',
                         help='List of epochs where the learning rate is decreased by `lr_decay`')
     parser.add_argument('--momentum', default=0.9, type=float, help='Momentum')
-    parser.add_argument('--epochs', default=20, type=int,
+    parser.add_argument('--epochs', default=50, type=int,
                         help='Number of epochs to train. If <=0, only testing will be done.')
-    parser.add_argument('--batch_size', default=2, type=int, help='Batch size')
+    parser.add_argument('--batch_size', default=3, type=int, help='Batch size')
     parser.add_argument('--optim', default='adam', help='Optimizer: sgd|adam')
     parser.add_argument('--grad_clip', default=1, type=float,
                         help='Element-wise clipping of gradient. If 0, does not clip')
