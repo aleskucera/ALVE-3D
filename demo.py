@@ -90,7 +90,7 @@ def log_dataset(cfg: DictConfig) -> None:
     """
 
     split = 'train'
-    sequence = 0
+    sequence = 2
     run_name = f'Sequence {sequence} - {split}'
 
     # Create dataset
