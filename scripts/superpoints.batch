@@ -12,4 +12,4 @@
 
 
 singularity run --nv singularity/alve-3d-final.sif bash ./scripts/compile.sh
-singularity run --nv singularity/alve-3d-final.sif python ./src/superpoints/supervised_partition.py --ROOT_PATH=/mnt/personal/kuceral4/S3DIS
+singularity run --nv singularity/alve-3d-final.sif python ./src/superpoints/supervised_partition.py --ROOT_PATH=/home/kuceral4/Datasets/S3DIS
