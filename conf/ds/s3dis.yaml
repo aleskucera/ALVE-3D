@@ -1,0 +1,34 @@
+path: data/S3DIS
+
+label_map:
+  stairs: 0,
+  ceiling: 1,
+  floor: 2,
+  wall: 3,
+  column: 4,
+  beam: 5,
+  window: 6,
+  door: 7,
+  table: 8,
+  chair: 9,
+  bookcase: 10,
+  sofa: 11,
+  board: 12,
+  clutter: 13
+
+
+label_map_inv:
+  0: stairs,
+  1: ceiling,
+  2: floor,
+  3: wall,
+  4: column,
+  5: beam,
+  6: window,
+  7: door,
+  8: table,
+  9: chair,
+  10: bookcase,
+  11: sofa,
+  12: board,
+  13: clutter

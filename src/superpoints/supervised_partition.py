@@ -14,7 +14,6 @@ import h5py
 import torch
 import wandb
 import numpy as np
-import torch.nn as nn
 from tqdm import tqdm
 import torchnet as tnt
 import torch.optim as optim

@@ -1,6 +1,9 @@
 import os
+import sys
 import torch
 import numpy as np
+
+sys.path.append(os.path.join(os.path.dirname(__file__), 'cut-pursuit/build/src'))
 
 import libcp
 from src.superpoints.ply_c import libply_c
