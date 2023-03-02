@@ -7,6 +7,7 @@ From: continuumio/miniconda3
 %environment
     export PATH="/opt/conda/bin:$PATH"
     export PATH="/opt/conda/envs/ALVE-3D/bin:$PATH"
+    export PYTHONPATH="/opt/conda/envs/ALVE-3D/lib/python3.10/site-packages:$PYTHONPATH"
 
 %post
     apt update
@@ -21,6 +22,9 @@ From: continuumio/miniconda3
     conda install eigen
     conda install -c r libiconv
     conda install -c conda-forge python-devtools
+    conda install -c pytorch3d pytorch3d
+
+    python -m pip install jakteristics
 
     ln -s /opt/conda/envs/ALVE-3D/lib/python3.10/site-packages/numpy/core/include/numpy /opt/conda/envs/ALVE-3D/include/numpy
 

@@ -20,18 +20,18 @@ from src.superpoints.provider import read_s3dis_format
 def main():
     parser = argparse.ArgumentParser(description='Large-scale Point Cloud Semantic Segmentation with Superpoint Graphs')
 
-    parser.add_argument('--ROOT_PATH', default='/home/ales/Datasets/S3DIS')
+    parser.add_argument('--ROOT_PATH', default='data/S3DIS')
 
     parser.add_argument('--compute_geof', default=1, type=int,
                         help='compute hand-crafted features of the local geometry')
     parser.add_argument('--k_nn_local', default=20, type=int, help='number of neighbors to describe the local geometry')
     parser.add_argument('--k_nn_adj', default=5, type=int, help='number of neighbors for the adjacency graph')
-    parser.add_argument('--voxel_width', default=0.00, type=float, help='voxel size when subsampling (in m)')
+    parser.add_argument('--voxel_width', default=0.03, type=float, help='voxel size when subsampling (in m)')
     parser.add_argument('--plane_model', default=True, type=bool, help='uses a simple plane model to derive elevation')
     parser.add_argument('--ver_batch', default=5000000, type=int, help='batch size for reading large files')
     args = parser.parse_args()
 
-    folders = ['Area_2']
+    folders = ['Area_1', 'Area_2', 'Area_3', 'Area_4', 'Area_5', 'Area_6']
     n_labels = 13
 
     for folder in folders:
@@ -317,7 +317,7 @@ def create_s3dis_datasets(args, test_seed_offset=0):
     """ Gets training and test datasets. """
     # Load formatted clouds
     testlist, trainlist = [], []
-    for n in range(1, 3):
+    for n in range(1, 7):
         if n != args.cvfold:
             path = '{}/features_supervision/Area_{:d}/'.format(args.ROOT_PATH, n)
             for fname in sorted(os.listdir(path)):

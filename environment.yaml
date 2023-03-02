@@ -291,6 +291,7 @@ dependencies:
   - networkx==3.0
   - oauthlib==3.2.2
   - omegaconf==2.2.3
+  - open3d==0.16.0
   - packaging==21.3
   - pandas==1.5.2
   - pandas-vet==0.2.3

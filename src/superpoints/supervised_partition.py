@@ -41,8 +41,8 @@ def parse_args():
     parser.add_argument('--resume', default='', help='Loads a previously saved model.')
     parser.add_argument('--db_train_name', default='trainval', help='Training set (Sema3D)')
     parser.add_argument('--db_test_name', default='testred', help='Test set (Sema3D)')
-    parser.add_argument('--ROOT_PATH', default='/home/ales/Datasets/S3DIS')
-    parser.add_argument('--odir', default='results_partition/s3dis/best', help='folder for saving the trained model')
+    parser.add_argument('--ROOT_PATH', default='data/S3DIS')
+    parser.add_argument('--odir', default='models/pretrained', help='folder for saving the trained model')
     parser.add_argument('--spg_out', default=1, type=int,
                         help='wether to compute the SPG for linking with the SPG semantic segmentation method')
 
@@ -164,7 +164,7 @@ class FolderHierarchy:
         self._root = root_dir
         if dataset_name == 's3dis':
             self._output_dir = os.path.join(output_dir, 'cv' + str(cv_fold))
-            self._folders = ["Area_1/"]
+            self._folders = ["Area_1/", "Area_2/", "Area_3/", "Area_4/", "Area_5/", "Area_6/"]
         elif dataset_name == 'sema3d':
             self._output_dir = os.path.join(output_dir, 'best')
             self._folders = ["train/", "test_reduced/", "test_full/"]
@@ -208,7 +208,7 @@ class FolderHierarchy:
 def main(args: argparse.Namespace):
     stats = []
     random.seed(0)
-    with wandb.init(project='Sequence Visualization'):
+    with wandb.init(project='Partition'):
         root = os.path.join(args.ROOT_PATH)
         folder_hierarchy = FolderHierarchy(args.odir, args.dataset, root, args.cvfold)
 
@@ -310,8 +310,8 @@ def main(args: argparse.Namespace):
 
                 # iterate over dataset in batches
                 for bidx, (
-                fname, edg_source, edg_target, is_transition, labels, objects, clouds_data, xyz) in enumerate(
-                        tqdm(val_loader)):
+                        fname, edg_source, edg_target, is_transition, labels, objects, clouds_data, xyz) in enumerate(
+                    tqdm(val_loader)):
 
                     # Move to device
                     clouds, clouds_global, nei = clouds_data
@@ -373,8 +373,8 @@ def main(args: argparse.Namespace):
 
                 # iterate over dataset in batches
                 for bidx, (
-                fname, edg_source, edg_target, is_transition, labels, objects, clouds_data, xyz) in enumerate(
-                        tqdm(val_loader)):
+                        fname, edg_source, edg_target, is_transition, labels, objects, clouds_data, xyz) in enumerate(
+                    tqdm(val_loader)):
 
                     # Move to device
                     clouds, clouds_global, nei = clouds_data
