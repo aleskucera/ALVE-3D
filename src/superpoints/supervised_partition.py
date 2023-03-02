@@ -7,6 +7,8 @@ import random
 import logging
 import argparse
 
+sys.path.append(os.path.join('/opt/conda/envs/ALVE-3D/lib/python3.10/site-packages/'))
+
 import json
 import h5py
 import torch
