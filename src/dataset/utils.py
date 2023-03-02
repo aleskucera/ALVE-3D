@@ -17,6 +17,7 @@ def open_sequence(path: str, split: str = None):
     calib_path = os.path.join(os.path.join(path, 'calib.txt'))
 
     info_path = os.path.join(path, 'info.npz')
+    print(info_path)
 
     velodyne = []
     if os.path.exists(velodyne_path):
