@@ -12,7 +12,7 @@ sys.path.append(os.path.join('/opt/conda/envs/ALVE-3D/lib/python3.10/site-packag
 import json
 import h5py
 import torch
-# import wandb
+import wandb
 import numpy as np
 from tqdm import tqdm
 import torchnet as tnt
@@ -208,107 +208,41 @@ class FolderHierarchy:
 def main(args: argparse.Namespace):
     stats = []
     random.seed(0)
-    # wandb.init(project='PointNet')
-    root = os.path.join(args.ROOT_PATH)
-    folder_hierarchy = FolderHierarchy(args.odir, args.dataset, root, args.cvfold)
+    with wandb.init(project='Sequence Visualization'):
+        root = os.path.join(args.ROOT_PATH)
+        folder_hierarchy = FolderHierarchy(args.odir, args.dataset, root, args.cvfold)
 
-    dbinfo = get_s3dis_info()
+        dbinfo = get_s3dis_info()
 
-    # Create the datasets
-    print('Creating datasets...')
-    train_ds, val_ds = create_s3dis_datasets(args)
-    print(f'Train dataset size: {len(train_ds)}')
-    print(f'Val dataset size: {len(val_ds)}')
+        # Create the datasets
+        print('Creating datasets...')
+        train_ds, val_ds = create_s3dis_datasets(args)
+        print(f'Train dataset size: {len(train_ds)}')
+        print(f'Val dataset size: {len(val_ds)}')
 
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, collate_fn=graph_collate, num_workers=args.nworkers,
-                              shuffle=True, drop_last=True)
-    val_loader = DataLoader(val_ds, batch_size=1, collate_fn=graph_collate, num_workers=args.nworkers,
-                            shuffle=False, drop_last=False)
+        train_loader = DataLoader(train_ds, batch_size=args.batch_size, collate_fn=graph_collate,
+                                  num_workers=args.nworkers,
+                                  shuffle=True, drop_last=True)
+        val_loader = DataLoader(val_ds, batch_size=1, collate_fn=graph_collate, num_workers=args.nworkers,
+                                shuffle=False, drop_last=False)
 
-    model = PointNet(num_features=6, num_global_features=7, out_features=4)
-    model.to(device)
+        model = PointNet(num_features=6, num_global_features=7, out_features=4)
+        model.to(device)
 
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps,
-                                                     gamma=args.lr_decay, last_epoch=args.start_epoch - 1)
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps,
+                                                         gamma=args.lr_decay, last_epoch=args.start_epoch - 1)
 
-    def train():
-        model.train()
-
-        loss_meter = tnt.meter.AverageValueMeter()
-        n_clusters_meter = tnt.meter.AverageValueMeter()
-
-        t0 = time.time()
-
-        for bidx, (fname, edg_source, edg_target, is_transition, labels, objects, clouds_data, xyz) in enumerate(
-                tqdm(train_loader)):
-
-            # Move to device
-            clouds, clouds_global, nei = clouds_data
-            is_transition = is_transition.to(device)
-            objects = objects.to(device)
-            clouds = clouds.to(device)
-            clouds_global = clouds_global.to(device)
-
-            t_loader = 1000 * (time.time() - t0)
-            optimizer.zero_grad()
-            t0 = time.time()
-
-            # Compute embeddings
-            embeddings = model(clouds, clouds_global)
-
-            # Compute loss
-            diff = compute_dist(embeddings, edg_source, edg_target, args.dist_type)
-            weights_loss, pred_comp, in_comp = compute_weight_loss(args, embeddings, objects, edg_source, edg_target,
-                                                                   is_transition, diff, True, xyz)
-            loss1, loss2 = compute_loss(args, diff, is_transition, weights_loss)
-
-            # wandb.log({"First Loss - train": loss1.item(), "Second Loss - train": loss2.item()})
-
-            factor = 1000  # scaling for better usage of float precision
-
-            loss = (loss1 + loss2) / weights_loss.shape[0] * factor
-
-            loss.backward()
-
-            if args.grad_clip > 0:
-                for p in model.parameters():
-                    p.grad.data.clamp_(-args.grad_clip * factor, args.grad_clip * factor)
-
-            optimizer.step()
-
-            t_trainer = 1000 * (time.time() - t0)
-            loss_meter.add(loss.item() / factor)  # /weights_loss.mean().item())
-            n_clusters_meter.add(embeddings.shape[0] / len(pred_comp))
-
-            logging.debug('Batch loss %f, Loader time %f ms, Trainer time %f ms.', loss.item() / factor, t_loader,
-                          t_trainer)
-
-            # wandb.log({"Batch loss - train": loss.item() / factor, "Loader time - train": t_loader,
-            #            "Trainer time - train": t_trainer})
-
-            t0 = time.time()
-
-        # wandb.log({"Epoch loss - train": loss_meter.value()[0],
-        #            "Epoch n_clusters - train": n_clusters_meter.value()[0]})
-
-        return loss_meter.value()[0], n_clusters_meter.value()[0]
-
-    def evaluate():
-        """ Evaluated model on test set """
-        model.eval()
-
-        with torch.no_grad():
+        def train():
+            model.train()
 
             loss_meter = tnt.meter.AverageValueMeter()
             n_clusters_meter = tnt.meter.AverageValueMeter()
-            BR_meter = tnt.meter.AverageValueMeter()
-            BP_meter = tnt.meter.AverageValueMeter()
-            CM_classes = ConfusionMatrix(dbinfo['classes'])
 
-            # iterate over dataset in batches
+            t0 = time.time()
+
             for bidx, (fname, edg_source, edg_target, is_transition, labels, objects, clouds_data, xyz) in enumerate(
-                    tqdm(val_loader)):
+                    tqdm(train_loader)):
 
                 # Move to device
                 clouds, clouds_global, nei = clouds_data
@@ -317,156 +251,231 @@ def main(args: argparse.Namespace):
                 clouds = clouds.to(device)
                 clouds_global = clouds_global.to(device)
 
+                t_loader = 1000 * (time.time() - t0)
+                optimizer.zero_grad()
+                t0 = time.time()
+
+                # Compute embeddings
                 embeddings = model(clouds, clouds_global)
 
+                # Compute loss
                 diff = compute_dist(embeddings, edg_source, edg_target, args.dist_type)
+                weights_loss, pred_comp, in_comp = compute_weight_loss(args, embeddings, objects, edg_source,
+                                                                       edg_target,
+                                                                       is_transition, diff, True, xyz)
+                loss1, loss2 = compute_loss(args, diff, is_transition, weights_loss)
+
+                wandb.log({"First Loss - train": loss1.item(), "Second Loss - train": loss2.item()})
+
+                factor = 1000  # scaling for better usage of float precision
+
+                loss = (loss1 + loss2) / weights_loss.shape[0] * factor
+
+                loss.backward()
+
+                if args.grad_clip > 0:
+                    for p in model.parameters():
+                        p.grad.data.clamp_(-args.grad_clip * factor, args.grad_clip * factor)
+
+                optimizer.step()
+
+                t_trainer = 1000 * (time.time() - t0)
+                loss_meter.add(loss.item() / factor)  # /weights_loss.mean().item())
+                n_clusters_meter.add(embeddings.shape[0] / len(pred_comp))
+
+                logging.debug('Batch loss %f, Loader time %f ms, Trainer time %f ms.', loss.item() / factor, t_loader,
+                              t_trainer)
+
+                wandb.log({"Batch loss - train": loss.item() / factor, "Loader time - train": t_loader,
+                           "Trainer time - train": t_trainer})
+
+                t0 = time.time()
+
+            wandb.log({"Epoch loss - train": loss_meter.value()[0],
+                       "Epoch n_clusters - train": n_clusters_meter.value()[0]})
+
+            return loss_meter.value()[0], n_clusters_meter.value()[0]
+
+        def evaluate():
+            """ Evaluated model on test set """
+            model.eval()
+
+            with torch.no_grad():
+
+                loss_meter = tnt.meter.AverageValueMeter()
+                n_clusters_meter = tnt.meter.AverageValueMeter()
+                BR_meter = tnt.meter.AverageValueMeter()
+                BP_meter = tnt.meter.AverageValueMeter()
+                CM_classes = ConfusionMatrix(dbinfo['classes'])
+
+                # iterate over dataset in batches
+                for bidx, (
+                fname, edg_source, edg_target, is_transition, labels, objects, clouds_data, xyz) in enumerate(
+                        tqdm(val_loader)):
+
+                    # Move to device
+                    clouds, clouds_global, nei = clouds_data
+                    is_transition = is_transition.to(device)
+                    objects = objects.to(device)
+                    clouds = clouds.to(device)
+                    clouds_global = clouds_global.to(device)
+
+                    embeddings = model(clouds, clouds_global)
+
+                    diff = compute_dist(embeddings, edg_source, edg_target, args.dist_type)
+
+                    if len(is_transition) > 1:
+                        weights_loss, pred_components, pred_in_component = compute_weight_loss(args, embeddings,
+                                                                                               objects,
+                                                                                               edg_source, edg_target,
+                                                                                               is_transition, diff,
+                                                                                               True,
+                                                                                               xyz)
+                        loss1, loss2 = compute_loss(args, diff, is_transition, weights_loss)
+                        loss = (loss1 + loss2) / weights_loss.shape[0]
+                        pred_transition = pred_in_component[edg_source] != pred_in_component[edg_target]
+                        per_pred = perfect_prediction(pred_components, labels)
+                        CM_classes.count_predicted_batch(labels[:, 1:], per_pred)
+                    else:
+                        loss = 0
+
+                    if len(is_transition) > 1:
+                        loss_meter.add(loss.item())  # /weights_loss.sum().item())
+                        is_transition = is_transition.cpu().numpy()
+                        n_clusters_meter.add(len(pred_components))
+                        BR_meter.add((is_transition.sum()) * compute_boundary_recall(is_transition,
+                                                                                     relax_edge_binary(pred_transition,
+                                                                                                       edg_source,
+                                                                                                       edg_target,
+                                                                                                       xyz.shape[0],
+                                                                                                       args.BR_tolerance)),
+                                     n=is_transition.sum())
+                        BP_meter.add((pred_transition.sum()) * compute_boundary_precision(
+                            relax_edge_binary(is_transition, edg_source, edg_target, xyz.shape[0], args.BR_tolerance),
+                            pred_transition), n=pred_transition.sum())
+            CM = CM_classes.confusion_matrix
+            return loss_meter.value()[0], n_clusters_meter.value()[0], 100 * CM.trace() / CM.sum(), BR_meter.value()[0], \
+                BP_meter.value()[0]
+
+        def evaluate_final():
+            """ Evaluated model on test set """
+
+            print("Final evaluation")
+            model.eval()
+
+            loss_meter = tnt.meter.AverageValueMeter()
+            n_clusters_meter = tnt.meter.AverageValueMeter()
+            confusion_matrix_classes = ConfusionMatrix(dbinfo['classes'])
+            confusion_matrix_BR = ConfusionMatrix(2)
+            confusion_matrix_BP = ConfusionMatrix(2)
+
+            with torch.no_grad():
+
+                # iterate over dataset in batches
+                for bidx, (
+                fname, edg_source, edg_target, is_transition, labels, objects, clouds_data, xyz) in enumerate(
+                        tqdm(val_loader)):
+
+                    # Move to device
+                    clouds, clouds_global, nei = clouds_data
+                    is_transition = is_transition.to(device, non_blocking=True)
+                    objects = objects.to(device, non_blocking=True)
+                    clouds = clouds.to(device, non_blocking=True)
+                    clouds_global = clouds_global.to(device, non_blocking=True)
+
+                    embeddings = model(clouds, clouds_global)
+
+                    diff = compute_dist(embeddings, edg_source, edg_target, args.dist_type)
+
+                    pred_components, pred_in_component = compute_partition(args, embeddings, edg_source, edg_target,
+                                                                           diff,
+                                                                           xyz)
+
+                    if len(is_transition) > 1:
+                        pred_transition = pred_in_component[edg_source] != pred_in_component[edg_target]
+                        is_transition = is_transition.cpu().numpy()
+
+                        n_clusters_meter.add(len(pred_components))
+
+                        per_pred = perfect_prediction(pred_components, labels)
+                        confusion_matrix_classes.count_predicted_batch(labels[:, 1:], per_pred)
+                        confusion_matrix_BR.count_predicted_batch_hard(is_transition,
+                                                                       relax_edge_binary(pred_transition, edg_source,
+                                                                                         edg_target, xyz.shape[0],
+                                                                                         args.BR_tolerance).astype(
+                                                                           'uint8'))
+                        confusion_matrix_BP.count_predicted_batch_hard(
+                            relax_edge_binary(is_transition, edg_source, edg_target, xyz.shape[0], args.BR_tolerance),
+                            pred_transition.astype('uint8'))
+
+                    if args.spg_out:
+                        graph_sp = compute_sp_graph(xyz, 100, pred_in_component, pred_components, labels,
+                                                    dbinfo["classes"])
+                        spg_file = os.path.join(folder_hierarchy.spg_folder, fname[0])
+                        if not os.path.exists(os.path.dirname(spg_file)):
+                            os.makedirs(os.path.dirname(spg_file))
+                        try:
+                            os.remove(spg_file)
+                        except OSError:
+                            pass
+                        write_spg(spg_file, graph_sp, pred_components, pred_in_component)
+
+                        # Debugging purpose - write the embedding file and an exemple of scalar files
+                        # if bidx % 0 == 0:
+                        #     embedding2ply(os.path.join(folder_hierarchy.emb_folder , fname[0][:-3] + '_emb.ply'), xyz, embeddings.detach().cpu().numpy())
+                        #     scalar2ply(os.path.join(folder_hierarchy.scalars , fname[0][:-3] + '_elevation.ply') , xyz, clouds_data[1][:,1].cpu())
+                        #     edg_class = is_transition + 2*pred_transition
+                        #     edge_class2ply2(os.path.join(folder_hierarchy.emb_folder , fname[0][:-3] + '_transition.ply'), edg_class, xyz, edg_source, edg_target)
 
                 if len(is_transition) > 1:
-                    weights_loss, pred_components, pred_in_component = compute_weight_loss(args, embeddings, objects,
-                                                                                           edg_source, edg_target,
-                                                                                           is_transition, diff, True,
-                                                                                           xyz)
-                    loss1, loss2 = compute_loss(args, diff, is_transition, weights_loss)
-                    loss = (loss1 + loss2) / weights_loss.shape[0]
-                    pred_transition = pred_in_component[edg_source] != pred_in_component[edg_target]
-                    per_pred = perfect_prediction(pred_components, labels)
-                    CM_classes.count_predicted_batch(labels[:, 1:], per_pred)
-                else:
-                    loss = 0
+                    res_name = folder_hierarchy.output_dir + '/res.h5'
+                    res_file = h5py.File(res_name, 'w')
+                    res_file.create_dataset('confusion_matrix_classes'
+                                            , data=confusion_matrix_classes.confusion_matrix, dtype='uint64')
+                    res_file.create_dataset('confusion_matrix_BR'
+                                            , data=confusion_matrix_BR.confusion_matrix, dtype='uint64')
+                    res_file.create_dataset('confusion_matrix_BP'
+                                            , data=confusion_matrix_BP.confusion_matrix, dtype='uint64')
+                    res_file.create_dataset('n_clusters'
+                                            , data=n_clusters_meter.value()[0], dtype='uint64')
+                    res_file.close()
 
-                if len(is_transition) > 1:
-                    loss_meter.add(loss.item())  # /weights_loss.sum().item())
-                    is_transition = is_transition.cpu().numpy()
-                    n_clusters_meter.add(len(pred_components))
-                    BR_meter.add((is_transition.sum()) * compute_boundary_recall(is_transition,
-                                                                                 relax_edge_binary(pred_transition,
-                                                                                                   edg_source,
-                                                                                                   edg_target,
-                                                                                                   xyz.shape[0],
-                                                                                                   args.BR_tolerance)),
-                                 n=is_transition.sum())
-                    BP_meter.add((pred_transition.sum()) * compute_boundary_precision(
-                        relax_edge_binary(is_transition, edg_source, edg_target, xyz.shape[0], args.BR_tolerance),
-                        pred_transition), n=pred_transition.sum())
-        CM = CM_classes.confusion_matrix
-        return loss_meter.value()[0], n_clusters_meter.value()[0], 100 * CM.trace() / CM.sum(), BR_meter.value()[0], \
-            BP_meter.value()[0]
+            return
 
-    def evaluate_final():
-        """ Evaluated model on test set """
+        for epoch in range(args.start_epoch, args.epochs):
+            if not args.learned_embeddings:
+                break
+            print('Epoch {}/{} ({}):'.format(epoch, args.epochs, folder_hierarchy.output_dir))
 
-        print("Final evaluation")
-        model.eval()
+            loss, n_sp = train()
+            scheduler.step()
 
-        loss_meter = tnt.meter.AverageValueMeter()
-        n_clusters_meter = tnt.meter.AverageValueMeter()
-        confusion_matrix_classes = ConfusionMatrix(dbinfo['classes'])
-        confusion_matrix_BR = ConfusionMatrix(2)
-        confusion_matrix_BP = ConfusionMatrix(2)
+            if (epoch + 1) % args.test_nth_epoch == 0:  # or epoch+1==args.epochs:
+                loss_test, n_clusters_test, ASA_test, BR_test, BP_test = evaluate()
+                print(
+                    '-> Train loss: %1.5f - Test Loss: %1.5f  |  n_clusters:  %5.1f  |  ASA: %3.2f %%  |  Test BR: %3.2f %%  |  BP : %3.2f%%' % (
+                        loss, loss_test, n_clusters_test, ASA_test, BR_test, BP_test))
+            else:
+                loss_test, n_clusters_test, ASA_test, BR_test, BP_test = 0, 0, 0, 0, 0
+                print('-> Train loss: %1.5f  superpoints size : %5.0f' % (loss, n_sp))
 
-        with torch.no_grad():
+            stats.append({'epoch': epoch, 'loss': loss, 'loss_test': loss_test, 'n_clusters_test': n_clusters_test,
+                          'ASA_test': ASA_test, 'BR_test': BR_test, 'BP_test': BP_test})
 
-            # iterate over dataset in batches
-            for bidx, (fname, edg_source, edg_target, is_transition, labels, objects, clouds_data, xyz) in enumerate(
-                    tqdm(val_loader)):
+            with open(os.path.join(folder_hierarchy.output_dir, 'trainlog.json'), 'w') as outfile:
+                json.dump(stats, outfile, indent=4)
 
-                # Move to device
-                clouds, clouds_global, nei = clouds_data
-                is_transition = is_transition.to(device, non_blocking=True)
-                objects = objects.to(device, non_blocking=True)
-                clouds = clouds.to(device, non_blocking=True)
-                clouds_global = clouds_global.to(device, non_blocking=True)
+            if epoch % args.save_nth_epoch == 0 or epoch == args.epochs - 1:
+                model_name = 'model.pth.tar'
+                print("Saving model to " + model_name)
+                model_name = 'model.pth.tar'
+                torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(),
+                            'optimizer': optimizer.state_dict()},
+                           os.path.join(folder_hierarchy.output_dir, model_name))
 
-                embeddings = model(clouds, clouds_global)
+            if math.isnan(loss): break
 
-                diff = compute_dist(embeddings, edg_source, edg_target, args.dist_type)
-
-                pred_components, pred_in_component = compute_partition(args, embeddings, edg_source, edg_target, diff,
-                                                                       xyz)
-
-                if len(is_transition) > 1:
-                    pred_transition = pred_in_component[edg_source] != pred_in_component[edg_target]
-                    is_transition = is_transition.cpu().numpy()
-
-                    n_clusters_meter.add(len(pred_components))
-
-                    per_pred = perfect_prediction(pred_components, labels)
-                    confusion_matrix_classes.count_predicted_batch(labels[:, 1:], per_pred)
-                    confusion_matrix_BR.count_predicted_batch_hard(is_transition,
-                                                                   relax_edge_binary(pred_transition, edg_source,
-                                                                                     edg_target, xyz.shape[0],
-                                                                                     args.BR_tolerance).astype('uint8'))
-                    confusion_matrix_BP.count_predicted_batch_hard(
-                        relax_edge_binary(is_transition, edg_source, edg_target, xyz.shape[0], args.BR_tolerance),
-                        pred_transition.astype('uint8'))
-
-                if args.spg_out:
-                    graph_sp = compute_sp_graph(xyz, 100, pred_in_component, pred_components, labels, dbinfo["classes"])
-                    spg_file = os.path.join(folder_hierarchy.spg_folder, fname[0])
-                    if not os.path.exists(os.path.dirname(spg_file)):
-                        os.makedirs(os.path.dirname(spg_file))
-                    try:
-                        os.remove(spg_file)
-                    except OSError:
-                        pass
-                    write_spg(spg_file, graph_sp, pred_components, pred_in_component)
-
-                    # Debugging purpose - write the embedding file and an exemple of scalar files
-                    # if bidx % 0 == 0:
-                    #     embedding2ply(os.path.join(folder_hierarchy.emb_folder , fname[0][:-3] + '_emb.ply'), xyz, embeddings.detach().cpu().numpy())
-                    #     scalar2ply(os.path.join(folder_hierarchy.scalars , fname[0][:-3] + '_elevation.ply') , xyz, clouds_data[1][:,1].cpu())
-                    #     edg_class = is_transition + 2*pred_transition
-                    #     edge_class2ply2(os.path.join(folder_hierarchy.emb_folder , fname[0][:-3] + '_transition.ply'), edg_class, xyz, edg_source, edg_target)
-
-            if len(is_transition) > 1:
-                res_name = folder_hierarchy.output_dir + '/res.h5'
-                res_file = h5py.File(res_name, 'w')
-                res_file.create_dataset('confusion_matrix_classes'
-                                        , data=confusion_matrix_classes.confusion_matrix, dtype='uint64')
-                res_file.create_dataset('confusion_matrix_BR'
-                                        , data=confusion_matrix_BR.confusion_matrix, dtype='uint64')
-                res_file.create_dataset('confusion_matrix_BP'
-                                        , data=confusion_matrix_BP.confusion_matrix, dtype='uint64')
-                res_file.create_dataset('n_clusters'
-                                        , data=n_clusters_meter.value()[0], dtype='uint64')
-                res_file.close()
-
-        return
-
-    for epoch in range(args.start_epoch, args.epochs):
-        if not args.learned_embeddings:
-            break
-        print('Epoch {}/{} ({}):'.format(epoch, args.epochs, folder_hierarchy.output_dir))
-
-        loss, n_sp = train()
-        scheduler.step()
-
-        if (epoch + 1) % args.test_nth_epoch == 0:  # or epoch+1==args.epochs:
-            loss_test, n_clusters_test, ASA_test, BR_test, BP_test = evaluate()
-            print(
-                '-> Train loss: %1.5f - Test Loss: %1.5f  |  n_clusters:  %5.1f  |  ASA: %3.2f %%  |  Test BR: %3.2f %%  |  BP : %3.2f%%' % (
-                    loss, loss_test, n_clusters_test, ASA_test, BR_test, BP_test))
-        else:
-            loss_test, n_clusters_test, ASA_test, BR_test, BP_test = 0, 0, 0, 0, 0
-            print('-> Train loss: %1.5f  superpoints size : %5.0f' % (loss, n_sp))
-
-        stats.append({'epoch': epoch, 'loss': loss, 'loss_test': loss_test, 'n_clusters_test': n_clusters_test,
-                      'ASA_test': ASA_test, 'BR_test': BR_test, 'BP_test': BP_test})
-
-        with open(os.path.join(folder_hierarchy.output_dir, 'trainlog.json'), 'w') as outfile:
-            json.dump(stats, outfile, indent=4)
-
-        if epoch % args.save_nth_epoch == 0 or epoch == args.epochs - 1:
-            model_name = 'model.pth.tar'
-            print("Saving model to " + model_name)
-            model_name = 'model.pth.tar'
-            torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(),
-                        'optimizer': optimizer.state_dict()},
-                       os.path.join(folder_hierarchy.output_dir, model_name))
-
-        if math.isnan(loss): break
-
-    evaluate_final()
+        evaluate_final()
 
 
 def get_s3dis_info():
