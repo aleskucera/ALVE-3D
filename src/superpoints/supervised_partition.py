@@ -201,7 +201,7 @@ class FolderHierarchy:
     def _create_folder(self, property_name):
         folder = os.path.join(self._root, property_name)
         if not os.path.isdir(folder):
-            os.makedirs(folder)
+            os.makedirs(folder, exist_ok=True)
         return folder
 
 
