@@ -184,6 +184,11 @@ def visualize_superpoints(cfg: DictConfig):
 
         source = graph_nn['source'].astype('int64')
         target = graph_nn['target'].astype('int64')
+        print(source.shape, target.shape)
+        print(embeddings.shape)
+        print(f'Embeddings: {embeddings.min().item()}, {embeddings.max().item()}')
+        print(f'source: {source.min()}, {source.max()}')
+        print(f'target: {target.min()}, {target.max()}')
         diff = ((embeddings[source, :] - embeddings[target, :]) ** 2).sum(1)
 
         pred_components, pred_in_component = compute_partition(embeddings, graph_nn['source'],
