@@ -1,7 +1,7 @@
 *.vscode
 *.dylib
 *.so
-build/
+cut-pursuit/build/
 cmake-build-*
 *.DS_Store
 .devcontainer.json

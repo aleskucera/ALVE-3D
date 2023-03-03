@@ -13,7 +13,7 @@ from sklearn.linear_model import RANSACRegressor
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
-from src.superpoints.ply_c import libply_c
+from ply_c import libply_c
 from src.superpoints.provider import read_s3dis_format
 
 
@@ -67,6 +67,7 @@ def main():
                     n_objects = int(np.max(objects) + 1)
                     xyz, rgb, labels, objects = libply_c.prune(xyz, args.voxel_width, rgb, labels,
                                                                objects, n_labels, n_objects)
+                    objects = objects[:, 1:].argmax(axis=1) + 1
                 n_ver = xyz.shape[0]
 
                 print('\t- computing NN structure')
@@ -320,6 +321,7 @@ def create_s3dis_datasets(args, test_seed_offset=0):
     for n in range(1, 7):
         if n != args.cvfold:
             path = '{}/features_supervision/Area_{:d}/'.format(args.ROOT_PATH, n)
+            print(path)
             for fname in sorted(os.listdir(path)):
                 if fname.endswith(".h5"):
                     trainlist.append(path + fname)
@@ -476,7 +478,6 @@ def graph_collate(batch):
 
 # ------------------------------------------------------------------------------
 def show(clouds, k):
-    from mpl_toolkits.mplot3d import Axes3D
     import matplotlib.pyplot as plt
     fig = plt.figure()
     ax = fig.gca(projection='3d')
