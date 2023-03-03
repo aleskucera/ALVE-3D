@@ -89,9 +89,9 @@ class LocalCloudEmbedder:
         # cudnn cannot handle arrays larger than 2**16 in one go, uses batch
         n_batches = int((clouds.shape[0] - 1) / self.batch_size)
 
-        T = model.stn(clouds[:self.batch_size, :self.nfeat_stn, :])
+        T = model.stn(clouds[:self.batch_size, :, :])
         for i in range(1, n_batches + 1):
-            T = torch.cat((T, model.stn(clouds[i * self.batch_size:(i + 1) * self.batch_size, :self.nfeat_stn, :])))
+            T = torch.cat((T, model.stn(clouds[i * self.batch_size:(i + 1) * self.batch_size, :, :])))
         xy_transf = torch.bmm(clouds[:, :2, :].transpose(1, 2), T).transpose(1, 2)
         clouds = torch.cat([xy_transf, clouds[:, 2:, :]], 1)
 
