@@ -76,6 +76,34 @@ class PointNet(nn.Module):
         return x
 
 
+class LocalCloudEmbedder:
+    """ Local PointNet
+    """
+
+    def __init__(self):
+        self.batch_size = 2 ** 16 - 1
+
+    def run_batch(self, model, clouds, clouds_global):
+        """ Evaluates all clouds in a differentiable way, use a batch approach.
+        Use when embedding many small point clouds with small PointNets at once"""
+        # cudnn cannot handle arrays larger than 2**16 in one go, uses batch
+        n_batches = int((clouds.shape[0] - 1) / self.batch_size)
+
+        T = model.stn(clouds[:self.batch_size, :self.nfeat_stn, :])
+        for i in range(1, n_batches + 1):
+            T = torch.cat((T, model.stn(clouds[i * self.batch_size:(i + 1) * self.batch_size, :self.nfeat_stn, :])))
+        xy_transf = torch.bmm(clouds[:, :2, :].transpose(1, 2), T).transpose(1, 2)
+        clouds = torch.cat([xy_transf, clouds[:, 2:, :]], 1)
+
+        clouds_global = torch.cat([clouds_global, T.view(-1, 4)], 1)
+
+        out = model.ptn(clouds[:self.batch_size, :, :], clouds_global[:self.batch_size, :])
+        for i in range(1, n_batches + 1):
+            out = torch.cat((out, model.ptn(clouds[i * self.batch_size:(i + 1) * self.batch_size, :, :],
+                                            clouds_global[i * self.batch_size:(i + 1) * self.batch_size, :])))
+        return F.normalize(out)
+
+
 if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

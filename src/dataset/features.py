@@ -17,7 +17,7 @@ from .utils import open_sequence
 from .dataset import SemanticDataset
 from src.laserscan import LaserScan
 from src.ply_c import libply_c
-from src.model.pointnet import PointNet
+from src.model.pointnet import PointNet, LocalCloudEmbedder
 from src.kitti360.ply import read_ply
 import libcp
 
@@ -138,6 +138,8 @@ def visualize_superpoints(cfg: DictConfig):
 
     model.eval()
 
+    local_cloud_embedder = LocalCloudEmbedder()
+
     with wandb.init(project='superpoint'):
         xyz = static_points
         rgb = static_colors
@@ -179,7 +181,7 @@ def visualize_superpoints(cfg: DictConfig):
         clouds = clouds.to(device, non_blocking=True)
         clouds_global = clouds_global.to(device, non_blocking=True)
 
-        embeddings = model(clouds, clouds_global)
+        embeddings = local_cloud_embedder.run_batch(model, clouds, clouds_global)
 
         source = graph_nn['source'].astype('int64')
         target = graph_nn['target'].astype('int64')
