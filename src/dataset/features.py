@@ -145,7 +145,7 @@ def visualize_superpoints(cfg: DictConfig):
         rgb = static_colors
 
         # Prune the data
-        xyz, rgb, labels, o = libply_c.prune(xyz.astype('float32'), 0.1, rgb.astype('uint8'),
+        xyz, rgb, labels, o = libply_c.prune(xyz.astype('float32'), 0.2, rgb.astype('uint8'),
                                              np.ones(xyz.shape[0], dtype='uint8'),
                                              np.zeros(1, dtype='uint8'), 20, 0)
 
@@ -181,7 +181,8 @@ def visualize_superpoints(cfg: DictConfig):
         clouds = clouds.to(device, non_blocking=True)
         clouds_global = clouds_global.to(device, non_blocking=True)
 
-        embeddings = local_cloud_embedder.run_batch(model, clouds, clouds_global)
+        # embeddings = local_cloud_embedder.run_batch(model, clouds, clouds_global)
+        embeddings = model(clouds, clouds_global)
 
         source = graph_nn['source'].astype('int64')
         target = graph_nn['target'].astype('int64')
