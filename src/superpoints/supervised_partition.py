@@ -19,7 +19,7 @@ import torchnet as tnt
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from src.superpoints.pointnet import PointNet
 from src.superpoints.graph import compute_sp_graph, create_s3dis_datasets, graph_collate
