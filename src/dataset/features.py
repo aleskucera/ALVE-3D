@@ -17,7 +17,7 @@ from .utils import open_sequence
 from .dataset import SemanticDataset
 from src.laserscan import LaserScan
 from src.ply_c import libply_c
-from src.model.pointnet import PointNet, LocalCloudEmbedder
+from src.model.pointnet import PointNet
 from src.kitti360.ply import read_ply
 import libcp
 
@@ -120,7 +120,7 @@ def visualize_superpoints_2(cfg: DictConfig):
 
 
 def visualize_superpoints(cfg: DictConfig):
-    window_file = '/home/kuceral4/ALVE-3D/data/KITTI-360/data_3d_semantics/train/2013_05_28_drive_0003_sync/static/0000000617_0000000738.ply'
+    window_file = '/home/ales/Thesis/ALVE-3D/data/KITTI-360/data_3d_semantics/train/2013_05_28_drive_0003_sync/static/0000000617_0000000738.ply'
     static_window = read_ply(window_file)
 
     static_points = structured_to_unstructured(static_window[['x', 'y', 'z']])
@@ -129,7 +129,7 @@ def visualize_superpoints(cfg: DictConfig):
     semantic = structured_to_unstructured(static_window[['semantic']])
 
     # Load the model
-    model = PointNet(num_features=6, num_global_features=7, out_features=4)
+    model = PointNet(num_features=6, num_global_features=7, out_features=4, memory_size=100)
     model.to(device)
 
     checkpoint = torch.load(os.path.join(cfg.path.models, 'pretrained', 'cv1', 'model.pth.tar'))
@@ -137,8 +137,6 @@ def visualize_superpoints(cfg: DictConfig):
     model.load_state_dict(checkpoint['state_dict'])
 
     model.eval()
-
-    local_cloud_embedder = LocalCloudEmbedder()
 
     with wandb.init(project='superpoint'):
         xyz = static_points

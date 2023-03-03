@@ -40,9 +40,10 @@ class STNkd(nn.Module):
 
 
 class PointNet(nn.Module):
-    def __init__(self, num_features: int = 6, num_global_features: int = 6, out_features: int = 4):
+    def __init__(self, num_features: int = 6, num_global_features: int = 6, out_features: int = 4,
+                 memory_size: int = 2 ** 16 - 1):
         super(PointNet, self).__init__()
-        torch.manual_seed(0)
+        self.memory_size = memory_size
         self.stn = STNkd(k=2)
 
         self.ptn_layer_1 = nn.Sequential(nn.Conv1d(num_features, 32, kernel_size=1),
@@ -63,7 +64,7 @@ class PointNet(nn.Module):
                                          nn.ReLU(inplace=True),
                                          nn.Linear(32, out_features))
 
-    def forward(self, x: torch.Tensor, x_global: torch.Tensor):
+    def forward_2(self, x: torch.Tensor, x_global: torch.Tensor):
         xy_transformed = torch.bmm(self.stn(x[:, :2, :]), x[:, :2, :])
         x = torch.cat([xy_transformed, x[:, 2:, :]], dim=1)
         x = self.ptn_layer_1(x)
@@ -75,33 +76,35 @@ class PointNet(nn.Module):
         x = self.ptn_layer_5(x)
         return x
 
-
-class LocalCloudEmbedder:
-    """ Local PointNet
-    """
-
-    def __init__(self):
-        self.batch_size = 2 ** 16 - 1
-
-    def run_batch(self, model, clouds, clouds_global):
+    def forward(self, x: torch.Tensor, x_global: torch.Tensor):
         """ Evaluates all clouds in a differentiable way, use a batch approach.
         Use when embedding many small point clouds with small PointNets at once"""
         # cudnn cannot handle arrays larger than 2**16 in one go, uses batch
-        n_batches = int((clouds.shape[0] - 1) / self.batch_size)
+        num_chunks = x.shape[0] // self.memory_size
 
-        T = model.stn(clouds[:self.batch_size, :, :])
-        for i in range(1, n_batches + 1):
-            T = torch.cat((T, model.stn(clouds[i * self.batch_size:(i + 1) * self.batch_size, :, :])))
-        xy_transf = torch.bmm(clouds[:, :2, :].transpose(1, 2), T).transpose(1, 2)
-        clouds = torch.cat([xy_transf, clouds[:, 2:, :]], 1)
+        outputs = []
+        for i in range(num_chunks):
+            # Get the current chunk
+            start_idx = i * self.memory_size
+            end_idx = min((i + 1) * self.memory_size, x.shape[0])
+            x_chunk = x[start_idx:end_idx]
+            x_global_chunk = x_global[start_idx:end_idx]
 
-        clouds_global = torch.cat([clouds_global, T.view(-1, 4)], 1)
+            # Process the chunk
+            xy_transformed = torch.bmm(self.stn(x_chunk[:, :2, :]), x_chunk[:, :2, :])
+            x_chunk = torch.cat([xy_transformed, x_chunk[:, 2:, :]], dim=1)
+            x_chunk = self.ptn_layer_1(x_chunk)
+            x_chunk = self.ptn_layer_2(x_chunk)
+            x_chunk = F.max_pool1d(x_chunk, x_chunk.shape[2]).squeeze(2)
+            x_chunk = torch.cat([x_chunk, x_global_chunk], dim=1)
+            x_chunk = self.ptn_layer_3(x_chunk)
+            x_chunk = self.ptn_layer_4(x_chunk)
+            x_chunk = self.ptn_layer_5(x_chunk)
 
-        out = model.ptn(clouds[:self.batch_size, :, :], clouds_global[:self.batch_size, :])
-        for i in range(1, n_batches + 1):
-            out = torch.cat((out, model.ptn(clouds[i * self.batch_size:(i + 1) * self.batch_size, :, :],
-                                            clouds_global[i * self.batch_size:(i + 1) * self.batch_size, :])))
-        return F.normalize(out)
+            # Append the chunk to the output
+            outputs.append(x_chunk)
+
+        return F.normalize(torch.cat(outputs, dim=0))
 
 
 if __name__ == '__main__':
