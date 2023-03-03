@@ -488,7 +488,7 @@ def main(args: argparse.Namespace):
         model.eval()
 
         for bidx, (fname, edg_source, edg_target, is_transition, labels, objects, clouds_data, xyz) in enumerate(
-                tqdm(val_loader)):
+                tqdm(train_loader)):
             clouds, clouds_global, nei = clouds_data
             is_transition = is_transition.to(device, non_blocking=True)
             objects = objects.to(device, non_blocking=True)

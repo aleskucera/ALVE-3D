@@ -15,7 +15,7 @@ except ImportError:
     print("WARNING: Can't import open3d.")
 
 from src import SemanticDataset, set_paths, LaserScan, ScanVis, create_global_cloud, visualize_kitti360_conversion, \
-    create_config
+    create_config, visualize_superpoints
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def main(cfg: DictConfig):
     elif cfg.action == 'kitti360_conversion':
         kitti360_conversion(cfg)
     elif cfg.action == 'superpoints':
-        show_superpoints(cfg)
+        log_superpoints(cfg)
     else:
         raise ValueError('Invalid demo type.')
 
@@ -151,6 +151,10 @@ def create_kitti360_config():
     """ Create KITTI-360 config file.
     """
     create_config()
+
+
+def log_superpoints(cfg: DictConfig):
+    visualize_superpoints(cfg)
 
 
 def show_superpoints(cfg):
