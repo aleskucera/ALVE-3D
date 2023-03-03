@@ -208,7 +208,7 @@ class FolderHierarchy:
 def main(args: argparse.Namespace):
     stats = []
     random.seed(0)
-    with wandb.init(project='Partition'):
+    with wandb.init(project='Evaluate partitioning'):
         root = os.path.join(args.ROOT_PATH)
         folder_hierarchy = FolderHierarchy(args.odir, args.dataset, root, args.cvfold)
 
@@ -442,40 +442,83 @@ def main(args: argparse.Namespace):
 
             return
 
-        for epoch in range(args.start_epoch, args.epochs):
-            if not args.learned_embeddings:
-                break
-            print('Epoch {}/{} ({}):'.format(epoch, args.epochs, folder_hierarchy.output_dir))
+        # for epoch in range(args.start_epoch, args.epochs):
+        #     if not args.learned_embeddings:
+        #         break
+        #     print('Epoch {}/{} ({}):'.format(epoch, args.epochs, folder_hierarchy.output_dir))
+        #
+        #     loss, n_sp = train()
+        #     scheduler.step()
+        #
+        #     if (epoch + 1) % args.test_nth_epoch == 0:  # or epoch+1==args.epochs:
+        #         loss_test, n_clusters_test, ASA_test, BR_test, BP_test = evaluate()
+        #         print(
+        #             '-> Train loss: %1.5f - Test Loss: %1.5f  |  n_clusters:  %5.1f  |  ASA: %3.2f %%  |  Test BR: %3.2f %%  |  BP : %3.2f%%' % (
+        #                 loss, loss_test, n_clusters_test, ASA_test, BR_test, BP_test))
+        #     else:
+        #         loss_test, n_clusters_test, ASA_test, BR_test, BP_test = 0, 0, 0, 0, 0
+        #         print('-> Train loss: %1.5f  superpoints size : %5.0f' % (loss, n_sp))
+        #
+        #     stats.append({'epoch': epoch, 'loss': loss, 'loss_test': loss_test, 'n_clusters_test': n_clusters_test,
+        #                   'ASA_test': ASA_test, 'BR_test': BR_test, 'BP_test': BP_test})
+        #
+        #     with open(os.path.join(folder_hierarchy.output_dir, 'trainlog.json'), 'w') as outfile:
+        #         json.dump(stats, outfile, indent=4)
+        #
+        #     if epoch % args.save_nth_epoch == 0 or epoch == args.epochs - 1:
+        #         model_name = 'model.pth.tar'
+        #         print("Saving model to " + model_name)
+        #         model_name = 'model.pth.tar'
+        #         torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(),
+        #                     'optimizer': optimizer.state_dict()},
+        #                    os.path.join(folder_hierarchy.output_dir, model_name))
+        #
+        #     if math.isnan(loss): break
+        #
+        # evaluate_final()
 
-            loss, n_sp = train()
-            scheduler.step()
+        # ==========================================================================================
 
-            if (epoch + 1) % args.test_nth_epoch == 0:  # or epoch+1==args.epochs:
-                loss_test, n_clusters_test, ASA_test, BR_test, BP_test = evaluate()
-                print(
-                    '-> Train loss: %1.5f - Test Loss: %1.5f  |  n_clusters:  %5.1f  |  ASA: %3.2f %%  |  Test BR: %3.2f %%  |  BP : %3.2f%%' % (
-                        loss, loss_test, n_clusters_test, ASA_test, BR_test, BP_test))
-            else:
-                loss_test, n_clusters_test, ASA_test, BR_test, BP_test = 0, 0, 0, 0, 0
-                print('-> Train loss: %1.5f  superpoints size : %5.0f' % (loss, n_sp))
+        for bidx, (fname, edg_source, edg_target, is_transition, labels, objects, clouds_data, xyz) in enumerate(
+                tqdm(val_loader)):
+            clouds, clouds_global, nei = clouds_data
+            is_transition = is_transition.to(device, non_blocking=True)
+            objects = objects.to(device, non_blocking=True)
+            clouds = clouds.to(device, non_blocking=True)
+            clouds_global = clouds_global.to(device, non_blocking=True)
 
-            stats.append({'epoch': epoch, 'loss': loss, 'loss_test': loss_test, 'n_clusters_test': n_clusters_test,
-                          'ASA_test': ASA_test, 'BR_test': BR_test, 'BP_test': BP_test})
+            embeddings = model(clouds, clouds_global)
 
-            with open(os.path.join(folder_hierarchy.output_dir, 'trainlog.json'), 'w') as outfile:
-                json.dump(stats, outfile, indent=4)
+            diff = compute_dist(embeddings, edg_source, edg_target, args.dist_type)
 
-            if epoch % args.save_nth_epoch == 0 or epoch == args.epochs - 1:
-                model_name = 'model.pth.tar'
-                print("Saving model to " + model_name)
-                model_name = 'model.pth.tar'
-                torch.save({'epoch': epoch + 1, 'args': args, 'state_dict': model.state_dict(),
-                            'optimizer': optimizer.state_dict()},
-                           os.path.join(folder_hierarchy.output_dir, model_name))
+            pred_components, pred_in_component = compute_partition(args, embeddings, edg_source, edg_target, diff, xyz)
 
-            if math.isnan(loss): break
+            # Map colors to components
+            print(max(pred_in_component))
+            color_map = instances_color_map()
+            pred_components_color = color_map[pred_in_component]
 
-        evaluate_final()
+            cloud = np.concatenate([xyz, pred_components_color * 255], axis=1)
+
+            # Log statistics
+            wandb.log({'Point Cloud': wandb.Object3D(cloud)})
+
+            print(f'\nLogged scan: {fname[0]}')
+
+            # graph_sp = compute_sp_graph(xyz, 100, pred_in_component, pred_components, labels, 13)
+            #
+            # spg_file = os.path.join(folder_hierarchy.spg_folder, fname[0])
+            #
+            # write_spg(spg_file, graph_sp, pred_components, pred_in_component)
+
+
+def instances_color_map():
+    # make instance colors
+    max_inst_id = 100000
+    color_map = np.random.uniform(low=0.0, high=1.0, size=(max_inst_id, 3))
+    # force zero to a gray-ish color
+    color_map[0] = np.full(3, 0.1)
+    return color_map
 
 
 def get_s3dis_info():
