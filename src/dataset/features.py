@@ -120,7 +120,7 @@ def visualize_superpoints_2(cfg: DictConfig):
 
 
 def visualize_superpoints(cfg: DictConfig):
-    window_file = '/home/ales/Thesis/ALVE-3D/data/KITTI-360/data_3d_semantics/train/2013_05_28_drive_0003_sync/static/0000000617_0000000738.ply'
+    window_file = '/home/kuceral4/ALVE-3D/data/KITTI-360/data_3d_semantics/train/2013_05_28_drive_0003_sync/static/0000000617_0000000738.ply'
     static_window = read_ply(window_file)
 
     static_points = structured_to_unstructured(static_window[['x', 'y', 'z']])
