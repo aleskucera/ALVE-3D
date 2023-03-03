@@ -479,6 +479,14 @@ def main(args: argparse.Namespace):
 
         # ==========================================================================================
 
+        # model = PointNet(num_features=6, num_global_features=7, out_features=4)
+        # model.to(device)
+
+        checkpoint = torch.load(os.path.join(folder_hierarchy.output_dir, 'model.pth.tar'), map_location=device)
+        model.load_state_dict(checkpoint['state_dict'])
+
+        model.eval()
+
         for bidx, (fname, edg_source, edg_target, is_transition, labels, objects, clouds_data, xyz) in enumerate(
                 tqdm(val_loader)):
             clouds, clouds_global, nei = clouds_data
