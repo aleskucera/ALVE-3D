@@ -39,6 +39,7 @@ def train_partition(cfg: DictConfig):
                 clouds, clouds_global, labels = clouds.to(device), clouds_global.to(device), labels.to(device)
                 edg_source, edg_target = edg_source.to(device), edg_target.to(device)
                 is_transition = is_transition.to(device)
+                print(type(xyz))
 
                 # Zero the parameter gradients
                 optimizer.zero_grad()
