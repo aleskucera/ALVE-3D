@@ -129,9 +129,9 @@ def visualize_superpoints(cfg: DictConfig):
         rgb = static_colors
 
         # Prune the data
-        xyz, rgb, labels, o = libply_c.prune(xyz.astype('float32'), 0.15, rgb.astype('uint8'),
-                                             np.ones(xyz.shape[0], dtype='uint8'),
-                                             np.zeros(1, dtype='uint8'), 20, 0)
+        # xyz, rgb, labels, o = libply_c.prune(xyz.astype('float32'), 0.15, rgb.astype('uint8'),
+        #                                      np.ones(xyz.shape[0], dtype='uint8'),
+        #                                      np.zeros(1, dtype='uint8'), 20, 0)
 
         # # Compute the nearest neighbors
         graph_nn, local_neighbors = compute_graph_nn(xyz, 5, 20)
