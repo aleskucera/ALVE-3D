@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tqdm import tqdm
+
 
 class STNkd(nn.Module):
     def __init__(self, k: int = 2):
@@ -64,26 +66,30 @@ class PointNet(nn.Module):
                                          nn.ReLU(inplace=True),
                                          nn.Linear(32, out_features))
 
-    def forward_2(self, x: torch.Tensor, x_global: torch.Tensor):
-        xy_transformed = torch.bmm(self.stn(x[:, :2, :]), x[:, :2, :])
-        x = torch.cat([xy_transformed, x[:, 2:, :]], dim=1)
-        x = self.ptn_layer_1(x)
-        x = self.ptn_layer_2(x)
-        x = F.max_pool1d(x, x.shape[2]).squeeze(2)
-        x = torch.cat([x, x_global], dim=1)
-        x = self.ptn_layer_3(x)
-        x = self.ptn_layer_4(x)
-        x = self.ptn_layer_5(x)
-        return x
+    # def forward(self, x: torch.Tensor, x_global: torch.Tensor):
+    #     xy_transformed = torch.bmm(self.stn(x[:, :2, :]), x[:, :2, :])
+    #     x = torch.cat([xy_transformed, x[:, 2:, :]], dim=1)
+    #     x = self.ptn_layer_1(x)
+    #     x = self.ptn_layer_2(x)
+    #     x = F.max_pool1d(x, x.shape[2]).squeeze(2)
+    #     x = torch.cat([x, x_global], dim=1)
+    #     x = self.ptn_layer_3(x)
+    #     x = self.ptn_layer_4(x)
+    #     x = self.ptn_layer_5(x)
+    #     return x
 
     def forward(self, x: torch.Tensor, x_global: torch.Tensor):
         """ Evaluates all clouds in a differentiable way, use a batch approach.
         Use when embedding many small point clouds with small PointNets at once"""
         # cudnn cannot handle arrays larger than 2**16 in one go, uses batch
+        x = x.squeeze(0)
+        x_global = x_global.squeeze(0)
         num_chunks = x.shape[0] // self.memory_size
+        if x.shape[0] % self.memory_size != 0:
+            num_chunks += 1
 
         outputs = []
-        for i in range(num_chunks):
+        for i in tqdm(range(num_chunks)):
             # Get the current chunk
             start_idx = i * self.memory_size
             end_idx = min((i + 1) * self.memory_size, x.shape[0])
@@ -104,7 +110,7 @@ class PointNet(nn.Module):
             # Append the chunk to the output
             outputs.append(x_chunk)
 
-        return F.normalize(torch.cat(outputs, dim=0))
+        return torch.cat(outputs, dim=0)
 
 
 if __name__ == '__main__':

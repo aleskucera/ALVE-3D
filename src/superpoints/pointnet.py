@@ -40,7 +40,7 @@ class STNkd(nn.Module):
 
 
 class PointNet(nn.Module):
-    def __init__(self, num_features: int = 6, num_global_features: int = 6, out_features: int = 4):
+    def __init__(self, num_features: int = 6, num_global_features: int = 7, out_features: int = 4):
         super(PointNet, self).__init__()
         torch.manual_seed(0)
         self.stn = STNkd(k=2)

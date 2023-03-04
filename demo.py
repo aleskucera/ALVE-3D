@@ -15,7 +15,7 @@ except ImportError:
     print("WARNING: Can't import open3d.")
 
 from src import SemanticDataset, set_paths, LaserScan, ScanVis, create_global_cloud, visualize_kitti360_conversion, \
-    create_config, visualize_superpoints
+    create_config, visualize_superpoints, KITTI360Dataset
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +30,8 @@ def main(cfg: DictConfig):
         show_hydra(cfg)
     elif cfg.action == 'dataset':
         show_dataset(cfg)
+    elif cfg.action == 'kitti360_dataset':
+        show_kitti360_dataset(cfg)
     elif cfg.action == 'log_dataset':
         log_dataset(cfg)
     elif cfg.action == 'global_cloud':
@@ -82,6 +84,19 @@ def show_dataset(cfg: DictConfig) -> None:
     # Visualizer
     vis = ScanVis(scan=scan, scans=dataset.scans, labels=dataset.labels, raw_cloud=True, instances=False)
     vis.run()
+
+
+def show_kitti360_dataset(cfg: DictConfig) -> None:
+    dataset = KITTI360Dataset(dataset_path=cfg.ds.path, cfg=cfg.ds, split='train')
+
+    for i in range(len(dataset)):
+        x, y = dataset[i]
+        # Visualizer
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(x[:, :3])
+        pcd.colors = o3d.utility.Vector3dVector(x[:, 3:6])
+        o3d.visualization.draw_geometries([pcd])
+        break
 
 
 def log_dataset(cfg: DictConfig) -> None:

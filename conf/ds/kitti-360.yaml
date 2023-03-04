@@ -6,7 +6,7 @@ laser_scan:
 
 name: kitti-360
 path: data/KITTI-360
-
+num_classes: 20
 color_map:
   -1:
     - 0

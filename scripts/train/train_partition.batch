@@ -11,5 +11,6 @@
 #SBATCH --mail-type=ALL                   # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
 export PYTHONPATH=$PYTHONPATH:/opt/conda/envs/ALVE-3D/lib/python3.10/site-packages
-singularity run --nv singularity/alve-3d-final.sif bash ./scripts/process/compile.sh
-singularity run --nv --bind /mnt singularity/alve-3d-final.sif python ./src/superpoints/supervised_partition.py
+singularity run --nv --bind /mnt singularity/alve-3d-all.sif bash ./scripts/process/compile.sh
+singularity run --nv --bind /mnt singularity/alve-3d-all.sif python main.py launch=train_partition
+#singularity run --nv --bind /mnt singularity/alve-3d-final.sif python ./src/superpoints/supervised_partition.py

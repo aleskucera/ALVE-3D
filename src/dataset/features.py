@@ -34,7 +34,6 @@ def visualize_superpoints_2(cfg: DictConfig):
     model.to(device)
 
     checkpoint = torch.load(os.path.join(cfg.path.models, 'pretrained', 'cv1', 'model.pth.tar'))
-    print(checkpoint['state_dict'].keys())
     model.load_state_dict(checkpoint['state_dict'])
 
     model.eval()
@@ -58,18 +57,6 @@ def visualize_superpoints_2(cfg: DictConfig):
 
                 # # Compute the nearest neighbors
                 graph_nn, local_neighbors = compute_graph_nn(xyz, 5, 20)
-
-                # TODO: WTF
-                # hard_labels = np.argmax(labels, axis=1)
-                # is_transition = hard_labels[graph_nn['target']] != hard_labels[graph_nn['source']]
-
-                # # Compute the connected components (create objects from labels)
-                # dump, objects = libply_c.connected_comp(xyz.shape[0], graph_nn['source'].astype('uint32'),
-                #                                         graph_nn['target'].astype('uint32'),
-                #                                         (is_transition == 0).astype('uint8'), 0)
-                #
-                # # Compute the geometric features
-                # geof = libply_c.compute_geof(xyz, local_neighbors, 5)
 
                 # Compute the elevation
                 low_points = (xyz[:, 2] - xyz[:, 2].min() < 0.5).nonzero()[0]
@@ -100,8 +87,8 @@ def visualize_superpoints_2(cfg: DictConfig):
                 clouds = clouds.to(device, non_blocking=True)
                 clouds_global = clouds_global.to(device, non_blocking=True)
 
+                # embeddings = model(clouds, clouds_global)
                 embeddings = model(clouds, clouds_global)
-
                 source = graph_nn['source'].astype('int64')
                 target = graph_nn['target'].astype('int64')
                 diff = ((embeddings[source, :] - embeddings[target, :]) ** 2).sum(1)
@@ -120,7 +107,7 @@ def visualize_superpoints_2(cfg: DictConfig):
 
 
 def visualize_superpoints(cfg: DictConfig):
-    window_file = '/home/kuceral4/ALVE-3D/data/KITTI-360/data_3d_semantics/train/2013_05_28_drive_0003_sync/static/0000000617_0000000738.ply'
+    window_file = '/home/ales/Thesis/ALVE-3D/data/KITTI-360/data_3d_semantics/train/2013_05_28_drive_0000_sync/static/0000000599_0000000846.ply'
     static_window = read_ply(window_file)
 
     static_points = structured_to_unstructured(static_window[['x', 'y', 'z']])
@@ -129,11 +116,10 @@ def visualize_superpoints(cfg: DictConfig):
     semantic = structured_to_unstructured(static_window[['semantic']])
 
     # Load the model
-    model = PointNet(num_features=6, num_global_features=7, out_features=4, memory_size=100)
+    model = PointNet(num_features=6, num_global_features=7, out_features=4, memory_size=1000)
     model.to(device)
 
     checkpoint = torch.load(os.path.join(cfg.path.models, 'pretrained', 'cv1', 'model.pth.tar'))
-    print(checkpoint['state_dict'].keys())
     model.load_state_dict(checkpoint['state_dict'])
 
     model.eval()
@@ -179,8 +165,9 @@ def visualize_superpoints(cfg: DictConfig):
         clouds = clouds.to(device, non_blocking=True)
         clouds_global = clouds_global.to(device, non_blocking=True)
 
-        # embeddings = local_cloud_embedder.run_batch(model, clouds, clouds_global)
-        embeddings = model(clouds, clouds_global)
+        # embeddings = cloud_embedder.run_batch(model, clouds, clouds_global)
+        with torch.no_grad():
+            embeddings = model(clouds, clouds_global)
 
         source = graph_nn['source'].astype('int64')
         target = graph_nn['target'].astype('int64')
