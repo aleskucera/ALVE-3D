@@ -107,7 +107,7 @@ def visualize_superpoints_2(cfg: DictConfig):
 
 
 def visualize_superpoints(cfg: DictConfig):
-    window_file = '/home/ales/Thesis/ALVE-3D/data/KITTI-360/data_3d_semantics/train/2013_05_28_drive_0000_sync/static/0000000599_0000000846.ply'
+    window_file = '/home/kuceral4/ALVE-3D/data/KITTI-360/data_3d_semantics/train/2013_05_28_drive_0000_sync/static/0000000599_0000000846.ply'
     static_window = read_ply(window_file)
 
     static_points = structured_to_unstructured(static_window[['x', 'y', 'z']])
@@ -116,7 +116,7 @@ def visualize_superpoints(cfg: DictConfig):
     semantic = structured_to_unstructured(static_window[['semantic']])
 
     # Load the model
-    model = PointNet(num_features=6, num_global_features=7, out_features=4, memory_size=1000)
+    model = PointNet(num_features=6, num_global_features=7, out_features=4, memory_size=10000)
     model.to(device)
 
     checkpoint = torch.load(os.path.join(cfg.path.models, 'pretrained', 'cv1', 'model.pth.tar'))
@@ -129,7 +129,7 @@ def visualize_superpoints(cfg: DictConfig):
         rgb = static_colors
 
         # Prune the data
-        xyz, rgb, labels, o = libply_c.prune(xyz.astype('float32'), 0.2, rgb.astype('uint8'),
+        xyz, rgb, labels, o = libply_c.prune(xyz.astype('float32'), 0.15, rgb.astype('uint8'),
                                              np.ones(xyz.shape[0], dtype='uint8'),
                                              np.zeros(1, dtype='uint8'), 20, 0)
 
@@ -171,11 +171,6 @@ def visualize_superpoints(cfg: DictConfig):
 
         source = graph_nn['source'].astype('int64')
         target = graph_nn['target'].astype('int64')
-        print(source.shape, target.shape)
-        print(embeddings.shape)
-        print(f'Embeddings: {embeddings.min().item()}, {embeddings.max().item()}')
-        print(f'source: {source.min()}, {source.max()}')
-        print(f'target: {target.min()}, {target.max()}')
         diff = ((embeddings[source, :] - embeddings[target, :]) ** 2).sum(1)
 
         pred_components, pred_in_component = compute_partition(embeddings, graph_nn['source'],
