@@ -12,5 +12,5 @@
 
 export PYTHONPATH=$PYTHONPATH:/opt/conda/envs/ALVE-3D/lib/python3.10/site-packages
 singularity run --nv --bind /mnt singularity/alve-3d-all.sif bash ./scripts/process/compile.sh
-singularity run --nv --bind /mnt singularity/alve-3d-all.sif python main.py launch=train_partition
+singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf96016298e59b1e030ae singularity/alve-3d-all.sif python main.py launch=train_partition
 #singularity run --nv --bind /mnt singularity/alve-3d-final.sif python ./src/superpoints/supervised_partition.py
