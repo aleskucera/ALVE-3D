@@ -19,8 +19,8 @@ log = logging.getLogger(__name__)
 
 
 class KITTI360Dataset(Dataset):
-    def __init__(self, cfg: DictConfig, dataset_path: str, split: str, max_points_train: int = 100000,
-                 k_nn_adj: int = 5, k_nn_local: int = 20):
+    def __init__(self, cfg: DictConfig, dataset_path: str, split: str, max_points_train: int = 500000,
+                 k_nn_adj: int = 5, k_nn_local: int = 20, max_samples: int = 10):
         self.cfg = cfg
         self.split = split
         self.path = dataset_path
@@ -29,11 +29,13 @@ class KITTI360Dataset(Dataset):
         self.k_nn_adj = k_nn_adj
         self.k_nn_local = k_nn_local
 
+        self.max_samples = max_samples
+
         self.scans = []
 
         self._init()
 
-    def __getitem__2(self, index):
+    def get_item(self, index):
         scan_path = self.scans[index]
         scan = read_ply(scan_path)
 
@@ -60,7 +62,7 @@ class KITTI360Dataset(Dataset):
         labels = label_map[labels]
 
         # Prune the data
-        xyz, rgb, labels, _ = libply_c.prune(xyz.astype('float32'), 0.2, rgb.astype('uint8'),
+        xyz, rgb, labels, _ = libply_c.prune(xyz.astype('float32'), 0.15, rgb.astype('uint8'),
                                              labels.astype('uint8'),
                                              np.zeros(1, dtype='uint8'), self.cfg.ds.num_classes, 0)
 
@@ -96,8 +98,11 @@ class KITTI360Dataset(Dataset):
 
         # Compute the elevation
         low_points = (xyz[:, 2] - xyz[:, 2].min() < 0.5).nonzero()[0]
-        reg = RANSACRegressor(random_state=0).fit(xyz[low_points, :2], xyz[low_points, 2])
-        elevation = xyz[:, 2] - reg.predict(xyz[:, :2])
+        if low_points.shape[0] > 0:
+            reg = RANSACRegressor(random_state=0).fit(xyz[low_points, :2], xyz[low_points, 2])
+            elevation = xyz[:, 2] - reg.predict(xyz[:, :2])
+        else:
+            elevation = np.zeros((xyz.shape[0],), dtype=float)
 
         # Compute the xyn (normalized x and y)
         ma, mi = np.max(xyz[:, :2], axis=0, keepdims=True), np.min(xyz[:, :2], axis=0, keepdims=True)
@@ -126,6 +131,6 @@ class KITTI360Dataset(Dataset):
         with open(split_list, 'r') as f:
             scans = f.read().splitlines()
 
-        self.scans = [os.path.join(self.path, scan) for scan in scans]
+        self.scans = [os.path.join(self.path, scan) for scan in scans][self.max_samples:]
 
         log.info(f'Loaded {len(self.scans)} scans from {self.split} split')

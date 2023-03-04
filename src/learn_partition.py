@@ -3,6 +3,7 @@ import sys
 
 import torch
 import wandb
+import numpy as np
 from tqdm import tqdm
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
@@ -33,7 +34,7 @@ def train_partition(cfg: DictConfig):
 
     with wandb.init(project='KITTI-360 learning'):
         for epoch in range(cfg.train.epochs):
-            for data in tqdm(train_loader):
+            for i, data in tqdm(enumerate(train_loader)):
                 # Get data
                 clouds, clouds_global, labels, edg_source, edg_target, is_transition, xyz = data
                 clouds, clouds_global, labels = clouds.to(device), clouds_global.to(device), labels.to(device)
@@ -56,6 +57,7 @@ def train_partition(cfg: DictConfig):
                 loss = (loss1 + loss2) / weights_loss[0] * 1000
 
                 wandb.log({'loss': loss.item(), 'loss1': loss1.item(), 'loss2': loss2.item()})
+                print(f'loss: {loss.item()}, loss1: {loss1.item()}, loss2: {loss2.item()}', end='\r')
 
                 # Backward
                 loss.backward()
@@ -66,5 +68,23 @@ def train_partition(cfg: DictConfig):
 
                 optimizer.step()
 
+                if i == 0:
+                    color_map = instances_color_map()
+                    pred_components_color = color_map[in_comp]
+
+                    cloud = np.concatenate([xyz, pred_components_color * 255], axis=1)
+
+                    # Log statistics
+                    wandb.log({'Point Cloud': wandb.Object3D(cloud)})
+
             # Save the model
             torch.save(model.state_dict(), os.path.join(cfg.path.models, f'PointNet_epoch_{epoch}.pth'))
+
+
+def instances_color_map():
+    # make instance colors
+    max_inst_id = 100000
+    color_map = np.random.uniform(low=0.0, high=1.0, size=(max_inst_id, 3))
+    # force zero to a gray-ish color
+    color_map[0] = np.full(3, 0.1)
+    return color_map

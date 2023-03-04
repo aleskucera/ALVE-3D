@@ -89,7 +89,7 @@ class PointNet(nn.Module):
             num_chunks += 1
 
         outputs = []
-        for i in tqdm(range(num_chunks)):
+        for i in range(num_chunks):
             # Get the current chunk
             start_idx = i * self.memory_size
             end_idx = min((i + 1) * self.memory_size, x.shape[0])
