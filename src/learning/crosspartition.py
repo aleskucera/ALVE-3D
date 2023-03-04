@@ -52,12 +52,14 @@ def compute_weights_XPART(pred_in_component, edg_source, edg_target, is_transiti
     return SEAGL_weights
 
 
-def compute_partition(embeddings, edg_source, edg_target, diff, xyz=0):
+def compute_partition(embeddings, edg_source, edg_target, diff, xyz):
     edge_weight_threshold = -0.5
     spatial_emb = 0.2
     reg_strength = 0.1
     k_nn_adj = 5
     CP_cutoff = 25
+    edg_source = edg_source.astype('uint32')
+    edg_target = edg_target.astype('uint32')
     edge_weight = torch.exp(diff * edge_weight_threshold).detach().cpu().numpy() / np.exp(
         edge_weight_threshold)
 
@@ -66,7 +68,7 @@ def compute_partition(embeddings, edg_source, edg_target, diff, xyz=0):
     ver_value = np.hstack((ver_value, spatial_emb * xyz))
 
     pred_components, pred_in_component = libcp.cutpursuit(ver_value,
-                                                          edg_source.astype('uint32'), edg_target.astype('uint32'),
+                                                          edg_source, edg_target,
                                                           edge_weight,
                                                           reg_strength / (4 * k_nn_adj),
                                                           cutoff=CP_cutoff, spatial=True, weight_decay=0.7)
