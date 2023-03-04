@@ -116,7 +116,7 @@ def visualize_superpoints(cfg: DictConfig):
     semantic = structured_to_unstructured(static_window[['semantic']])
 
     # Load the model
-    model = PointNet(num_features=6, num_global_features=7, out_features=4, memory_size=100000)
+    model = PointNet(num_features=6, num_global_features=7, out_features=4, memory_size=10000)
     model.to(device)
 
     checkpoint = torch.load(os.path.join(cfg.path.models, 'pretrained', 'cv1', 'model.pth.tar'))
