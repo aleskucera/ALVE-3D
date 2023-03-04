@@ -19,8 +19,8 @@ log = logging.getLogger(__name__)
 
 
 class KITTI360Dataset(Dataset):
-    def __init__(self, cfg: DictConfig, dataset_path: str, split: str, max_points_train: int = 500000,
-                 k_nn_adj: int = 5, k_nn_local: int = 20, max_samples: int = 10):
+    def __init__(self, cfg: DictConfig, dataset_path: str, split: str, max_points_train: int = 100000,
+                 k_nn_adj: int = 5, k_nn_local: int = 20, max_samples: int = 30):
         self.cfg = cfg
         self.split = split
         self.path = dataset_path
@@ -131,6 +131,6 @@ class KITTI360Dataset(Dataset):
         with open(split_list, 'r') as f:
             scans = f.read().splitlines()
 
-        self.scans = [os.path.join(self.path, scan) for scan in scans][self.max_samples:]
+        self.scans = [os.path.join(self.path, scan) for scan in scans][:self.max_samples]
 
         log.info(f'Loaded {len(self.scans)} scans from {self.split} split')

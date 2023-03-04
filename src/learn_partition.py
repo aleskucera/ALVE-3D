@@ -35,6 +35,8 @@ def train_partition(cfg: DictConfig):
     with wandb.init(project='KITTI-360 learning'):
         for epoch in range(cfg.train.epochs):
             for i, data in tqdm(enumerate(train_loader)):
+
+                print(f'Epoch {epoch}, batch {i}')
                 # Get data
                 clouds, clouds_global, labels, edg_source, edg_target, is_transition, xyz = data
                 clouds, clouds_global, labels = clouds.to(device), clouds_global.to(device), labels.to(device)
@@ -68,7 +70,7 @@ def train_partition(cfg: DictConfig):
 
                 optimizer.step()
 
-                if i == 0:
+                if i % 5 == 0:
                     color_map = instances_color_map()
                     pred_components_color = color_map[in_comp]
 
