@@ -26,7 +26,7 @@ def map_color(data, color_map='viridis', data_range=(0, 19), bad=(0,)):
 
     # Map data to color
     color = m.to_rgba(data)
-    return color
+    return color[..., :3]
 
 
 def dict_to_color_map(dictionary: dict) -> np.ndarray:

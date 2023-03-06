@@ -17,7 +17,6 @@ def open_sequence(path: str, split: str = None):
     calib_path = os.path.join(os.path.join(path, 'calib.txt'))
 
     info_path = os.path.join(path, 'info.npz')
-    print(info_path)
 
     velodyne = []
     if os.path.exists(velodyne_path):
@@ -31,11 +30,6 @@ def open_sequence(path: str, split: str = None):
 
     if os.path.exists(info_path):
         info = np.load(info_path, allow_pickle=True)
-        print(f'Val shape: {info["val"].shape}, max: {np.max(info["val"])}, min: {np.min(info["val"])}')
-        print(f'Train shape: {info["train"].shape}, max: {np.max(info["train"])}, min: {np.min(info["train"])}')
-        print(f'Pose shape: {info["poses"].shape}')
-        print(f'Velodyne len: {len(velodyne)}')
-        print(f'Labels len: {len(labels)}')
         poses = [pose for pose in info['poses']]
         if split is not None:
             split_indices = info[split]

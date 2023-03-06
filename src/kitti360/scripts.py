@@ -1,4 +1,5 @@
-import yaml
+from ruamel.yaml import YAML
+from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from omegaconf import DictConfig
 
 from .labels import labels
@@ -26,42 +27,85 @@ def create_config():
     The changes are:
     - learning_map"""
 
-    name = 'kitti-360'
-    path = 'data/KITTI-360'
+    config = CommentedMap()
+    config['name'] = 'KITTI-360'
+    config['path'] = 'data/KITTI-360'
 
-    id_to_name = {label.id: label.name for label in labels}
+    config['num_classes'] = 20
+    config['num_semantic_channels'] = 5
+    config['num_partition_channels'] = {'local': 6, 'global': 7}
 
-    learning_map = {label.id: train_id(label) for label in labels}
-    learning_map_inv = {train_id(label): label.id for label in labels}
-    learning_ignore = {train_id(label): label.ignoreInEval for label in labels}
+    config['ignore_index'] = 0
 
-    color_map = {label.id: list(label.color) for label in labels}
-    color_map_train = {train_id(label): list(label.color) for label in labels}
-    color_map_train[0] = [0, 0, 0]
+    config['laser_scan'] = {'H': 64, 'W': 2048, 'fov_up': 16.6, 'fov_down': -16.6}
 
-    # Range, intensity, r, g, b
-    mean = [0, 0, 0, 0, 0]
-    std = [1, 1, 1, 1, 1]
+    config['sequences'] = flow_list([0, 2, 3, 4, 5, 6, 7, 9, 10])
 
-    laser_scan = {'H': 64, 'W': 2048, 'fov_up': 16.6, 'fov_down': -16.6}
+    config['split'] = {'train': flow_list([0, 2, 3, 4, 5, 6, 7, 9, 10]),
+                       'val': flow_list([0, 2, 3, 4, 5, 6, 7, 9, 10])}
 
-    config = {'name': name, 'path': path, 'labels': id_to_name, 'color_map_train': color_map_train,
-              'color_map': color_map, 'learning_map': learning_map, 'learning_map_inv': learning_map_inv,
-              'learning_ignore': learning_ignore, 'mean': mean, 'std': std, 'laser_scan': laser_scan}
+    config['labels'] = {label.id: label.name for label in labels}
 
-    # create config file
-    with open('config.yaml', 'w') as f:
-        yaml.dump(config, f)
+    config['color_map'] = {label.id: flow_list(label.color) for label in labels}
+    config['color_map_train'] = {train_id(label): flow_list(label.color) for label in labels}
+    config['color_map_train'][0] = flow_list([0, 0, 0])
+
+    config['learning_map'] = {label.id: train_id(label) for label in labels}
+    config['learning_map_inv'] = {train_id(label): label.id for label in labels}
+    config['learning_ignore'] = {train_id(label): label.ignoreInEval for label in labels}
+
+    config['mean'] = flow_list([0.0, 0.0, 0.0])
+    config['std'] = flow_list([1.0, 1.0, 1.0])
+
+    yaml = YAML()
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.dump(config, open('kitti-360.yaml', 'w'))
+
+    # name = 'KITTI-360'
+    # path = 'data/KITTI-360'
+    #
+    # num_classes = 20
+    # num_semantic_channels = 5
+    # num_partition_channels = {'local': 6, 'global': 7}
+    #
+    # ignore_index = 0
+    #
+    # laser_scan = {'H': 64, 'W': 2048, 'fov_up': 16.6, 'fov_down': -16.6}
+    #
+    # sequences = [0, 2, 3, 4, 5, 6, 7, 9, 10]
+    #
+    # split = {'train': sequences, 'val': sequences}
+    #
+    # id_to_name = {label.id: label.name for label in labels}
+    #
+    # color_map = {label.id: list(label.color) for label in labels}
+    # color_map_train = {train_id(label): list(label.color) for label in labels}
+    # color_map_train[0] = [0, 0, 0]
+    #
+    # learning_map = {label.id: train_id(label) for label in labels}
+    # learning_map_inv = {train_id(label): label.id for label in labels}
+    # learning_ignore = {train_id(label): label.ignoreInEval for label in labels}
+    #
+    # # Range, intensity, r, g, b
+    # mean = [0, 0, 0, 0, 0]
+    # std = [1, 1, 1, 1, 1]
+    #
+    # config = {'name': name, 'path': path, 'labels': id_to_name, 'color_map_train': color_map_train,
+    #           'color_map': color_map, 'learning_map': learning_map, 'learning_map_inv': learning_map_inv,
+    #           'learning_ignore': learning_ignore, 'mean': mean, 'std': std, 'laser_scan': laser_scan}
+    #
+    # # create config file
+    # with open('config.yaml', 'w') as f:
+    #     yaml.dump(config, f)
+
+
+def flow_list(items):
+    seq = CommentedSeq(items)
+    seq.fa.set_flow_style()
+    return seq
 
 
 def train_id(label):
     if label.ignoreInEval:
         return 0
     return label.trainId + 1
-
-
-def extract_kitti360_features(path: str):
-    """Extract features from KITTI-360 dataset. Extracted features are: mean, std and label distribution
-    :param path: Path to KITTI-360 dataset
-    """
-    pass

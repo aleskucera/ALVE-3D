@@ -163,11 +163,12 @@ class UpBlock(nn.Module):
 
 
 class SalsaNext(nn.Module):
-    def __init__(self, nclasses):
+    def __init__(self, num_inputs, num_outputs):
         super(SalsaNext, self).__init__()
-        self.nclasses = nclasses
+        self.num_inputs = num_inputs
+        self.num_outputs = num_outputs
 
-        self.downCntx = ResContextBlock(5, 32)
+        self.downCntx = ResContextBlock(num_inputs, 32)
         self.downCntx2 = ResContextBlock(32, 32)
         self.downCntx3 = ResContextBlock(32, 32)
 
@@ -182,7 +183,7 @@ class SalsaNext(nn.Module):
         self.upBlock3 = UpBlock(4 * 32, 2 * 32, 0.2)
         self.upBlock4 = UpBlock(2 * 32, 32, 0.2, drop_out=False)
 
-        self.logits = nn.Conv2d(32, nclasses, kernel_size=(1, 1))
+        self.logits = nn.Conv2d(32, num_outputs, kernel_size=(1, 1))
 
     def forward(self, x):
         downCntx = self.downCntx(x)

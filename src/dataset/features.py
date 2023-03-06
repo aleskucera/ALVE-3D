@@ -4,6 +4,7 @@ import sys
 import h5py
 import wandb
 import torch
+import open3d as o3d
 import numpy as np
 from tqdm import tqdm
 from omegaconf import DictConfig
@@ -107,7 +108,7 @@ def visualize_superpoints_2(cfg: DictConfig):
 
 
 def visualize_superpoints(cfg: DictConfig):
-    window_file = '/home/kuceral4/ALVE-3D/data/KITTI-360/data_3d_semantics/train/2013_05_28_drive_0000_sync/static/0000000599_0000000846.ply'
+    window_file = '/home/ales/Thesis/ALVE-3D/data/KITTI-360/data_3d_semantics/train/2013_05_28_drive_0000_sync/static/0000000599_0000000846.ply'
     static_window = read_ply(window_file)
 
     static_points = structured_to_unstructured(static_window[['x', 'y', 'z']])
@@ -116,7 +117,7 @@ def visualize_superpoints(cfg: DictConfig):
     semantic = structured_to_unstructured(static_window[['semantic']])
 
     # Load the model
-    model = PointNet(num_features=6, num_global_features=7, out_features=4, memory_size=10000)
+    model = PointNet(num_features=6, num_global_features=7, out_features=4, memory_size=1000)
     model.to(device)
 
     checkpoint = torch.load(os.path.join(cfg.path.models, 'pretrained', 'cv1', 'model.pth.tar'))
@@ -127,13 +128,47 @@ def visualize_superpoints(cfg: DictConfig):
     with wandb.init(project='superpoint'):
         xyz = static_points
         rgb = static_colors
+        labels = semantic
+
+        # Map labels to train ids
+        label_map = np.zeros(max(cfg.ds.learning_map.keys()) + 1, dtype=np.uint8)
+        for label, value in cfg.ds.learning_map.items():
+            label_map[label] = value
+        labels = label_map[labels]
 
         # Prune the data
-        # xyz, rgb, labels, o = libply_c.prune(xyz.astype('float32'), 0.15, rgb.astype('uint8'),
-        #                                      np.ones(xyz.shape[0], dtype='uint8'),
+        # xyz, rgb, labels, o = libply_c.prune(xyz.astype('float32'), 0.1, rgb.astype('uint8'),
+        #                                      labels.astype('uint8'),
         #                                      np.zeros(1, dtype='uint8'), 20, 0)
+        #
+        # cloud = np.concatenate([xyz, rgb], axis=1)
+        #
+        # # Log statistics
+        # wandb.log({'Point Cloud': wandb.Object3D(cloud)})
 
-        # # Compute the nearest neighbors
+        # xyz = static_points
+        # rgb = static_colors
+        # labels = semantic
+
+        device_o3d = o3d.core.Device("CPU:0")
+        pcd = o3d.t.geometry.PointCloud(device_o3d)
+
+        pcd.point.positions = o3d.core.Tensor(xyz, o3d.core.float32, device_o3d)
+        pcd.point.colors = o3d.core.Tensor(rgb, o3d.core.float32, device_o3d)
+        pcd.point.labels = o3d.core.Tensor(labels, o3d.core.int32, device_o3d)
+
+        pcd = pcd.voxel_down_sample(voxel_size=0.3)
+
+        xyz = pcd.point.positions.numpy().astype('float32')
+        rgb = (pcd.point.colors.numpy() * 255).astype('uint8')
+        labels = pcd.point.labels.numpy().astype('uint32')
+
+        # cloud = np.concatenate([xyz, rgb], axis=1)
+        #
+        # # Log statistics
+        # wandb.log({'Pruned Point Cloud': wandb.Object3D(cloud)})
+
+        # Compute the nearest neighbors
         graph_nn, local_neighbors = compute_graph_nn(xyz, 5, 20)
 
         # Compute the elevation
@@ -151,16 +186,14 @@ def visualize_superpoints(cfg: DictConfig):
         clouds = xyz[nei,]
         diameters = np.sqrt(clouds.var(1).sum(1))
         clouds = (clouds - xyz[:, np.newaxis, :]) / (diameters[:, np.newaxis, np.newaxis] + 1e-10)
-        clouds = np.concatenate([clouds, rgb[nei,]], axis=2)
+        clouds = np.concatenate([clouds, rgb[nei,] / 255], axis=2)
         clouds = clouds.transpose([0, 2, 1])
 
         # Compute the global geometry
         clouds_global = np.hstack([diameters[:, np.newaxis], elevation[:, np.newaxis], rgb, xyn])
 
-        # is_transition = torch.from_numpy(is_transition)
-        # objects = torch.from_numpy(objects.astype('int64'))
-        clouds = torch.from_numpy(clouds)
-        clouds_global = torch.from_numpy(clouds_global)
+        clouds = torch.from_numpy(clouds.astype(np.float32))
+        clouds_global = torch.from_numpy(clouds_global.astype(np.float32))
 
         clouds = clouds.to(device, non_blocking=True)
         clouds_global = clouds_global.to(device, non_blocking=True)
@@ -173,9 +206,7 @@ def visualize_superpoints(cfg: DictConfig):
         target = graph_nn['target'].astype('int64')
         diff = ((embeddings[source, :] - embeddings[target, :]) ** 2).sum(1)
 
-        pred_components, pred_in_component = compute_partition(embeddings, graph_nn['source'],
-                                                               graph_nn['target'], diff,
-                                                               xyz)
+        pred_components, pred_in_component = compute_partition(embeddings, source, target, diff, xyz)
 
         color_map = instances_color_map()
         pred_components_color = color_map[pred_in_component]

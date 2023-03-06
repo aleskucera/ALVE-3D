@@ -2,6 +2,7 @@ import os
 import logging
 
 import numpy as np
+from tqdm import tqdm
 from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
@@ -22,8 +23,8 @@ class SemanticDataset(Dataset):
     :param indices: List of indices to load. If None all the samples are loaded (default: None)
     """
 
-    def __init__(self, dataset_path: str, cfg: DictConfig, sequences: list = None,
-                 split: str = None, size: int = None, indices: list = None):
+    def __init__(self, dataset_path: str, cfg: DictConfig, split: str,
+                 sequences: list = None, size: int = None, indices: list = None):
 
         self.cfg = cfg
         self.size = size
@@ -31,9 +32,11 @@ class SemanticDataset(Dataset):
         self.indices = indices
         self.path = dataset_path
 
+        split_sequences = cfg.split[split]
         if sequences is None:
-            sequences = cfg.split[split]
-        self.sequences = sequences
+            self.sequences = split_sequences
+        else:
+            self.sequences = [s for s in sequences if s in split_sequences]
 
         self.scans = []
         self.labels = []
@@ -48,37 +51,77 @@ class SemanticDataset(Dataset):
 
         self._init()
 
+    def calculate_statistics(self):
+        """ Calculate the mean, standard deviation and ratio of the labels in the dataset. """
+        log.info('Calculating statistics...')
+        num_channels = self.cfg.num_semantic_channels
+        num_classes = self.cfg.num_classes
+
+        # Initialize variables
+        num_pixels = 0
+        mean = np.zeros(num_channels)
+        std = np.zeros(num_channels)
+        content = np.zeros(num_classes)
+
+        log.info(f'Calculating mean and content ratio...')
+        for i in tqdm(range(len(self))):
+            proj_image, proj_label, idx = self[i]
+
+            # Update the statistics
+            num_pixels += proj_image.shape[1] * proj_image.shape[2]
+            mean += np.sum(proj_image, axis=(1, 2))
+            content += np.bincount(proj_label.flatten(), minlength=num_classes)
+
+        # Calculate the mean
+        mean /= num_pixels
+
+        # Calculate the content ratio
+        content[self.cfg.ignore_index] = 0
+        ratio = content / np.sum(content)
+
+        log.info(f'Calculating std...')
+        for i in tqdm(range(len(self))):
+            proj_image, proj_label, idx = self[i]
+
+            # Update the statistics
+            std += np.sum((proj_image - mean[:, np.newaxis, np.newaxis]) ** 2, axis=(1, 2))
+
+        # Calculate the std
+        std = np.sqrt(std / num_pixels)
+
+        # Print the statistics
+        log.info(f"Mean: {mean}")
+        log.info(f"Std: {std}")
+        log.info(f"Ratio: {ratio}")
+
+        return mean, std, ratio
+
     def __getitem__(self, index):
         scan_path = self.scans[index]
         label_path = self.labels[index]
 
-        # Load the scan data into the LaserScan object
         if self.split == 'train':
             self.laser_scan.open_scan(scan_path, flip_prob=0.5, trans_prob=0.5, rot_prob=0.5, drop_prob=0.5)
         else:
             self.laser_scan.open_scan(scan_path)
-
-        # Load the label data into the LaserScan object
         self.laser_scan.open_label(label_path)
 
         if self.laser_scan.color is not None:
-            # Concatenate depth, xyz, remission and color
-            x = np.concatenate([self.laser_scan.proj_depth[np.newaxis, ...],
-                                self.laser_scan.proj_xyz.transpose(2, 0, 1),
-                                self.laser_scan.proj_remission[np.newaxis, ...],
-                                self.laser_scan.proj_color.transpose(2, 0, 1)], axis=0)
+            proj_image = np.concatenate([self.laser_scan.proj_color.transpose(2, 0, 1),
+                                         self.laser_scan.proj_depth[np.newaxis, ...],
+                                         self.laser_scan.proj_remission[np.newaxis, ...]
+                                         ], axis=0)
         else:
-            # Concatenate depth, xyz and remission
-            x = np.concatenate([self.laser_scan.proj_depth[np.newaxis, ...],
-                                self.laser_scan.proj_xyz.transpose(2, 0, 1),
-                                self.laser_scan.proj_remission[np.newaxis, ...]], axis=0)
+            proj_image = np.concatenate([self.laser_scan.proj_depth[np.newaxis, ...],
+                                         # self.laser_scan.proj_xyz.transpose(2, 0, 1),
+                                         self.laser_scan.proj_remission[np.newaxis, ...]], axis=0)
 
         # Normalize
         # x = (x - self.mean[:, np.newaxis, np.newaxis]) / self.std[:, np.newaxis, np.newaxis]
 
-        y = self.laser_scan.proj_sem_label.astype(np.long)
+        proj_label = self.laser_scan.proj_sem_label.astype(np.long)
 
-        return x, y, index
+        return proj_image, proj_label, index
 
     def __len__(self):
         return len(self.scans)

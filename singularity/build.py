@@ -5,13 +5,12 @@ import subprocess
 # # ===================================== Define the parameters =====================================
 USER = 'kuceral4'
 CONDA_ENV = 'ALVE-3D'
-SINGULARITY_IMAGE = os.path.join(os.getcwd(), 'singularity/alve-3d-all.sif')
+SINGULARITY_IMAGE = os.path.join(os.getcwd(), 'singularity/alve-3d.sif')
 
 RECIPE_FILE = os.path.join(os.getcwd(), 'singularity/recipe.def')
 ENVIRONMENT_FILE = os.path.join(os.getcwd(), 'environment.yaml')
 
 EXCLUDED_PACKAGES = ['pytorch3d', 'jakteristics']
-# EXCLUDED_PACKAGES = ['open3d', 'pytorch3d', 'jakteristics']
 
 print('===============================================')
 print('\tSINGULARITY IMAGE BUILD SCRIPT')

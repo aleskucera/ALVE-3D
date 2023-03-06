@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import time
-import atexit
 import logging
 
 import hydra
@@ -14,11 +12,11 @@ from src import train_model, test_model, set_paths, start_tensorboard, \
 log = logging.getLogger(__name__)
 
 
-@atexit.register
-def exit_function():
-    """ Terminate all running tensorboard processes when the program exits. """
-    terminate_tensorboard()
-    log.info('Terminated all running tensorboard processes.')
+# @atexit.register
+# def exit_function():
+#     """ Terminate all running tensorboard processes when the program exits. """
+#     terminate_tensorboard()
+#     log.info('Terminated all running tensorboard processes.')
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -28,8 +26,8 @@ def main(cfg: DictConfig):
 
     log.info(f'Starting action: {cfg.action}')
 
-    start_tensorboard(cfg.path.output)
-    time.sleep(5)
+    # start_tensorboard(cfg.path.output)
+    # time.sleep(5)
     if cfg.action == 'train':
         train_model(cfg)
     elif cfg.action == 'test':
@@ -43,9 +41,7 @@ def main(cfg: DictConfig):
     else:
         log.error(f'The action "{cfg.action}" is not supported')
 
-    input("\nPress ENTER to exit\n")
-
-    log.info('Exiting program')
+    log.info(f'Finished action: {cfg.action}')
 
 
 if __name__ == '__main__':

@@ -1,14 +1,13 @@
 import os
 import logging
-from copy import deepcopy
 
 import torch.nn
 from omegaconf import DictConfig
-from torch.utils.data import DataLoader
 
 from .model import SalsaNext
-from .dataset import SemanticDataset
 from .learning import Trainer
+from .dataset import SemanticDataset
+from .learning import SemanticTrainer
 
 log = logging.getLogger(__name__)
 
@@ -18,20 +17,11 @@ log.info(f'Using device {device}')
 
 
 def train_model(cfg: DictConfig):
-    # Create datasets
     train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size)
     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='valid', size=cfg.train.dataset_size)
 
-    model = SalsaNext(cfg.ds.num_classes)
-    model.to(device)
-
-    optimizer = torch.optim.Adam(model.parameters(), cfg.train.learning_rate)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
-
-    trainer = Trainer(model=model, cfg=cfg, train_ds=train_ds,
-                      val_ds=val_ds, optimizer=optimizer, scheduler=scheduler)
-
-    trainer.train(cfg.train.epochs, cfg.path.models)
+    trainer = SemanticTrainer(cfg, train_ds, val_ds, device)
+    trainer.train(cfg.train.epochs)
 
 
 # def train_model_active(cfg: DictConfig):

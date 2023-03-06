@@ -7,6 +7,12 @@ from omegaconf import DictConfig
 from torch.utils.data import Dataset
 from numpy.lib.recfunctions import structured_to_unstructured
 
+try:
+    import open3d as o3d
+except ImportError:
+    o3d = None
+    print("WARNING: Can't import open3d.")
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '../cut-pursuit/build/src'))
 
 from .ply import read_ply
@@ -19,7 +25,7 @@ log = logging.getLogger(__name__)
 
 
 class KITTI360Dataset(Dataset):
-    def __init__(self, cfg: DictConfig, dataset_path: str, split: str, max_points_train: int = 100000,
+    def __init__(self, cfg: DictConfig, dataset_path: str, split: str, max_points_train: int = 8000,
                  k_nn_adj: int = 5, k_nn_local: int = 20, max_samples: int = 30):
         self.cfg = cfg
         self.split = split
@@ -35,7 +41,7 @@ class KITTI360Dataset(Dataset):
 
         self._init()
 
-    def get_item(self, index):
+    def get_cloud(self, index):
         scan_path = self.scans[index]
         scan = read_ply(scan_path)
 
@@ -52,7 +58,7 @@ class KITTI360Dataset(Dataset):
         scan = read_ply(scan_path)
 
         xyz = structured_to_unstructured(scan[['x', 'y', 'z']])
-        rgb = structured_to_unstructured(scan[['red', 'green', 'blue']]) / 255
+        rgb = structured_to_unstructured(scan[['red', 'green', 'blue']])
         labels = structured_to_unstructured(scan[['semantic']])
 
         # Map labels to train ids
@@ -61,18 +67,24 @@ class KITTI360Dataset(Dataset):
             label_map[label] = value
         labels = label_map[labels]
 
-        # Prune the data
-        xyz, rgb, labels, _ = libply_c.prune(xyz.astype('float32'), 0.15, rgb.astype('uint8'),
-                                             labels.astype('uint8'),
-                                             np.zeros(1, dtype='uint8'), self.cfg.ds.num_classes, 0)
+        device = o3d.core.Device("CPU:0")
+        pcd = o3d.t.geometry.PointCloud(device)
+
+        pcd.point.positions = o3d.core.Tensor(xyz, o3d.core.float32, device)
+        pcd.point.colors = o3d.core.Tensor(rgb, o3d.core.uint8, device)
+        pcd.point.labels = o3d.core.Tensor(labels, o3d.core.uint32, device)
+
+        pcd = pcd.voxel_down_sample(voxel_size=0.2)
+        xyz, rgb, labels = pcd.point.positions.numpy(), pcd.point.colors.numpy(), pcd.point.labels.numpy()
 
         # Compute the nearest neighbors
         graph_nn, local_neighbors = compute_graph_nn_2(xyz, self.k_nn_adj, self.k_nn_local)
         edg_source, edg_target = graph_nn['source'].astype('int64'), graph_nn['target'].astype('int64')
 
+        label_transition = labels[edg_source] != labels[edg_target]
         _, objects = libply_c.connected_comp(xyz.shape[0], edg_source.astype('uint32'),
                                              edg_target.astype('uint32'),
-                                             (labels == 0).astype('uint8'), 0)
+                                             (label_transition == 0).astype('uint8'), 0)
 
         is_transition = objects[edg_source] != objects[edg_target]
         nei = local_neighbors.reshape([xyz.shape[0], self.k_nn_local]).astype('int64')
@@ -97,12 +109,12 @@ class KITTI360Dataset(Dataset):
             nei = nei[selected_ver,]
 
         # Compute the elevation
-        low_points = (xyz[:, 2] - xyz[:, 2].min() < 0.5).nonzero()[0]
-        if low_points.shape[0] > 0:
+        low_points = (xyz[:, 2] - xyz[:, 2].min() < 5).nonzero()[0]
+        if low_points.shape[0] > 100:
             reg = RANSACRegressor(random_state=0).fit(xyz[low_points, :2], xyz[low_points, 2])
             elevation = xyz[:, 2] - reg.predict(xyz[:, :2])
         else:
-            elevation = np.zeros((xyz.shape[0],), dtype=float)
+            elevation = np.zeros((xyz.shape[0],), dtype=np.float32)
 
         # Compute the xyn (normalized x and y)
         ma, mi = np.max(xyz[:, :2], axis=0, keepdims=True), np.min(xyz[:, :2], axis=0, keepdims=True)
@@ -134,3 +146,12 @@ class KITTI360Dataset(Dataset):
         self.scans = [os.path.join(self.path, scan) for scan in scans][:self.max_samples]
 
         log.info(f'Loaded {len(self.scans)} scans from {self.split} split')
+
+
+def instances_color_map():
+    # make instance colors
+    max_inst_id = 10000000
+    color_map = np.random.uniform(low=0.0, high=1.0, size=(max_inst_id, 3))
+    # force zero to a gray-ish color
+    color_map[0] = np.full(3, 0.1)
+    return color_map

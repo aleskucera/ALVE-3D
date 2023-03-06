@@ -120,7 +120,7 @@ class ScanVis:
 
         color = self.scan_colors[self.offset] if self.scan_colors is not None else None
         if isinstance(self.scans[0], str):
-            self.scan.open_scan(self.scans[self.offset], color=color)
+            self.scan.open_scan(self.scans[self.offset])
         else:
             self.scan.set_scan(self.scans[self.offset], color=color)
 

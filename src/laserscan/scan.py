@@ -228,8 +228,8 @@ class LaserScan:
         self.proj_remission[self.proj_mask] = self.remissions[self.proj_idx[self.proj_mask]]
 
         if color is None and self.colorize:
-            rem_range = (np.min(self.remissions), np.max(self.remissions))
-            self.color = map_color(self.remissions, color_map='twilight', data_range=rem_range)
+            rem_range = (np.min(self.radius), np.max(self.radius))
+            self.color = map_color(self.radius, color_map='turbo', data_range=rem_range)
             self.proj_color = self.color[self.proj_idx]
         elif color is not None:
             self.color = color[self.drop_mask]

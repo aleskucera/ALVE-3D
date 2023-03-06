@@ -1,6 +1,6 @@
 learning_rate: 0.001    # 1e-3
-weight_decay: 0.0001    # 1e-4
-weight_epsilon: 0.0001   # 1e-4
+#weight_decay: 0.0001    # 1e-4
+#weight_epsilon: 0.0001   # 1e-4
 epochs: 100
 batch_size: 32
 dataset_size: null      # null means all
