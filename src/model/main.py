@@ -8,8 +8,8 @@ from .SalsaNext import SalsaNext
 
 def get_model(cfg: DictConfig, device: torch.device):
     num_outputs = cfg.ds.num_classes
-    num_inputs = cfg.ds.num_semantic_inputs
-    features = cfg.ds.partition_features
+    num_inputs = cfg.ds.num_semantic_channels
+    features = cfg.ds.partition_channels
 
     if cfg.model.architecture == 'SalsaNext':
         model = SalsaNext(num_inputs, num_outputs)
