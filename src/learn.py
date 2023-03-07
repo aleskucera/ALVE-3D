@@ -18,7 +18,7 @@ log.info(f'Using device {device}')
 
 def train_model(cfg: DictConfig):
     train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size)
-    val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='valid', size=cfg.train.dataset_size)
+    val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size)
 
     trainer = SemanticTrainer(cfg, train_ds, val_ds, device)
     trainer.train(cfg.train.epochs)
