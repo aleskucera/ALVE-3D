@@ -75,23 +75,23 @@ class SemanticLogger(object):
 
         self.conf_matrix.update(outputs, targets)
 
-    def log_train(self, epoch: int):
+    def log_train(self, epoch: int) -> dict:
         """Log train metrics to W&B
 
         :param epoch: Current epoch
         """
 
-        self._log_epoch(epoch, 'train')
+        return self._log_epoch(epoch, 'train')
 
-    def log_val(self, epoch: int):
+    def log_val(self, epoch: int) -> dict:
         """Log val metrics to W&B
 
         :param epoch: Current epoch
         """
 
-        self._log_epoch(epoch, 'val')
+        return self._log_epoch(epoch, 'val')
 
-    def _log_epoch(self, epoch: int, phase: str):
+    def _log_epoch(self, epoch: int, phase: str) -> dict:
         """Log epoch metrics to W&B
 
         :param epoch: Current epoch
@@ -115,7 +115,7 @@ class SemanticLogger(object):
         wandb.log({f"Accuracy {phase}": acc}, step=epoch)
 
         self.metric_history['IoU'].append(iou)
-        wandb.log({f"IoU {phase}": self.iou}, step=epoch)
+        wandb.log({f"IoU {phase}": iou}, step=epoch)
 
         if phase == 'val':
             self.metric_history['Class Accuracy'].append(class_acc)
@@ -134,6 +134,8 @@ class SemanticLogger(object):
         self.class_acc.reset()
         self.class_iou.reset()
         self.conf_matrix.reset()
+
+        return {'loss': loss, 'acc': acc, 'iou': iou}
 
     def _log_class_accuracy(self, class_acc: torch.Tensor, epoch: int):
         for class_name, class_acc in zip(self.label_names, class_acc.tolist()):

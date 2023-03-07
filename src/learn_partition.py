@@ -28,7 +28,6 @@ def train_partition(cfg: DictConfig):
     model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), cfg.train.learning_rate)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
 
     model.train()
 

@@ -9,6 +9,5 @@
 #SBATCH --mail-user=kuceral4@fel.cvut.cz  # where send info about job
 #SBATCH --mail-type=ALL                   # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
-export PYTHONPATH=$PYTHONPATH:/opt/conda/envs/ALVE-3D/lib/python3.10/site-packages
 singularity run --nv singularity/alve-3d.sif bash ./scripts/process/compile.sh
 singularity run --nv --bind /mnt singularity/alve-3d.sif python src/superpoints/graph.py

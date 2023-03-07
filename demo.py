@@ -85,7 +85,7 @@ def log_sequence(cfg: DictConfig) -> None:
     :param cfg: Configuration object.
     """
 
-    sequence = 3
+    sequence = cfg.sequence
 
     train_ds = SemanticDataset(dataset_path=cfg.ds.path, split='train', sequences=[sequence], cfg=cfg.ds)
     val_ds = SemanticDataset(dataset_path=cfg.ds.path, split='val', sequences=[sequence], cfg=cfg.ds)

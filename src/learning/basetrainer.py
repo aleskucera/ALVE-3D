@@ -34,7 +34,7 @@ class BaseTrainer(object):
     def train(self, epochs: int):
         raise NotImplementedError
 
-    def train_epoch(self, epoch: int, validate: bool = True):
+    def train_epoch(self, epoch: int, validate: bool = True) -> dict:
         self.model.train()
 
         for batch_idx, batch in enumerate(tqdm(self.train_loader)):
@@ -52,9 +52,11 @@ class BaseTrainer(object):
         self.logger.log_train(epoch)
 
         if validate:
-            self.validate(epoch)
+            return self.validate(epoch)
+        else:
+            return {}
 
-    def validate(self, epoch: int):
+    def validate(self, epoch: int) -> dict:
         self.model.eval()
 
         for batch_idx, batch in enumerate(tqdm(self.val_loader)):
@@ -63,7 +65,7 @@ class BaseTrainer(object):
             loss = self.loss_fn(outputs, targets)
 
             self.logger.update(loss.item(), outputs, targets)
-        self.logger.log_val(epoch)
+        return self.logger.log_val(epoch)
 
     @staticmethod
     def _get_num_workers(device: torch.device) -> int:
