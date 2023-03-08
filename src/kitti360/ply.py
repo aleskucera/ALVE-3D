@@ -26,6 +26,7 @@
 # Basic libs
 import numpy as np
 import sys
+from numpy.lib.recfunctions import structured_to_unstructured
 
 # Define PLY types
 ply_dtypes = dict([
@@ -192,6 +193,16 @@ def read_ply(filename, triangular_mesh=False):
             data = np.fromfile(plyfile, dtype=properties, count=num_points)
 
     return data
+
+
+def read_kitti360_ply(filename):
+    ply = read_ply(filename)
+    points = structured_to_unstructured(ply[['x', 'y', 'z']])
+    colors = structured_to_unstructured(ply[['red', 'green', 'blue']]) / 255
+
+    sem_labels = structured_to_unstructured(ply[['semantic']])
+    inst_labels = structured_to_unstructured(ply[['instance']])
+    return points, colors, sem_labels, inst_labels
 
 
 def header_properties(field_list, field_names):

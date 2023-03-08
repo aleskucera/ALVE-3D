@@ -1,25 +1,29 @@
 import os
 import logging
 
-import h5py
+import scipy
 import numpy as np
-import open3d as o3d
 from tqdm import tqdm
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from omegaconf import DictConfig
 from mpl_toolkits.axes_grid1 import ImageGrid
+from numpy.lib.recfunctions import structured_to_unstructured
 
-from .ply import read_kitti360_ply
-from src.utils.map import map_labels, map_colors
-from src.utils.cloud import transform_points, downsample_cloud, nearest_neighbors, nearest_neighbors_2, \
-    connected_label_components, nn_graph, visualize_cloud, visualize_cloud_values
+try:
+    import open3d as o3d
+except ImportError:
+    o3d = None
+    print("WARNING: Can't import open3d.")
+
+from .ply import read_ply
+from .labels import id2label
 from src.laserscan.project import project_scan
 
 log = logging.getLogger(__name__)
 
 
-class KITTI360Converter:
+class Kitti360Converter:
     def __init__(self, cfg: DictConfig):
 
         # ----------------- KITTI-360 structure attributes -----------------
@@ -50,14 +54,10 @@ class KITTI360Converter:
         self.static_windows.sort()
         self.dynamic_windows.sort()
 
-        assert len(self.static_windows) == len(
-            self.dynamic_windows), 'Number of static and dynamic windows must be equal'
-
-        self.window_ranges = get_disjoint_ranges(self.static_windows)
-        self.cloud_names = names_from_ranges(self.window_ranges)
-        self.dataset_indices, self.train_samples, self.val_samples = self.get_splits(self.window_ranges,
-                                                                                     self.train_windows_path,
-                                                                                     self.val_windows_path)
+        # For each window, get the range of scans that it contains
+        self.window_ranges = [get_window_range(window) for window in self.static_windows]
+        self.train_windows = read_txt(self.train_windows_path, self.seq_name)
+        self.val_windows = read_txt(self.val_windows_path, self.seq_name)
 
         # ----------------- Conversion attributes -----------------
         self.static_threshold = cfg.conversion.static_threshold
@@ -105,9 +105,6 @@ class KITTI360Converter:
             ord('Q'): self.quit,
         }
 
-        self.k_nn_adj = 5
-        self.k_nn_local = 20
-
     def convert(self):
         """Convert KITTI-360 dataset to SemanticKITTI format. This function will create a sequence directory in the
         KITTI-360 dataset directory.
@@ -121,32 +118,38 @@ class KITTI360Converter:
         # Create output directories
         sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
 
-        labels_dir = os.path.join(sequence_path, 'labels')
         velodyne_dir = os.path.join(sequence_path, 'velodyne')
-
-        os.makedirs(labels_dir, exist_ok=True)
         os.makedirs(velodyne_dir, exist_ok=True)
 
-        global_clouds_dir = os.path.join(sequence_path, 'global_clouds')
-        assert os.path.exists(global_clouds_dir), f'Global clouds directory {global_clouds_dir} does not exist'
-        global_clouds = [os.path.join(global_clouds_dir, f) for f in os.listdir(global_clouds_dir)]
-        global_clouds.sort()
+        labels_dir = os.path.join(sequence_path, 'labels')
+        os.makedirs(labels_dir, exist_ok=True)
 
-        with h5py.File(os.path.join(sequence_path, 'info.h5'), 'w') as f:
-            f.create_dataset('poses', data=self.poses[self.dataset_indices])
-            f.create_dataset('train', data=self.train_samples)
-            f.create_dataset('val', data=self.val_samples)
-            f.create_dataset('selected', data=np.zeros(len(self.train_samples), dtype=np.bool))
+        info_file = os.path.join(sequence_path, 'info.npz')
 
-        for i, files in enumerate(zip(self.static_windows, self.dynamic_windows, global_clouds)):
+        all_indices = get_list(self.window_ranges)
+        train_indices = split_indices([get_window_range(window) for window in self.train_windows], all_indices)
+        val_indices = split_indices([get_window_range(window) for window in self.val_windows], all_indices)
+
+        poses = self.poses[all_indices]
+
+        # Save info file
+        np.savez(info_file, poses=poses, train=train_indices, val=val_indices)
+
+        for i, window_file in enumerate(self.static_windows):
             log.info(f'Converting window {i + 1}/{self.num_windows}')
-            static_file, dynamic_file, global_cloud_file = files
 
-            static_points, static_colors, semantic, _ = read_kitti360_ply(static_file)
-            dynamic_points, _, _, _ = read_kitti360_ply(dynamic_file)
+            # Read static window
+            static_window = read_ply(window_file)
 
-            with h5py.File(global_cloud_file, 'r') as f:
-                global_points = np.asarray(f['points'])
+            static_points = structured_to_unstructured(static_window[['x', 'y', 'z']])
+            static_colors = structured_to_unstructured(static_window[['red', 'green', 'blue']]) / 255
+
+            self.semantic = structured_to_unstructured(static_window[['semantic']])
+            self.instances = structured_to_unstructured(static_window[['instance']])
+
+            # Read dynamic window
+            dynamic_window = read_ply(self.dynamic_windows[self.window_num])
+            dynamic_points = structured_to_unstructured(dynamic_window[['x', 'y', 'z']])
 
             # For each scan in the window, find the points that belong to it and write them to a files
             log.info(f'Window range: {self.window_ranges[i]}')
@@ -154,83 +157,76 @@ class KITTI360Converter:
             for j in tqdm(range(start, end)):
                 scan = read_scan(self.velodyne_path, j)
                 scan_points = scan[:, :3]
-                scan_remissions = scan[:, 3][:, np.newaxis]
+                scan_intensity = scan[:, 3][:, np.newaxis]
 
-                # Transform scan to the current pose
-                transformed_scan_points = transform_points(scan_points, self.poses[j])
+                # Transform scan to world coordinates
+                hom_scan_points = np.concatenate([scan_points, np.ones((scan_points.shape[0], 1))], axis=1)
+                hom_scan_points = np.matmul(self.poses[j], hom_scan_points.T).T
+                transformed_scan_points = hom_scan_points[:, :3]
 
-                # Find neighbors in the dynamic window and remove dynamic points
-                if len(dynamic_points) > 0:
-                    dists, indices = nearest_neighbors_2(dynamic_points, transformed_scan_points, k_nn=1)
-                    mask = np.logical_and(dists >= 0, dists <= self.dynamic_threshold)
-                    scan_points = scan_points[~mask]
-                    scan_remissions = scan_remissions[~mask]
-                    transformed_scan_points = transformed_scan_points[~mask]
+                # Find neighbors in the dynamic window
+                tree = scipy.spatial.cKDTree(dynamic_points)
+                dists, indices = tree.query(transformed_scan_points, k=1)
+                mask = np.logical_and(dists >= 0, dists <= self.dynamic_threshold)
 
-                # Find neighbours in the static window and assign their color
-                dists, indices = nearest_neighbors_2(static_points, transformed_scan_points, k_nn=1)
+                # Remove dynamic points from scan
+                scan_points = scan_points[~mask]
+                scan_intensity = scan_intensity[~mask]
+                transformed_scan_points = transformed_scan_points[~mask]
+
+                # Find neighbours in the static window
+                tree = scipy.spatial.cKDTree(static_points)
+                dists, indices = tree.query(transformed_scan_points, k=1)
                 mask = np.logical_and(dists >= 0, dists <= self.static_threshold)
-                colors = static_colors[indices[mask]].astype(np.float32)
-                semantics = semantic[indices[mask]].astype(np.uint8)
 
-                # Find neighbours in the global cloud and assign their index
-                dists, global_indices = nearest_neighbors_2(global_points, transformed_scan_points, k_nn=1)
+                # Get the color of the nearest neighbour
+                rgb = static_colors[indices[mask]]
 
-                with h5py.File(os.path.join(velodyne_dir, f'{j:06d}.h5'), 'w') as f:
-                    f.create_dataset('points', data=scan_points[mask], dtype=np.float32)
-                    f.create_dataset('remissions', data=scan_remissions[mask], dtype=np.float32)
-                    f.create_dataset('colors', data=colors, dtype=np.float32)
-                    f.create_dataset('global_indices', data=global_indices, dtype=np.float32)
-                    f.create_dataset('global_cloud_num', data=i, dtype=np.uint8)
+                # Save the scan
+                scan = np.concatenate([scan_points[mask], scan_intensity[mask], rgb], axis=1, dtype=np.float32)
+                np.save(os.path.join(velodyne_dir, f'{j:06d}.npy'), scan)
 
-                with h5py.File(os.path.join(labels_dir, f'{j:06d}.h5'), 'w') as f:
-                    f.create_dataset('labels', data=semantics, dtype=np.uint8)
-                    f.create_dataset('label_mask', data=np.zeros_like(semantics, dtype=np.bool), dtype=np.bool)
+                # Save the labels
+                labels = np.zeros((scan.shape[0], 1), dtype=np.int32)
+                semantics = self.semantic[indices[mask]].astype(np.int32)
+                instances = self.instances[indices[mask]].astype(np.int32)
 
-    def create_global_clouds(self):
-        sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
-        global_cloud_dir = os.path.join(sequence_path, 'global_clouds')
-        os.makedirs(global_cloud_dir, exist_ok=True)
+                labels = labels | semantics
+                labels = labels | (instances << 16)
 
-        for window_file, name in tqdm(zip(self.static_windows, self.cloud_names)):
-            output_file = h5py.File(os.path.join(global_cloud_dir, f'{name}.h5'), 'w')
-
-            # Read static window and downsample
-            points, colors, labels, _ = read_kitti360_ply(window_file)
-            points, colors, labels = downsample_cloud(points, colors, labels, 0.2)
-
-            # visualize_cloud(points, colors)
-
-            # Compute graph edges
-            edge_sources, edge_targets, distances = nn_graph(points, self.k_nn_adj)
-
-            # Compute local neighbors
-            local_neighbors = nearest_neighbors(points, self.k_nn_local)
-
-            # Computes object in point cloud and transition edges
-            objects = connected_label_components(labels, edge_sources, edge_targets)
-            edge_transitions = objects[edge_sources] != objects[edge_targets]
-
-            # visualize_cloud_values(points, objects, random_colors=True)
-
-            output_file.create_dataset('points', data=points, dtype='float32')
-            output_file.create_dataset('colors', data=colors, dtype='float32')
-            output_file.create_dataset('labels', data=labels, dtype='uint8')
-            output_file.create_dataset('objects', data=objects, dtype='uint32')
-
-            output_file.create_dataset('edge_sources', data=edge_sources, dtype='uint32')
-            output_file.create_dataset('edge_targets', data=edge_targets, dtype='uint32')
-            output_file.create_dataset('edge_transitions', data=edge_transitions, dtype='uint8')
-            output_file.create_dataset('local_neighbors', data=local_neighbors, dtype='uint32')
+                np.save(os.path.join(labels_dir, f'{j:06d}.npy'), labels)
 
     def update_window(self):
-        static_points, static_colors, self.semantic, _ = read_kitti360_ply(self.static_windows[self.window_num])
 
-        self.semantic = map_labels(self.semantic, self.cfg.ds.learning_map).flatten()
-        self.semantic_color = map_colors(self.semantic, self.cfg.ds.color_map_train)
+        # Read static window
+        static_window = read_ply(self.static_windows[self.window_num])
 
-        dynamic_points, _, _, _ = read_kitti360_ply(self.dynamic_windows[self.window_num])
+        static_points = structured_to_unstructured(static_window[['x', 'y', 'z']])
+        static_colors = structured_to_unstructured(static_window[['red', 'green', 'blue']]) / 255
+
+        # self.semantic = structured_to_unstructured(static_window[['semantic']]).flatten()
+        self.instances = structured_to_unstructured(static_window[['instance']]).flatten()
+
+        # Read dynamic window
+        dynamic_window = read_ply(self.dynamic_windows[self.window_num])
+        dynamic_points = structured_to_unstructured(dynamic_window[['x', 'y', 'z']])
         dynamic_colors = np.ones_like(dynamic_points) * [0, 0, 1]
+
+        # Colorize for visualization
+        self.semantic_color = np.zeros((self.instances.size, 3))
+        self.instance_color = np.zeros((self.instances.size, 3))
+
+        for uid in np.unique(self.instances):
+            semantic_id, instance_id = global2local(uid)
+            self.semantic_color[self.instances == uid] = id2label[semantic_id].color
+            if instance_id == 0:
+                self.instance_color[self.instances == uid] = (0, 0, 0)
+            elif instance_id > 0:
+                self.instance_color[self.instances == uid] = np.asarray(self.cmap(instance_id % self.cmap_length)[:3])
+            else:
+                self.instance_color[self.instances == uid] = np.ndarray([96, 96, 96]) / 255.
+
+        self.semantic_color = self.semantic_color / 255.
 
         self.static_window.points = o3d.utility.Vector3dVector(static_points)
         self.static_window.colors = o3d.utility.Vector3dVector(static_colors)
@@ -248,10 +244,13 @@ class KITTI360Converter:
         scan_points = scan[:, :3]
 
         # Transform scan to world coordinates
-        transformed_scan_points = transform_points(scan_points, self.poses[self.scan_num])
+        hom_scan_points = np.concatenate([scan_points, np.ones((scan_points.shape[0], 1))], axis=1)
+        hom_scan_points = np.matmul(self.poses[self.scan_num], hom_scan_points.T).T
+        transformed_scan_points = hom_scan_points[:, :3]
 
         # Find neighbours in the static window
-        dists, indices = nearest_neighbors_2(self.static_window.points, transformed_scan_points, k_nn=1)
+        tree = scipy.spatial.cKDTree(np.array(self.static_window.points))
+        dists, indices = tree.query(transformed_scan_points, k=1)
         mask = np.logical_and(dists >= 0, dists <= self.static_threshold)
 
         # Extract RGB values from the static window
@@ -263,6 +262,7 @@ class KITTI360Converter:
 
         # Get point cloud labels
         semantics = np.array(self.semantic_color)[indices[mask]]
+        instances = np.array(self.instance_color)[indices[mask]]
 
         # Project the scan to the camera
         projection = project_scan(scan_points, 64, 1024, 3, -25.0)
@@ -280,6 +280,7 @@ class KITTI360Converter:
 
         proj_color[filtered_proj_mask] = rgb[filtered_proj_indices]
         proj_semantics[filtered_proj_mask] = semantics[filtered_proj_indices]
+        proj_instances[filtered_proj_mask] = instances[filtered_proj_indices]
 
         # Visualize the projection
         fig = plt.figure(figsize=(11, 4), dpi=150)
@@ -297,28 +298,6 @@ class KITTI360Converter:
 
         self.scan.points = o3d.utility.Vector3dVector(transformed_scan_points)
         self.scan.colors = o3d.utility.Vector3dVector(scan_colors)
-
-    def get_splits(self, window_ranges: list[tuple[int, int]], train_path: str, val_path: str) -> tuple:
-
-        dataset_indices = []
-        val_indices = []
-        train_indices = []
-
-        train_ranges = [get_window_range(path) for path in read_txt(train_path, self.seq_name)]
-        val_ranges = [get_window_range(path) for path in read_txt(val_path, self.seq_name)]
-
-        for window in window_ranges:
-            dataset_indices += list(range(window[0], window[1] + 1))
-            for train_range in train_ranges:
-                if train_range[0] == window[0]:
-                    train_indices += list(range(window[0], window[1] + 1))
-            for val_range in val_ranges:
-                if val_range[0] == window[0]:
-                    val_indices += list(range(window[0], window[1] + 1))
-
-        train_samples = np.searchsorted(dataset_indices, train_indices)
-        val_samples = np.searchsorted(dataset_indices, val_indices)
-        return dataset_indices, train_samples, val_samples
 
     def next_window(self, vis):
         self.window_num += 1
@@ -421,6 +400,15 @@ def read_scan(velodyne_path: str, i: int):
     return scan
 
 
+def global2local(globalId):
+    semanticId = globalId // 1000
+    instanceId = globalId % 1000
+    if isinstance(globalId, np.ndarray):
+        return semanticId.astype(int), instanceId.astype(int)
+    else:
+        return int(semanticId), int(instanceId)
+
+
 def get_list(ranges: list[tuple[int, int]]) -> list[int]:
     """ Create list of sorted values without duplicates. """
     values = []
@@ -433,24 +421,3 @@ def split_indices(ranges: list[tuple[int, int]], all_indices: list) -> np.ndarra
     """ Create list of sorted indices without duplicates. """
     indices = get_list(ranges)
     return np.searchsorted(all_indices, indices)
-
-
-def get_disjoint_ranges(paths: list[str]) -> list[tuple[int, int]]:
-    """ Create list of disjoint ranges. """
-    paths.sort()
-    ranges = [get_window_range(path) for path in paths]
-    disjoint_ranges = []
-    for i, (start, end) in enumerate(ranges):
-        if i == len(ranges) - 1:
-            disjoint_ranges.append((start, end))
-        else:
-            next_start, _ = ranges[i + 1]
-            if next_start < end:
-                end = next_start - 1
-            disjoint_ranges.append((start, end))
-    return disjoint_ranges
-
-
-def names_from_ranges(window_ranges: list[tuple[int, int]]) -> list[str]:
-    """ Create list of window names. """
-    return [f'{start:06d}_{end:06d}' for start, end in window_ranges]

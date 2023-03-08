@@ -9,8 +9,8 @@ import open3d as o3d
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src import SemanticDataset, set_paths, LaserScan, ScanVis, create_global_cloud, visualize_superpoints, \
-    create_config
+from src import SemanticDataset, set_paths, LaserScan, ScanVis, visualize_superpoints, \
+    create_config, KITTI360Converter
 
 log = logging.getLogger(__name__)
 
@@ -29,8 +29,8 @@ def main(cfg: DictConfig):
         log_sequence(cfg)
     elif cfg.action == 'dataset_statistics':
         dataset_statistics(cfg)
-    # elif cfg.action == 'global_cloud':
-    #     show_global_cloud(cfg)
+    elif cfg.action == 'visualize_kitti360_conversion':
+        visualize_kitti360_conversion(cfg)
     elif cfg.action == 'create_kitti360_config':
         create_config()
     elif cfg.action == 'superpoints':
@@ -127,23 +127,13 @@ def dataset_statistics(cfg: DictConfig):
     dataset.calculate_statistics()
 
 
-# def show_global_cloud(cfg: DictConfig) -> None:
-#     """ Create global cloud and visualize it.
-#     :param cfg: Configuration object.
-#     """
-#
-#     sequence = 0
-#     file_name = f'global_cloud.npz'
-#     path = os.path.join(cfg.ds.path, 'sequences', f'{sequence:02d}', file_name)
-#     create_global_cloud(cfg, sequence, path)
-#
-#     data = np.load(path)
-#     cloud, color = data['cloud'], data['color']
-#
-#     pcd = o3d.geometry.PointCloud()
-#     pcd.points = o3d.utility.Vector3dVector(cloud)
-#     pcd.colors = o3d.utility.Vector3dVector(color)
-#     o3d.visualization.draw_geometries([pcd])
+def visualize_kitti360_conversion(cfg: DictConfig):
+    """ Visualize KITTI360 conversion.
+    :param cfg: Configuration object.
+    """
+
+    converter = KITTI360Converter(cfg)
+    converter.visualize()
 
 
 def log_superpoints(cfg: DictConfig):

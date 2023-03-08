@@ -17,6 +17,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../cut-pursuit/build/sr
 
 from .ply import read_ply
 from src.superpoints.graph import compute_graph_nn_2
+from src.utils.map import map_labels
 from sklearn.linear_model import RANSACRegressor
 import libcp
 from src.ply_c import libply_c
@@ -62,10 +63,7 @@ class KITTI360Dataset(Dataset):
         labels = structured_to_unstructured(scan[['semantic']])
 
         # Map labels to train ids
-        label_map = np.zeros(max(self.cfg.ds.learning_map.keys()) + 1, dtype=np.uint8)
-        for label, value in self.cfg.ds.learning_map.items():
-            label_map[label] = value
-        labels = label_map[labels]
+        labels = map_labels(labels, self.cfg.ds.learning_map)
 
         device = o3d.core.Device("CPU:0")
         pcd = o3d.t.geometry.PointCloud(device)

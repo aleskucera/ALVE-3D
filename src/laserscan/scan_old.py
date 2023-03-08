@@ -2,7 +2,6 @@
 import os
 import random
 
-import h5py
 import torch
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -131,11 +130,6 @@ class LaserScan:
         self.proj_superpoints = None
         self.proj_superpoints_color = None
 
-        # Global indices
-        self.global_indices = None
-        self.global_cloud_num = None
-        self.label_mask = None
-
     def __len__(self):
         return self.points.shape[0]
 
@@ -161,18 +155,19 @@ class LaserScan:
         if filename.endswith('.bin'):
             scan = np.fromfile(filename, dtype=np.float32)
             scan = scan.reshape((-1, 4))
-            points = scan[:, :3]
-            remissions = scan[:, 3]
-            color = None
-        elif filename.endswith('.h5'):
-            with h5py.File(filename, 'r') as f:
-                points = np.array(f['points'])
-                color = np.array(f['colors'])
-                remissions = np.array(f['remissions'])
-                self.global_indices = np.array(f['global_indices'])
-                self.global_cloud_num = np.array(f['global_cloud_num'])
+        elif filename.endswith('.npy'):
+            scan = np.load(filename)
         else:
             raise ValueError('Invalid file extension')
+
+        # Parse scan
+        points = scan[:, :3]
+        remissions = scan[:, 3]
+        if scan.shape[1] == 7:
+            color = scan[:, 4:7]
+        else:
+            color = None
+
         self.set_scan(points, remissions, color, flip_prob, trans_prob, rot_prob, drop_prob)
 
     @arg_check
@@ -272,10 +267,8 @@ class LaserScan:
         # Read label from file
         if filename.endswith('.label'):
             label = np.fromfile(filename, dtype=np.int32)
-        elif filename.endswith('.h5'):
-            with h5py.File(filename, 'r') as f:
-                label = np.array(f['labels'])
-                self.label_mask = np.array(f['label_mask'])
+        elif filename.endswith('.npy'):
+            label = np.load(filename)
         else:
             raise ValueError('Invalid file extension')
 

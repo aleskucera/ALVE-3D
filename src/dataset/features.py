@@ -109,12 +109,7 @@ def visualize_superpoints_2(cfg: DictConfig):
 
 def visualize_superpoints(cfg: DictConfig):
     window_file = '/home/ales/Thesis/ALVE-3D/data/KITTI-360/data_3d_semantics/train/2013_05_28_drive_0000_sync/static/0000000599_0000000846.ply'
-    static_window = read_ply(window_file)
-
-    static_points = structured_to_unstructured(static_window[['x', 'y', 'z']])
-    static_colors = structured_to_unstructured(static_window[['red', 'green', 'blue']]) / 255
-
-    semantic = structured_to_unstructured(static_window[['semantic']])
+    static_points, static_colors, semantic, _ = read_kitti360_ply(window_file)
 
     # Load the model
     model = PointNet(num_features=6, num_global_features=7, out_features=4, memory_size=1000)

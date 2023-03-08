@@ -6,17 +6,9 @@ import hydra
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src import train_model, test_model, set_paths, start_tensorboard, \
-    terminate_tensorboard, convert_kitti360, train_partition
+from src import train_model, test_model, set_paths, train_partition, KITTI360Converter
 
 log = logging.getLogger(__name__)
-
-
-# @atexit.register
-# def exit_function():
-#     """ Terminate all running tensorboard processes when the program exits. """
-#     terminate_tensorboard()
-#     log.info('Terminated all running tensorboard processes.')
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -26,18 +18,16 @@ def main(cfg: DictConfig):
 
     log.info(f'Starting action: {cfg.action}')
 
-    # start_tensorboard(cfg.path.output)
-    # time.sleep(5)
     if cfg.action == 'train':
         train_model(cfg)
     elif cfg.action == 'test':
         test_model(cfg)
-    # elif cfg.action == 'train_active':
-    #     train_model_active(cfg)
     elif cfg.action == 'train_partition':
         train_partition(cfg)
     elif cfg.action == 'convert':
-        convert_kitti360(cfg)
+        converter = KITTI360Converter(cfg)
+        converter.create_global_clouds()
+        converter.convert()
     else:
         log.error(f'The action "{cfg.action}" is not supported')
 

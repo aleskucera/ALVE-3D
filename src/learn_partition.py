@@ -4,6 +4,7 @@ import sys
 import torch
 import wandb
 import numpy as np
+import open3d as o3d
 from tqdm import tqdm
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
