@@ -111,7 +111,7 @@ def log_sequence(cfg: DictConfig) -> None:
     with wandb.init(project='Test new dataset'):
         for i in [1, 10, 36, 150]:
             proj_image, proj_label = dataset[i]
-            wandb.log({'Projection': wandb.Image(proj_image),
+            wandb.log({'Projection': wandb.Image(proj_image[:, :, 2:]),
                        'Projection Label': wandb.Image(proj_label)})
 
 
