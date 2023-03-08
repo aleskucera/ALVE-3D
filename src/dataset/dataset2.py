@@ -48,7 +48,9 @@ class ActiveDataset(Dataset):
         After that the dataset is cropped to the specified size so that sum(N_i for i = 1, ... , S) = size.
         """
 
-        self.scans, self.labels, self.poses, self.selection_masks = load_dataset(self.path, self.sequences, self.split)
+        self.scans, self.labels, self.poses, self.cloud_maps, self.selection_masks = load_dataset(self.path,
+                                                                                                  self.sequences,
+                                                                                                  self.split)
 
         if self.size is not None:
             self._crop_dataset(self.size)
