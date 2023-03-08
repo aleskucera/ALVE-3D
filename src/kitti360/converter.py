@@ -147,7 +147,7 @@ class KITTI360Converter:
             # For each scan in the window, find the points that belong to it and write them to a files
             log.info(f'Window range: {self.window_ranges[i]}')
             start, end = self.window_ranges[i]
-            for j in tqdm(range(start, end)):
+            for j in tqdm(range(start, end + 1)):
                 scan = read_scan(self.velodyne_path, j)
                 scan_points = scan[:, :3]
                 scan_remissions = scan[:, 3][:, np.newaxis]
