@@ -7,7 +7,7 @@ from src.utils.project import project_scan
 from src.utils.io import update_selection_mask, load_dataset
 
 
-class Active3DDataset(Dataset):
+class ActiveDataset(Dataset):
     """Semantic dataset for active learning.
 
     :param dataset_path: Path to the dataset.

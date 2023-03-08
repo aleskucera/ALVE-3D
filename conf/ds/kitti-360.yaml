@@ -13,7 +13,7 @@ projection:
   fov_down: -16.6
 sequences: [ 0, 2, 3, 4, 5, 6, 7, 9, 10 ]
 split:
-  train: [ 0, 2, 3, 4, 5, 6, 7, 9, 10 ]
+  train: [ 3 ]
   val: [ 0, 2, 3, 4, 5, 6, 7, 9, 10 ]
 labels:
   0: unlabeled

@@ -11,6 +11,7 @@ from src import SemanticDataset, LaserScan, ScanVis, visualize_superpoints, \
     create_config, KITTI360Converter
 
 from src.utils.io import set_paths
+from src.dataset.dataset2 import ActiveDataset
 
 log = logging.getLogger(__name__)
 
@@ -85,24 +86,27 @@ def log_sequence(cfg: DictConfig) -> None:
     :param cfg: Configuration object.
     """
 
-    sequence = cfg.sequence
+    # sequence = cfg.sequence
 
-    train_ds = SemanticDataset(dataset_path=cfg.ds.path, split='train', sequences=[sequence], cfg=cfg.ds)
-    val_ds = SemanticDataset(dataset_path=cfg.ds.path, split='val', sequences=[sequence], cfg=cfg.ds)
+    # train_ds = SemanticDataset(dataset_path=cfg.ds.path, split='train', sequences=[sequence], cfg=cfg.ds)
+    # val_ds = SemanticDataset(dataset_path=cfg.ds.path, split='val', sequences=[sequence], cfg=cfg.ds)
+    #
+    # scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
+    #
+    # if len(train_ds) > 0:
+    #     with wandb.init(project='Sequence Visualization', group=cfg.ds.name, name=f'Sequence {sequence} - train'):
+    #         _log_sequence(train_ds, scan)
+    # else:
+    #     log.info(f'Train dataset for sequence {sequence} is empty.')
+    #
+    # if len(val_ds) > 0:
+    #     with wandb.init(project='Sequence Visualization', group=cfg.ds.name, name=f'Sequence {sequence} - val'):
+    #         _log_sequence(val_ds, scan)
+    # else:
+    #     log.info(f'Validation dataset for sequence {sequence} is empty.')
 
-    scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
-
-    if len(train_ds) > 0:
-        with wandb.init(project='Sequence Visualization', group=cfg.ds.name, name=f'Sequence {sequence} - train'):
-            _log_sequence(train_ds, scan)
-    else:
-        log.info(f'Train dataset for sequence {sequence} is empty.')
-
-    if len(val_ds) > 0:
-        with wandb.init(project='Sequence Visualization', group=cfg.ds.name, name=f'Sequence {sequence} - val'):
-            _log_sequence(val_ds, scan)
-    else:
-        log.info(f'Validation dataset for sequence {sequence} is empty.')
+    dataset = ActiveDataset(cfg.ds.path, cfg.ds, 'train')
+    print(dataset)
 
 
 def _log_sequence(dataset, scan):
