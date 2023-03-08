@@ -6,7 +6,7 @@ num_partition_channels:
   local: 0
   global: 0
 ignore_index: 0
-laser_scan:
+projection:
   H: 64
   W: 2048
   fov_up: 16.6

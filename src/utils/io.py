@@ -14,25 +14,49 @@ def set_paths(cfg: DictConfig, output_dir: str) -> DictConfig:
     return cfg
 
 
-def get_split(dataset_path: str, sequences: list, split: str) -> tuple:
+def load_dataset(dataset_path: str, sequences: list, split: str) -> tuple:
     assert split in ['train', 'val']
+
+    poses = []
+    labels = []
+    velodyne = []
+    cloud_maps = []
+    selection_masks = []
+
     for sequence in sequences:
-        velodyne_path = os.path.join(os.path.join(dataset_path, 'velodyne'))
-        labels_path = os.path.join(os.path.join(dataset_path, 'labels'))
-        info_path = os.path.join(dataset_path, 'sequences', f'{sequence:02d}', 'info.txt')
+        sequence_path = os.path.join(dataset_path, 'sequences', f'{sequence:02d}')
 
-        velodyne = [os.path.join(velodyne_path, v) for v in os.listdir(velodyne_path)]
-        velodyne.sort()
-
-        labels = [os.path.join(labels_path, l) for l in os.listdir(labels_path)]
-        labels.sort()
+        info_path = os.path.join(sequence_path, 'info.h5')
+        labels_path = os.path.join(os.path.join(sequence_path, 'labels'))
+        velodyne_path = os.path.join(os.path.join(sequence_path, 'velodyne'))
 
         with h5py.File(info_path, 'r') as f:
-            poses = np.asarray(f['poses'])
-            indices = np.asarray(f[split])
-            selected = np.asarray(f['selected']) if split == 'train' else None
+            split_indices = np.asarray(f[split])
 
-        velodyne = [velodyne[i] for i in indices]
-        labels = [labels[i] for i in indices]
+            poses.append(np.asarray(f['poses'][split_indices]))
+            cloud_maps.append(np.asarray(f['cloud_map'][split_indices]))
 
-        yield velodyne, labels, poses, selected
+            if split == 'train':
+                selection_masks.append(np.asarray(f['selection_mask']))
+
+        seq_labels = [os.path.join(labels_path, l) for l in os.listdir(labels_path) if l.endswith('.h5')]
+        seq_velodyne = [os.path.join(velodyne_path, v) for v in os.listdir(velodyne_path) if v.endswith('.h5')]
+
+        seq_labels.sort()
+        seq_velodyne.sort()
+
+        labels.append(np.array(seq_labels, dtype=np.str_)[split_indices])
+        velodyne.append(np.array(seq_velodyne, dtype=np.str_)[split_indices])
+
+    return velodyne, labels, poses, cloud_maps, selection_masks
+
+
+def update_selection_mask(dataset_path: str, sequences: list, split: str) -> list:
+    assert split in ['train', 'val']
+    selection_masks = []
+    for sequence in sequences:
+        info_path = os.path.join(dataset_path, 'sequences', f'{sequence:02d}', 'info.h5')
+        with h5py.File(info_path, 'r') as f:
+            seq_selection_mask = np.asarray(f['selection_mask'])
+        selection_masks.append(seq_selection_mask)
+    return selection_masks

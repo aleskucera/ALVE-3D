@@ -132,11 +132,7 @@ class KITTI360Converter:
         global_clouds = [os.path.join(global_clouds_dir, f) for f in os.listdir(global_clouds_dir)]
         global_clouds.sort()
 
-        with h5py.File(os.path.join(sequence_path, 'info.h5'), 'w') as f:
-            f.create_dataset('poses', data=self.poses[self.dataset_indices])
-            f.create_dataset('train', data=self.train_samples)
-            f.create_dataset('val', data=self.val_samples)
-            f.create_dataset('selected', data=np.zeros(len(self.train_samples), dtype=np.bool))
+        cloud_map = []
 
         for i, files in enumerate(zip(self.static_windows, self.dynamic_windows, global_clouds)):
             log.info(f'Converting window {i + 1}/{self.num_windows}')
@@ -156,6 +152,8 @@ class KITTI360Converter:
                 scan_points = scan[:, :3]
                 scan_remissions = scan[:, 3][:, np.newaxis]
 
+                cloud_map.append(i)
+
                 # Transform scan to the current pose
                 transformed_scan_points = transform_points(scan_points, self.poses[j])
 
@@ -163,9 +161,9 @@ class KITTI360Converter:
                 if len(dynamic_points) > 0:
                     dists, indices = nearest_neighbors_2(dynamic_points, transformed_scan_points, k_nn=1)
                     mask = np.logical_and(dists >= 0, dists <= self.dynamic_threshold)
-                    scan_points = scan_points[~mask]
-                    scan_remissions = scan_remissions[~mask]
                     transformed_scan_points = transformed_scan_points[~mask]
+                    scan_remissions = scan_remissions[~mask]
+                    scan_points = scan_points[~mask]
 
                 # Find neighbours in the static window and assign their color
                 dists, indices = nearest_neighbors_2(static_points, transformed_scan_points, k_nn=1)
@@ -176,16 +174,25 @@ class KITTI360Converter:
                 # Find neighbours in the global cloud and assign their index
                 dists, global_indices = nearest_neighbors_2(global_points, transformed_scan_points, k_nn=1)
 
+                # Write the scan to a file
                 with h5py.File(os.path.join(velodyne_dir, f'{j:06d}.h5'), 'w') as f:
+                    f.create_dataset('colors', data=colors, dtype=np.float32)
                     f.create_dataset('points', data=scan_points[mask], dtype=np.float32)
                     f.create_dataset('remissions', data=scan_remissions[mask], dtype=np.float32)
-                    f.create_dataset('colors', data=colors, dtype=np.float32)
-                    f.create_dataset('global_indices', data=global_indices, dtype=np.float32)
-                    f.create_dataset('global_cloud_num', data=i, dtype=np.uint8)
 
+                # Write the labels to a file
                 with h5py.File(os.path.join(labels_dir, f'{j:06d}.h5'), 'w') as f:
                     f.create_dataset('labels', data=semantics, dtype=np.uint8)
+                    f.create_dataset('voxel_map', data=global_indices, dtype=np.uint32)
                     f.create_dataset('label_mask', data=np.zeros_like(semantics, dtype=np.bool), dtype=np.bool)
+
+        # Write the sequence info to a file
+        with h5py.File(os.path.join(sequence_path, 'info.h5'), 'w') as f:
+            f.create_dataset('val', data=self.val_samples)
+            f.create_dataset('train', data=self.train_samples)
+            f.create_dataset('poses', data=self.poses[self.dataset_indices])
+            f.create_dataset('cloud_map', data=np.array(cloud_map), dtype=np.uint32)
+            f.create_dataset('selection_mask', data=np.ones(len(self.train_samples), dtype=np.bool))
 
     def create_global_clouds(self):
         sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
@@ -199,8 +206,6 @@ class KITTI360Converter:
             points, colors, labels, _ = read_kitti360_ply(window_file)
             points, colors, labels = downsample_cloud(points, colors, labels, 0.2)
 
-            # visualize_cloud(points, colors)
-
             # Compute graph edges
             edge_sources, edge_targets, distances = nn_graph(points, self.k_nn_adj)
 
@@ -210,8 +215,6 @@ class KITTI360Converter:
             # Computes object in point cloud and transition edges
             objects = connected_label_components(labels, edge_sources, edge_targets)
             edge_transitions = objects[edge_sources] != objects[edge_targets]
-
-            # visualize_cloud_values(points, objects, random_colors=True)
 
             output_file.create_dataset('points', data=points, dtype='float32')
             output_file.create_dataset('colors', data=colors, dtype='float32')

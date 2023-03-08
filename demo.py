@@ -1,16 +1,16 @@
 #!/usr/bin/env python
-import os
 import logging
 
 import wandb
 import hydra
 import numpy as np
-import open3d as o3d
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src import SemanticDataset, set_paths, LaserScan, ScanVis, visualize_superpoints, \
+from src import SemanticDataset, LaserScan, ScanVis, visualize_superpoints, \
     create_config, KITTI360Converter
+
+from src.utils.io import set_paths
 
 log = logging.getLogger(__name__)
 

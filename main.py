@@ -6,7 +6,9 @@ import hydra
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src import train_model, test_model, set_paths, train_partition, KITTI360Converter
+from src import train_model, test_model, train_partition
+from src.utils import set_paths
+from src.kitti360 import KITTI360Converter
 
 log = logging.getLogger(__name__)
 
