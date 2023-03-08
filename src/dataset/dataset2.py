@@ -71,16 +71,22 @@ class ActiveDataset(Dataset):
         sample_idx = size - seq_size + len(self.scans[seq_idx])
 
         # Select the whole sequences
-        self.cropped_poses = self.poses[:seq_idx]
-        self.cropped_scans = self.scans[:seq_idx]
-        self.cropped_labels = self.labels[:seq_idx]
-        self.cropped_selection_mask = self.selection_masks[:seq_idx]
+        cropped_poses = self.poses[:seq_idx]
+        cropped_scans = self.scans[:seq_idx]
+        cropped_labels = self.labels[:seq_idx]
+        cropped_selection_mask = self.selection_masks[:seq_idx]
 
         # Append the cropped sequence
-        self.cropped_poses.append(self.poses[seq_idx][:sample_idx])
-        self.cropped_scans.append(self.scans[seq_idx][:sample_idx])
-        self.cropped_labels.append(self.labels[seq_idx][:sample_idx])
-        self.cropped_selection_mask.append(self.selection_masks[seq_idx][:sample_idx])
+        cropped_poses.append(self.poses[seq_idx][:sample_idx])
+        cropped_scans.append(self.scans[seq_idx][:sample_idx])
+        cropped_labels.append(self.labels[seq_idx][:sample_idx])
+        cropped_selection_mask.append(self.selection_masks[seq_idx][:sample_idx])
+
+        # Update the dataset
+        self.poses = cropped_poses
+        self.scans = cropped_scans
+        self.labels = cropped_labels
+        self.selection_masks = cropped_selection_mask
 
     def update(self):
         """Update the selection masks. This is used when the dataset is used in an active
