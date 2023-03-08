@@ -33,8 +33,13 @@ def load_dataset(dataset_path: str, sequences: list, split: str) -> tuple:
         with h5py.File(info_path, 'r') as f:
             split_indices = np.asarray(f[split])
 
-            poses.append(np.asarray(f['poses'][split_indices]))
-            cloud_maps.append(np.asarray(f['cloud_map'][split_indices]))
+            print(
+                f'Split indices max: {np.max(split_indices)}, min: {np.min(split_indices)}, shape: {split_indices.shape}')
+            print(f'Poses shape: {np.asarray(f["poses"]).shape}')
+            print(f'Cloud map shape: {np.asarray(f["cloud_map"]).shape}')
+
+            poses.append(np.asarray(f['poses'])[split_indices])
+            cloud_maps.append(np.asarray(f['cloud_map'])[split_indices])
 
             if split == 'train':
                 selection_masks.append(np.asarray(f['selection_mask']))
