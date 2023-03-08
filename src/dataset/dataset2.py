@@ -172,8 +172,8 @@ class ActiveDataset(Dataset):
         labels *= label_mask
 
         # Project points to image
-        p = project_scan(points, self.proj_W, self.proj_H, self.proj_fov_up, self.proj_fov_down)
-        proj_depth, proj_idx, proj_mask = p['proj_depth'], p['proj_idx'], p['proj_mask']
+        proj = project_scan(points, self.proj_W, self.proj_H, self.proj_fov_up, self.proj_fov_down)
+        proj_depth, proj_idx, proj_mask = proj['depth'], proj['idx'], proj['mask']
 
         proj_remissions = np.full((self.proj_H, self.proj_W), -1, dtype=np.float32)
         proj_remissions[proj_mask] = remissions[proj_idx[proj_mask]]
