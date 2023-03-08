@@ -108,6 +108,12 @@ def log_sequence(cfg: DictConfig) -> None:
     dataset = ActiveDataset(cfg.ds.path, cfg.ds, 'train', size=300)
     print(dataset)
 
+    with wandb.init(project='Test new dataset'):
+        for i in [1, 10, 36, 150]:
+            proj_image, proj_label = dataset[i]
+            wandb.log({'Projection': wandb.Image(proj_image),
+                       'Projection Label': wandb.Image(proj_label)})
+
 
 def _log_sequence(dataset, scan):
     i = np.random.randint(0, len(dataset))
