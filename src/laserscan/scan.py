@@ -281,7 +281,7 @@ class LaserScan:
             with h5py.File(filename, 'r') as f:
                 semantics = np.array(f['labels']).flatten()
                 label_mask = np.array(f['label_mask']).flatten()
-                semantics *= label_mask
+                # semantics *= label_mask
                 instances = None
         else:
             raise ValueError('Invalid file extension')
