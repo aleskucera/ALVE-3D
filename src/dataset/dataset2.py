@@ -164,12 +164,12 @@ class ActiveDataset(Dataset):
         with h5py.File(scans[idx], 'r') as f:
             points = np.asarray(f['points'])
             colors = np.asarray(f['colors'])
-            remissions = np.asarray(f['remissions'])
+            remissions = np.asarray(f['remissions']).flatten()
 
         # Load label
         with h5py.File(labels[idx], 'r') as f:
-            labels = np.asarray(f['labels'])
-            label_mask = np.asarray(f['label_mask'])
+            labels = np.asarray(f['labels']).flatten()
+            label_mask = np.asarray(f['label_mask']).flatten()
 
         # Apply mask
         labels *= label_mask
