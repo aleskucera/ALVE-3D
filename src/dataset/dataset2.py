@@ -175,7 +175,7 @@ class ActiveDataset(Dataset):
         labels *= label_mask
 
         # Project points to image
-        proj = project_scan(points, self.proj_W, self.proj_H, self.proj_fov_up, self.proj_fov_down)
+        proj = project_scan(points, self.proj_H, self.proj_W, self.proj_fov_up, self.proj_fov_down)
         proj_depth, proj_idx, proj_mask = proj['depth'], proj['idx'], proj['mask']
 
         print(f'proj_depth: {proj_depth.shape}')
