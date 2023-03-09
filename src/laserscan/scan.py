@@ -307,7 +307,7 @@ class LaserScan:
 
         # Set attributes, so they correspond to the points in the scan
         self.sem_label = semantics[self.drop_mask]
-        self.inst_label = instances[self.drop_mask]
+        self.inst_label = instances[self.drop_mask] if instances is not None else None
 
         if instances is None:
             self.inst_label = np.zeros((self.points.shape[0]), dtype=np.int32)
