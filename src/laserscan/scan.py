@@ -168,9 +168,7 @@ class LaserScan:
             with h5py.File(filename, 'r') as f:
                 points = np.array(f['points'])
                 color = np.array(f['colors'])
-                remissions = np.array(f['remissions'])
-                self.global_indices = np.array(f['global_indices'])
-                self.global_cloud_num = np.array(f['global_cloud_num'])
+                remissions = np.array(f['remissions']).flatten()
         else:
             raise ValueError('Invalid file extension')
         self.set_scan(points, remissions, color, flip_prob, trans_prob, rot_prob, drop_prob)
@@ -272,22 +270,24 @@ class LaserScan:
         # Read label from file
         if filename.endswith('.label'):
             label = np.fromfile(filename, dtype=np.int32)
+
+            # Parse label
+            semantics = label & 0xFFFF  # semantic label in lower half
+            instances = label >> 16  # instance id in upper half
+
+            semantics = semantics.flatten()
+            instances = instances.flatten()
         elif filename.endswith('.h5'):
             with h5py.File(filename, 'r') as f:
-                label = np.array(f['labels'])
-                self.label_mask = np.array(f['label_mask'])
+                semantics = np.array(f['labels']).flatten()
+                label_mask = np.array(f['label_mask']).flatten()
+                semantics *= label_mask
+                instances = None
         else:
             raise ValueError('Invalid file extension')
 
-        # Parse label
-        semantics = label & 0xFFFF  # semantic label in lower half
-        instances = label >> 16  # instance id in upper half
-
         # Map labels to train ids
         semantics = map_labels(semantics, self.label_map)
-
-        semantics = semantics.flatten()
-        instances = instances.flatten()
 
         # Set attributes
         self.set_label(semantics, instances)

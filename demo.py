@@ -11,7 +11,7 @@ from src import SemanticDataset, LaserScan, ScanVis, visualize_superpoints, \
     create_config, KITTI360Converter
 
 from src.utils.io import set_paths
-from src.dataset.dataset2 import ActiveDataset
+from src.dataset.active_dataset import ActiveDataset
 
 log = logging.getLogger(__name__)
 
@@ -106,13 +106,11 @@ def log_sequence(cfg: DictConfig) -> None:
     #     log.info(f'Validation dataset for sequence {sequence} is empty.')
 
     dataset = ActiveDataset(cfg.ds.path, cfg.ds, 'train')
-    print(dataset)
 
-    with wandb.init(project='Test new dataset'):
-        for i in [1, 10, 36, 150]:
-            proj_image, proj_label = dataset[i]
-            wandb.log({'Projection': wandb.Image(proj_image[:, :, 2:]),
-                       'Projection Label': wandb.Image(proj_label)})
+    scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
+
+    with wandb.init(project='Dataset Visualization', group=cfg.ds.name):
+        _log_sequence(dataset, scan)
 
 
 def _log_sequence(dataset, scan):

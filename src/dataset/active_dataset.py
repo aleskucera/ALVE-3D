@@ -28,13 +28,44 @@ class ActiveDataset(Dataset):
         self.proj_fov_up = cfg.projection.fov_up
         self.proj_fov_down = cfg.projection.fov_down
 
-        self.poses = None
-        self.scans = None
-        self.labels = None
+        self._poses = None
+        self._scans = None
+        self._labels = None
+
         self.cloud_maps = None
         self.selection_masks = None
 
         self._init()
+
+    @property
+    def scans(self):
+        scans = np.concatenate(self._scans)
+
+        selection_mask = np.concatenate(self.selection_masks)
+        indices = np.where(selection_mask == 1)[0]
+
+        scans = scans[indices]
+        return scans
+
+    @property
+    def labels(self):
+        labels = np.concatenate(self._labels)
+
+        selection_mask = np.concatenate(self.selection_masks)
+        indices = np.where(selection_mask == 1)[0]
+
+        labels = labels[indices]
+        return labels
+
+    @property
+    def poses(self):
+        poses = np.concatenate(self._poses)
+
+        selection_mask = np.concatenate(self.selection_masks)
+        indices = np.where(selection_mask == 1)[0]
+
+        poses = poses[indices]
+        return poses
 
     def _init(self):
         """Initialize the dataset. Load the scans, labels, poses and selection masks. The data has following shape:
@@ -48,45 +79,16 @@ class ActiveDataset(Dataset):
         After that the dataset is cropped to the specified size so that sum(N_i for i = 1, ... , S) = size.
         """
 
-        self.scans, self.labels, self.poses, self.cloud_maps, self.selection_masks = load_dataset(self.path,
-                                                                                                  self.sequences,
-                                                                                                  self.split)
+        data = load_dataset(self.path, self.sequences, self.split)
+        self._scans, self._labels, self._poses, self.cloud_maps, self.selection_masks = data
 
+        # Crop the dataset if the size is specified
         if self.size is not None:
-            self._crop_dataset(self.size)
-
-    def _crop_dataset(self, size: int):
-        """Crop the dataset to the specified size so that sum(N_i for i = 1, ... , S) = size, where
-        N_i is the number of samples in the i-th sequence and S is the number of sequences.
-        """
-
-        # Compute the sequence index where the size is located
-        seq_idx = 0
-        seq_size = len(self.scans[seq_idx])
-        while seq_size < size:
-            seq_idx += 1
-            seq_size += len(self.scans[seq_idx])
-
-        # Compute the sample index where to crop the sequence
-        sample_idx = size - seq_size + len(self.scans[seq_idx])
-
-        # Select the whole sequences
-        cropped_poses = self.poses[:seq_idx]
-        cropped_scans = self.scans[:seq_idx]
-        cropped_labels = self.labels[:seq_idx]
-        cropped_selection_mask = self.selection_masks[:seq_idx]
-
-        # Append the cropped sequence
-        cropped_poses.append(self.poses[seq_idx][:sample_idx])
-        cropped_scans.append(self.scans[seq_idx][:sample_idx])
-        cropped_labels.append(self.labels[seq_idx][:sample_idx])
-        cropped_selection_mask.append(self.selection_masks[seq_idx][:sample_idx])
-
-        # Update the dataset
-        self.poses = cropped_poses
-        self.scans = cropped_scans
-        self.labels = cropped_labels
-        self.selection_masks = cropped_selection_mask
+            self.crop_sequence_format(self._poses, self.size)
+            self.crop_sequence_format(self._scans, self.size)
+            self.crop_sequence_format(self._labels, self.size)
+            self.crop_sequence_format(self.cloud_maps, self.size)
+            self.crop_sequence_format(self.selection_masks, self.size)
 
     def update(self):
         """Update the selection masks. This is used when the dataset is used in an active
@@ -94,6 +96,9 @@ class ActiveDataset(Dataset):
         """
 
         self.selection_masks = update_selection_mask(self.path, self.sequences, self.split)
+
+        if self.size is not None:
+            self.crop_sequence_format(self.selection_masks, self.size)
 
     def label_global_voxels(self, voxels: np.ndarray, sequence: int):
         """Select the labels for training based on the global voxel indices.
@@ -104,7 +109,7 @@ class ActiveDataset(Dataset):
 
         assert sequence < len(self.sequences), f'Invalid sequence index: {sequence}'
 
-        seq_labels = self.labels[sequence]
+        seq_labels = self._labels[sequence]
         seq_cloud_map = self.cloud_maps[sequence]
         seq_selection_mask = self.selection_masks[sequence]
 
@@ -133,7 +138,7 @@ class ActiveDataset(Dataset):
 
         assert sequence < len(self.sequences), f'Invalid sequence index: {sequence}'
 
-        seq_labels = self.labels[sequence]
+        seq_labels = self._labels[sequence]
         seq_selection_mask = self.selection_masks[sequence]
         seq_selection_mask[sample_indices] = 1
 
@@ -147,27 +152,14 @@ class ActiveDataset(Dataset):
         The sample is a tuple of the projected image and the projected labels.
         """
 
-        # Flatten the samples
-        scans = np.concatenate(self.scans)
-        labels = np.concatenate(self.labels)
-
-        selection_mask = np.concatenate(self.selection_masks)
-        indices = np.where(selection_mask == 1)[0]
-
-        scans = scans[indices]
-        labels = labels[indices]
-
-        print(f'scans: {scans.shape}')
-        print(f'labels: {labels.shape}')
-
         # Load scan
-        with h5py.File(scans[idx], 'r') as f:
+        with h5py.File(self.scan_files[idx], 'r') as f:
             points = np.asarray(f['points'])
             colors = np.asarray(f['colors'])
             remissions = np.asarray(f['remissions']).flatten()
 
         # Load label
-        with h5py.File(labels[idx], 'r') as f:
+        with h5py.File(self.label_files[idx], 'r') as f:
             labels = np.asarray(f['labels']).flatten()
             label_mask = np.asarray(f['label_mask']).flatten()
 
@@ -179,14 +171,6 @@ class ActiveDataset(Dataset):
         proj_depth, proj_idx, proj_mask = proj['depth'], proj['idx'], proj['mask']
 
         proj_remissions = np.full((self.proj_H, self.proj_W), -1, dtype=np.float32)
-
-        print(f'proj_depth: {proj_depth.shape}')
-        print(f'proj_idx: {proj_idx.shape}')
-        print(f'proj_mask: {proj_mask.shape}')
-        print(f'proj_idx[proj_mask]: {proj_idx[proj_mask].shape}')
-        print(f'proj_remissions[proj_mask]: {proj_remissions[proj_mask].shape}')
-        print(f'remissions[proj_idx[proj_mask]]: {remissions[proj_idx[proj_mask]].shape}')
-
         proj_remissions[proj_mask] = remissions[proj_idx[proj_mask]]
 
         proj_colors = np.zeros((self.proj_H, self.proj_W, 3), dtype=np.float32)
@@ -215,3 +199,25 @@ class ActiveDataset(Dataset):
         return f'\nSemanticDataset: {self.split}\n' \
                f'\t - Dataset size: {len(self)}\n' \
                f'\t - Sequences: {self.sequences}\n'
+
+    @staticmethod
+    def crop_sequence_format(data: list, size: int):
+        """Crop the data to the specified size so that sum(N_i for i = 1, ... , S) = size, where
+        N_i is the number of samples in the i-th sequence and S is the number of sequences.
+        """
+
+        # Compute the sequence index where the size is located
+        seq_idx = 0
+        seq_size = len(data[seq_idx])
+        while seq_size < size:
+            seq_idx += 1
+            seq_size += len(data[seq_idx])
+
+        # Compute the sample index where to crop the sequence
+        sample_idx = size - seq_size + len(data[seq_idx])
+
+        # Crop the data
+        cropped_data = data[:seq_idx]
+        cropped_data.append(data[seq_idx][:sample_idx])
+
+        return cropped_data
