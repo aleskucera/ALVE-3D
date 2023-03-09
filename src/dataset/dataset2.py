@@ -184,7 +184,7 @@ class ActiveDataset(Dataset):
         print(f'proj_idx: {proj_idx.shape}')
         print(f'proj_mask: {proj_mask.shape}')
         print(f'proj_idx[proj_mask]: {proj_idx[proj_mask].shape}')
-        print(f'proj_remissions[proj_mask]: {remissions[proj_idx[proj_mask]].shape}')
+        print(f'proj_remissions[proj_mask]: {remissions[proj_mask].shape}')
         print(f'remissions[proj_idx[proj_mask]]: {remissions[proj_idx[proj_mask]].shape}')
 
         proj_remissions[proj_mask] = remissions[proj_idx[proj_mask]]
