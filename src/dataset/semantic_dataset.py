@@ -4,10 +4,10 @@ from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
 from src.utils.project import project_scan
-from src.utils.io import update_selection_mask, load_dataset
+from .utils import update_selection_mask, load_semantic_dataset, crop_sequence_format
 
 
-class ActiveDataset(Dataset):
+class SemanticDataset(Dataset):
     """Semantic dataset for active learning.
 
     :param dataset_path: Path to the dataset.
@@ -16,8 +16,13 @@ class ActiveDataset(Dataset):
     :param size: Number of samples to load. If None all the samples are loaded (default: None)
     """
 
-    def __init__(self, dataset_path: str, cfg: DictConfig, split: str, size: int = None):
+    def __init__(self, dataset_path: str, cfg: DictConfig, split: str, mode: str = 'passive', size: int = None):
+
+        assert split in ['train', 'val']
+        assert mode in ['passive', 'active']
+
         self.cfg = cfg
+        self.mode = mode
         self.size = size
         self.split = split
         self.path = dataset_path
@@ -35,10 +40,10 @@ class ActiveDataset(Dataset):
         self.cloud_maps = None
         self.selection_masks = None
 
-        self._init()
+        self._initialize()
 
     @property
-    def scans(self):
+    def scan_files(self):
         scans = np.concatenate(self._scans)
 
         selection_mask = np.concatenate(self.selection_masks)
@@ -48,7 +53,7 @@ class ActiveDataset(Dataset):
         return scans
 
     @property
-    def labels(self):
+    def label_files(self):
         labels = np.concatenate(self._labels)
 
         selection_mask = np.concatenate(self.selection_masks)
@@ -67,7 +72,7 @@ class ActiveDataset(Dataset):
         poses = poses[indices]
         return poses
 
-    def _init(self):
+    def _initialize(self):
         """Initialize the dataset. Load the scans, labels, poses and selection masks. The data has following shape:
 
         scans: (S, N_i) - S: number of sequences, N: number of samples in the i-th sequence
@@ -79,16 +84,16 @@ class ActiveDataset(Dataset):
         After that the dataset is cropped to the specified size so that sum(N_i for i = 1, ... , S) = size.
         """
 
-        data = load_dataset(self.path, self.sequences, self.split)
+        data = load_semantic_dataset(self.path, self.sequences, self.split, self.mode)
         self._scans, self._labels, self._poses, self.cloud_maps, self.selection_masks = data
 
         # Crop the dataset if the size is specified
         if self.size is not None:
-            self.crop_sequence_format(self._poses, self.size)
-            self.crop_sequence_format(self._scans, self.size)
-            self.crop_sequence_format(self._labels, self.size)
-            self.crop_sequence_format(self.cloud_maps, self.size)
-            self.crop_sequence_format(self.selection_masks, self.size)
+            crop_sequence_format(self._poses, self.size)
+            crop_sequence_format(self._scans, self.size)
+            crop_sequence_format(self._labels, self.size)
+            crop_sequence_format(self.cloud_maps, self.size)
+            crop_sequence_format(self.selection_masks, self.size)
 
     def update(self):
         """Update the selection masks. This is used when the dataset is used in an active
@@ -98,7 +103,7 @@ class ActiveDataset(Dataset):
         self.selection_masks = update_selection_mask(self.path, self.sequences, self.split)
 
         if self.size is not None:
-            self.crop_sequence_format(self.selection_masks, self.size)
+            crop_sequence_format(self.selection_masks, self.size)
 
     def label_global_voxels(self, voxels: np.ndarray, sequence: int):
         """Select the labels for training based on the global voxel indices.
@@ -199,25 +204,3 @@ class ActiveDataset(Dataset):
         return f'\nSemanticDataset: {self.split}\n' \
                f'\t - Dataset size: {len(self)}\n' \
                f'\t - Sequences: {self.sequences}\n'
-
-    @staticmethod
-    def crop_sequence_format(data: list, size: int):
-        """Crop the data to the specified size so that sum(N_i for i = 1, ... , S) = size, where
-        N_i is the number of samples in the i-th sequence and S is the number of sequences.
-        """
-
-        # Compute the sequence index where the size is located
-        seq_idx = 0
-        seq_size = len(data[seq_idx])
-        while seq_size < size:
-            seq_idx += 1
-            seq_size += len(data[seq_idx])
-
-        # Compute the sample index where to crop the sequence
-        sample_idx = size - seq_size + len(data[seq_idx])
-
-        # Crop the data
-        cropped_data = data[:seq_idx]
-        cropped_data.append(data[seq_idx][:sample_idx])
-
-        return cropped_data

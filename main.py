@@ -26,7 +26,7 @@ def main(cfg: DictConfig):
         test_model(cfg)
     elif cfg.action == 'train_partition':
         train_partition(cfg)
-    elif cfg.action == 'convert':
+    elif cfg.action == 'convert_kitti360':
         converter = KITTI360Converter(cfg)
         converter.create_global_clouds()
         converter.convert()

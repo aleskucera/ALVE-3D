@@ -16,9 +16,9 @@ except ImportError:
     o3d = None
     print("WARNING: Can't import open3d.")
 
-from .ply import read_ply
-from .labels import id2label
-from src.laserscan.project import project_scan
+from kitti360.ply import read_ply
+from kitti360.labels import id2label
+from old.project import project_scan
 
 log = logging.getLogger(__name__)
 

@@ -7,11 +7,10 @@ import numpy as np
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src import SemanticDataset, LaserScan, ScanVis, visualize_superpoints, \
-    create_config, KITTI360Converter
-
 from src.utils.io import set_paths
-from src.dataset.active_dataset import ActiveDataset
+from src.dataset import SemanticDataset
+from src.kitti360 import KITTI360Dataset, KITTI360Converter, create_kitti360_config
+from src.laserscan import LaserScan, ScanVis
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ def main(cfg: DictConfig):
     elif cfg.action == 'visualize_kitti360_conversion':
         visualize_kitti360_conversion(cfg)
     elif cfg.action == 'create_kitti360_config':
-        create_config()
+        create_kitti360_config()
     elif cfg.action == 'superpoints':
         log_superpoints(cfg)
     else:
@@ -65,18 +64,16 @@ def visualize_dataset(cfg: DictConfig) -> None:
 
     split = 'train'
     size = None
-    sequences = [0]
-    indices = None
 
     # Create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path, cfg=cfg.ds,
-                              split=split, sequences=sequences, indices=indices, size=size)
+                              split=split, mode='passive', size=size)
 
     # Create scan object
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
 
     # Visualizer
-    vis = ScanVis(scan=scan, scans=dataset.scans, labels=dataset.labels, raw_cloud=True, instances=False)
+    vis = ScanVis(scan=scan, scans=dataset.scan_files, labels=dataset.label_files, raw_cloud=True, instances=False)
     vis.run()
 
 

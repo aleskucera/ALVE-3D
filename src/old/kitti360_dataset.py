@@ -3,15 +3,10 @@ import sys
 import logging
 
 import numpy as np
+import open3d as o3d
 from omegaconf import DictConfig
 from torch.utils.data import Dataset
 from numpy.lib.recfunctions import structured_to_unstructured
-
-try:
-    import open3d as o3d
-except ImportError:
-    o3d = None
-    print("WARNING: Can't import open3d.")
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../cut-pursuit/build/src'))
 

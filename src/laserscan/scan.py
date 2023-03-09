@@ -7,7 +7,7 @@ import torch
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from .project import project_scan
+from src.utils import project_scan
 from src.utils.map import colorize, map_colors, map_labels, colorize_instances
 
 

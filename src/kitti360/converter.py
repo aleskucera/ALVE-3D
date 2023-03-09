@@ -11,10 +11,10 @@ from omegaconf import DictConfig
 from mpl_toolkits.axes_grid1 import ImageGrid
 
 from .ply import read_kitti360_ply
-from src.utils.map import map_labels, map_colors
-from src.utils.cloud import transform_points, downsample_cloud, nearest_neighbors, nearest_neighbors_2, \
-    connected_label_components, nn_graph, visualize_cloud, visualize_cloud_values
-from src.laserscan.project import project_scan
+from src.utils import project_scan
+from src.utils import map_labels, map_colors
+from src.utils import transform_points, downsample_cloud, nearest_neighbors, \
+    nearest_neighbors_2, connected_label_components, nn_graph
 
 log = logging.getLogger(__name__)
 

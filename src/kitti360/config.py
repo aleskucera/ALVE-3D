@@ -1,11 +1,10 @@
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
-from omegaconf import DictConfig
 
 from .labels import labels
 
 
-def create_config():
+def create_kitti360_config():
     """Create config file for KITTI-360 dataset from kitti360scripts.helpers.labels.
     The changes are:
     - learning_map"""

@@ -7,7 +7,7 @@ from sklearn.neighbors import KDTree
 from sklearn.cluster import MiniBatchKMeans
 from omegaconf import DictConfig
 
-from .dataset import SemanticDataset
+from dataset.dataset import SemanticDataset
 from src.laserscan import LaserScan
 
 try:

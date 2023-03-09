@@ -10,16 +10,13 @@ from tqdm import tqdm
 from omegaconf import DictConfig
 from sklearn.neighbors import NearestNeighbors
 from sklearn.linear_model import RANSACRegressor
-from numpy.lib.recfunctions import structured_to_unstructured
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../cut-pursuit/build/src'))
 
-from .utils import open_sequence
-from .dataset import SemanticDataset
+from dataset.dataset import SemanticDataset
 from src.laserscan import LaserScan
 from src.ply_c import libply_c
 from src.model.pointnet import PointNet
-from src.kitti360.ply import read_ply
 import libcp
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -108,7 +105,7 @@ def visualize_superpoints_2(cfg: DictConfig):
 
 
 def visualize_superpoints(cfg: DictConfig):
-    window_file = '/home/ales/Thesis/ALVE-3D/data/KITTI-360/data_3d_semantics/train/2013_05_28_drive_0000_sync/static/0000000599_0000000846.ply'
+    window_file = '/data/KITTI-360/data_3d_semantics/train/2013_05_28_drive_0000_sync/static/0000000599_0000000846.ply'
     static_points, static_colors, semantic, _ = read_kitti360_ply(window_file)
 
     # Load the model

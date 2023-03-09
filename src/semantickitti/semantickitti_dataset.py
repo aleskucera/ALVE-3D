@@ -12,7 +12,7 @@ from src.laserscan import LaserScan
 log = logging.getLogger(__name__)
 
 
-class SemanticDataset(Dataset):
+class SemanticKITTIDataset(Dataset):
     """ Wrapper class for the PyTorch Dataset class.
 
     :param dataset_path: Path to the dataset.

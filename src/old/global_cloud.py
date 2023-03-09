@@ -6,7 +6,7 @@ import open3d as o3d
 from omegaconf import DictConfig
 
 from src.laserscan import LaserScan
-from .dataset import SemanticDataset
+from dataset.dataset import SemanticDataset
 
 STEP = 10
 VOXEL_SIZE = 0.5
