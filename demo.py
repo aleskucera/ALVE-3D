@@ -10,7 +10,7 @@ from hydra.core.hydra_config import HydraConfig
 
 from src.utils import set_paths, visualize_global_cloud
 from src.dataset import SemanticDataset
-from src.kitti360 import KITTI360Dataset, KITTI360Converter, create_kitti360_config
+from src.kitti360 import KITTI360Converter, create_kitti360_config
 from src.laserscan import LaserScan, ScanVis
 
 log = logging.getLogger(__name__)
@@ -26,16 +26,14 @@ def main(cfg: DictConfig):
         show_hydra_config(cfg)
     elif cfg.action == 'visualize_dataset':
         visualize_dataset(cfg)
+    elif cfg.action == 'visualize_sequence':
+        visualize_sequence(cfg)
     elif cfg.action == 'log_sequence':
         log_sequence(cfg)
-    elif cfg.action == 'dataset_statistics':
-        dataset_statistics(cfg)
-    elif cfg.action == 'visualize_kitti360_conversion':
-        visualize_kitti360_conversion(cfg)
     elif cfg.action == 'create_kitti360_config':
         create_kitti360_config()
-    elif cfg.action == 'superpoints':
-        log_superpoints(cfg)
+    elif cfg.action == 'visualize_kitti360_conversion':
+        visualize_kitti360_conversion(cfg)
     else:
         raise ValueError('Invalid demo type.')
 
@@ -58,36 +56,56 @@ def show_hydra_config(cfg: DictConfig) -> None:
     print('')
 
 
-def visualize_dataset(cfg: DictConfig) -> None:
+def visualize_dataset(cfg: DictConfig):
     """ Show how to use SemanticDataset.
+
     :param cfg: Configuration object.
     """
 
-    split = 'val'
-    size = None
+    size = cfg.size if 'size' in cfg else None
+    split = cfg.split if 'split' in cfg else 'train'
+    sequences = cfg.sequences if 'sequences' in cfg else None
 
     # Create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path, cfg=cfg.ds,
-                              split=split, mode='passive', size=size)
+                              split=split, mode='passive', sequences=sequences, size=size)
 
     # Create scan object
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
 
+    # Visualizer
+    vis = ScanVis(scan=scan, scans=dataset.scan_files, labels=dataset.label_files, raw_cloud=True, instances=False)
+    vis.run()
+
+
+def visualize_sequence(cfg: DictConfig) -> None:
+    """ Show how to use SemanticDataset.
+    :param cfg: Configuration object.
+    """
+
+    size = cfg.size if 'size' in cfg else None
+    split = cfg.split if 'split' in cfg else 'train'
+    sequences = [cfg.sequence] if 'sequence' in cfg else [3]
+
+    # Create dataset
+    dataset = SemanticDataset(dataset_path=cfg.ds.path, cfg=cfg.ds,
+                              split=split, mode='passive', sequences=sequences, size=size)
+
+    # Create scan object
+    scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
+
+    # Load the sequence
     points, colors, poses = [], [], []
-    for i in tqdm(range(0, min(len(dataset), 1000))):
+    for i in tqdm(range(len(dataset)), desc='Loading sequence'):
         scan.open_scan(dataset.scan_files[i])
         scan.open_label(dataset.label_files[i])
         pose = dataset.poses[i]
 
         points.append(scan.points)
-        colors.append(scan.color)
+        colors.append(scan.sem_label_color)
         poses.append(pose)
 
     visualize_global_cloud(points, colors, poses, step=5, voxel_size=0.2)
-
-    # # Visualizer
-    # vis = ScanVis(scan=scan, scans=dataset.scan_files, labels=dataset.label_files, raw_cloud=True, instances=False)
-    # vis.run()
 
 
 def log_sequence(cfg: DictConfig) -> None:
@@ -96,37 +114,30 @@ def log_sequence(cfg: DictConfig) -> None:
     :param cfg: Configuration object.
     """
 
-    # sequence = cfg.sequence
+    sequence = cfg.sequence if 'sequence' in cfg else 3
 
-    # train_ds = SemanticDataset(dataset_path=cfg.ds.path, split='train', sequences=[sequence], cfg=cfg.ds)
-    # val_ds = SemanticDataset(dataset_path=cfg.ds.path, split='val', sequences=[sequence], cfg=cfg.ds)
-    #
-    # scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
-    #
-    # if len(train_ds) > 0:
-    #     with wandb.init(project='Sequence Visualization', group=cfg.ds.name, name=f'Sequence {sequence} - train'):
-    #         _log_sequence(train_ds, scan)
-    # else:
-    #     log.info(f'Train dataset for sequence {sequence} is empty.')
-    #
-    # if len(val_ds) > 0:
-    #     with wandb.init(project='Sequence Visualization', group=cfg.ds.name, name=f'Sequence {sequence} - val'):
-    #         _log_sequence(val_ds, scan)
-    # else:
-    #     log.info(f'Validation dataset for sequence {sequence} is empty.')
-
-    dataset = ActiveDataset(cfg.ds.path, cfg.ds, 'train')
+    train_ds = SemanticDataset(dataset_path=cfg.ds.path, split='train', sequences=[sequence], cfg=cfg.ds)
+    val_ds = SemanticDataset(dataset_path=cfg.ds.path, split='val', sequences=[sequence], cfg=cfg.ds)
 
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
 
-    with wandb.init(project='Dataset Visualization', group=cfg.ds.name):
-        _log_sequence(dataset, scan)
+    if len(train_ds) > 0:
+        with wandb.init(project='Sequence Visualization', group=cfg.ds.name, name=f'Sequence {sequence} - train'):
+            _log_sequence(train_ds, scan)
+    else:
+        log.info(f'Train dataset for sequence {sequence} is empty.')
+
+    if len(val_ds) > 0:
+        with wandb.init(project='Sequence Visualization', group=cfg.ds.name, name=f'Sequence {sequence} - val'):
+            _log_sequence(val_ds, scan)
+    else:
+        log.info(f'Validation dataset for sequence {sequence} is empty.')
 
 
 def _log_sequence(dataset, scan):
     i = np.random.randint(0, len(dataset))
-    scan.open_scan(dataset.scans[i])
-    scan.open_label(dataset.labels[i])
+    scan.open_scan(dataset.scan_files[i])
+    scan.open_label(dataset.label_files[i])
 
     cloud = np.concatenate([scan.points, scan.color * 255], axis=1)
     label = np.concatenate([scan.points, scan.sem_label_color * 255], axis=1)
@@ -136,13 +147,8 @@ def _log_sequence(dataset, scan):
                'Projection': wandb.Image(scan.proj_color),
                'Projection Label': wandb.Image(scan.proj_sem_color)})
 
-    print(f'\nLogged scan: {dataset.scans[i]} \n'
-          f'Logged label: {dataset.labels[i]} \n')
-
-
-def dataset_statistics(cfg: DictConfig):
-    dataset = SemanticDataset(dataset_path=cfg.ds.path, split='train', cfg=cfg.ds)
-    dataset.calculate_statistics()
+    log.info(f'Logged scan: {dataset.scan_files[i]}')
+    log.info(f'Logged label: {dataset.label_files[i]}')
 
 
 def visualize_kitti360_conversion(cfg: DictConfig):
@@ -152,10 +158,6 @@ def visualize_kitti360_conversion(cfg: DictConfig):
 
     converter = KITTI360Converter(cfg)
     converter.visualize()
-
-
-def log_superpoints(cfg: DictConfig):
-    visualize_superpoints(cfg)
 
 
 if __name__ == '__main__':

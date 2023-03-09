@@ -105,7 +105,7 @@ def visualize_global_cloud(points: iter, colors: iter, poses: iter, step: int = 
     colors = colors[::step]
     poses = poses[::step]
 
-    for p, c, pos in tqdm(zip(points, colors, poses), total=len(points)):
+    for p, c, pos in tqdm(zip(points, colors, poses), total=len(points), desc='Creating global cloud'):
         transformed_points = transform_points(p, pos)
 
         cloud.append(transformed_points)

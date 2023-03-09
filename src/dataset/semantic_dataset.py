@@ -16,7 +16,8 @@ class SemanticDataset(Dataset):
     :param size: Number of samples to load. If None all the samples are loaded (default: None)
     """
 
-    def __init__(self, dataset_path: str, cfg: DictConfig, split: str, mode: str = 'passive', size: int = None):
+    def __init__(self, dataset_path: str, cfg: DictConfig, split: str, mode: str = 'passive', sequences: iter = None,
+                 size: int = None):
 
         assert split in ['train', 'val']
         assert mode in ['passive', 'active']
@@ -26,7 +27,11 @@ class SemanticDataset(Dataset):
         self.size = size
         self.split = split
         self.path = dataset_path
-        self.sequences = cfg.split[split]
+
+        if sequences is None:
+            self.sequences = cfg.split[split]
+        else:
+            self.sequences = sequences
 
         self.proj_W = cfg.projection.W
         self.proj_H = cfg.projection.H
