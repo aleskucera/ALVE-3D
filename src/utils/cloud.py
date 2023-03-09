@@ -1,5 +1,6 @@
 import numpy as np
 import open3d as o3d
+from tqdm import tqdm
 from sklearn.neighbors import NearestNeighbors
 from sklearn.linear_model import RANSACRegressor
 
@@ -22,16 +23,21 @@ def visualize_cloud_values(points: np.ndarray, values: np.ndarray, random_colors
     visualize_cloud(points, colors)
 
 
-def downsample_cloud(points: np.ndarray, colors: np.ndarray, labels: np.ndarray, voxel_size=0.1):
+def downsample_cloud(points: np.ndarray, colors: np.ndarray, labels: np.ndarray = None,
+                     voxel_size: float = 0.1) -> tuple:
     device = o3d.core.Device("CPU:0")
     pcd = o3d.t.geometry.PointCloud(device)
 
     pcd.point.positions = o3d.core.Tensor(points, o3d.core.float32, device)
     pcd.point.colors = o3d.core.Tensor(colors, o3d.core.float32, device)
-    pcd.point.labels = o3d.core.Tensor(labels, o3d.core.uint32, device)
+    if labels is not None:
+        pcd.point.labels = o3d.core.Tensor(labels, o3d.core.uint32, device)
 
     pcd = pcd.voxel_down_sample(voxel_size=voxel_size)
-    return pcd.point.positions.numpy(), pcd.point.colors.numpy(), pcd.point.labels.numpy()
+
+    if labels is not None:
+        return pcd.point.positions.numpy(), pcd.point.colors.numpy(), pcd.point.labels.numpy()
+    return pcd.point.positions.numpy(), pcd.point.colors.numpy()
 
 
 def nearest_neighbors(points: np.ndarray, k_nn: int) -> np.ndarray:
@@ -89,3 +95,25 @@ def normalize_xy(xy: np.ndarray):
 def transform_points(points: np.ndarray, transform: np.ndarray):
     points = np.concatenate([points, np.ones((len(points), 1))], axis=1)
     return np.matmul(points, transform.T)[:, :3]
+
+
+def visualize_global_cloud(points: iter, colors: iter, poses: iter, step: int = 10,
+                           voxel_size: float = 0.2) -> None:
+    cloud, cloud_color = [], []
+
+    points = points[::step]
+    colors = colors[::step]
+    poses = poses[::step]
+
+    for p, c, pos in tqdm(zip(points, colors, poses), total=len(points)):
+        transformed_points = transform_points(p, pos)
+
+        cloud.append(transformed_points)
+        cloud_color.append(c)
+
+    cloud = np.concatenate(cloud, axis=0)
+    color = np.concatenate(cloud_color, axis=0)
+
+    # Down sample global cloud with voxel grid
+    cloud, color = downsample_cloud(cloud, color, voxel_size=voxel_size)
+    visualize_cloud(cloud, color)

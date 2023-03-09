@@ -2,4 +2,4 @@
 defaults:
   - override /ds: kitti-360
 
-action: convert
+action: convert_kitti360

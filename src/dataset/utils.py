@@ -61,12 +61,9 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str, datase
             cloud_maps.append(np.asarray(f['cloud_map'])[split_indices])
 
             if split == 'train':
-                if dataset_mode == 'active':
-                    f['selection_mask'][...] = np.zeros_like(f['selection_mask'])
-                elif dataset_mode == 'passive':
-                    f['selection_mask'][...] = np.ones_like(f['selection_mask'])
-
                 selection_masks.append(np.asarray(f['selection_mask']))
+            elif split == 'val':
+                selection_masks.append(np.ones_like(split_indices))
 
         seq_labels = [os.path.join(labels_path, l) for l in os.listdir(labels_path) if l.endswith('.h5')]
         seq_velodyne = [os.path.join(velodyne_path, v) for v in os.listdir(velodyne_path) if v.endswith('.h5')]

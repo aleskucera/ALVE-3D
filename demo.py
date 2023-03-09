@@ -4,10 +4,11 @@ import logging
 import wandb
 import hydra
 import numpy as np
+from tqdm import tqdm
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src.utils.io import set_paths
+from src.utils import set_paths, visualize_global_cloud
 from src.dataset import SemanticDataset
 from src.kitti360 import KITTI360Dataset, KITTI360Converter, create_kitti360_config
 from src.laserscan import LaserScan, ScanVis
@@ -62,7 +63,7 @@ def visualize_dataset(cfg: DictConfig) -> None:
     :param cfg: Configuration object.
     """
 
-    split = 'train'
+    split = 'val'
     size = None
 
     # Create dataset
@@ -72,9 +73,21 @@ def visualize_dataset(cfg: DictConfig) -> None:
     # Create scan object
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
 
-    # Visualizer
-    vis = ScanVis(scan=scan, scans=dataset.scan_files, labels=dataset.label_files, raw_cloud=True, instances=False)
-    vis.run()
+    points, colors, poses = [], [], []
+    for i in tqdm(range(0, min(len(dataset), 1000))):
+        scan.open_scan(dataset.scan_files[i])
+        scan.open_label(dataset.label_files[i])
+        pose = dataset.poses[i]
+
+        points.append(scan.points)
+        colors.append(scan.color)
+        poses.append(pose)
+
+    visualize_global_cloud(points, colors, poses, step=5, voxel_size=0.2)
+
+    # # Visualizer
+    # vis = ScanVis(scan=scan, scans=dataset.scan_files, labels=dataset.label_files, raw_cloud=True, instances=False)
+    # vis.run()
 
 
 def log_sequence(cfg: DictConfig) -> None:
