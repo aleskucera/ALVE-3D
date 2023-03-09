@@ -181,6 +181,7 @@ class ActiveDataset(Dataset):
         print(f'proj_depth: {proj_depth.shape}')
         print(f'proj_idx: {proj_idx.shape}')
         print(f'proj_mask: {proj_mask.shape}')
+        print(f'proj_idx[proj_mask]: {proj_idx[proj_mask].shape}')
 
         proj_remissions = np.full((self.proj_H, self.proj_W), -1, dtype=np.float32)
         proj_remissions[proj_mask] = remissions[proj_idx[proj_mask]]
