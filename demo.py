@@ -105,7 +105,7 @@ def log_sequence(cfg: DictConfig) -> None:
     # else:
     #     log.info(f'Validation dataset for sequence {sequence} is empty.')
 
-    dataset = ActiveDataset(cfg.ds.path, cfg.ds, 'train', size=300)
+    dataset = ActiveDataset(cfg.ds.path, cfg.ds, 'train')
     print(dataset)
 
     with wandb.init(project='Test new dataset'):
