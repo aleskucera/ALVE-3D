@@ -1,13 +1,11 @@
 import logging
 
 import torch
-import numpy as np
 from tqdm import tqdm
-from torch.utils.data import DataLoader
 from torchmetrics import MetricCollection
 from torchmetrics.classification import MulticlassAccuracy, MulticlassJaccardIndex
 
-from .utils import parse_data
+from old.utils import parse_data
 
 log = logging.getLogger(__name__)
 

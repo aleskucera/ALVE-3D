@@ -42,6 +42,57 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str, datase
     initialize_semantic_samples(dataset_path, sequences, split=split, mode=dataset_mode)
 
     poses = []
+    scans = []
+    labels = []
+
+    cloud_map = []
+    sequence_map = []
+    selection_mask = []
+
+    for sequence in sequences:
+        sequence_path = os.path.join(dataset_path, 'sequences', f'{sequence:02d}')
+
+        info_path = os.path.join(sequence_path, 'info.h5')
+        labels_path = os.path.join(os.path.join(sequence_path, 'labels'))
+        velodyne_path = os.path.join(os.path.join(sequence_path, 'velodyne'))
+
+        with h5py.File(info_path, 'r+') as f:
+            split_indices = np.asarray(f[split])
+
+            poses.append(np.asarray(f['poses'])[split_indices])
+            cloud_map.append(np.asarray(f['cloud_map'])[split_indices])
+
+            if split == 'train':
+                selection_mask.append(np.asarray(f['selection_mask']))
+            elif split == 'val':
+                selection_mask.append(np.ones_like(split_indices))
+
+        seq_labels = [os.path.join(labels_path, l) for l in os.listdir(labels_path) if l.endswith('.h5')]
+        seq_velodyne = [os.path.join(velodyne_path, v) for v in os.listdir(velodyne_path) if v.endswith('.h5')]
+
+        seq_labels.sort()
+        seq_velodyne.sort()
+
+        labels.append(np.array(seq_labels, dtype=np.str_)[split_indices])
+        scans.append(np.array(seq_velodyne, dtype=np.str_)[split_indices])
+        sequence_map.append(np.full_like(split_indices, sequence))
+
+    poses = np.concatenate(poses, axis=0)
+    scans = np.concatenate(scans, axis=0)
+    labels = np.concatenate(labels, axis=0)
+    cloud_map = np.concatenate(cloud_map, axis=0)
+    sequence_map = np.concatenate(sequence_map, axis=0)
+    selection_mask = np.concatenate(selection_mask, axis=0)
+
+    return scans, labels, poses, sequence_map, cloud_map, selection_mask
+
+
+def load_semantic_dataset_2(dataset_path: str, sequences: list, split: str, dataset_mode: str) -> tuple:
+    assert split in ['train', 'val']
+
+    initialize_semantic_samples(dataset_path, sequences, split=split, mode=dataset_mode)
+
+    poses = []
     labels = []
     velodyne = []
     cloud_maps = []

@@ -1,13 +1,11 @@
-import os
 import logging
 
-import torch.nn
+import torch
+import wandb
 from omegaconf import DictConfig
 
-from .model import SalsaNext
-from .learning import Trainer
-from .dataset import SemanticDataset
-from .learning import SemanticTrainer
+from src.datasets import SemanticDataset
+from src.learning import Trainer, ActiveTrainer
 
 log = logging.getLogger(__name__)
 
@@ -20,68 +18,21 @@ def train_model(cfg: DictConfig):
     train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size)
     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size)
 
-    trainer = SemanticTrainer(cfg, train_ds, val_ds, device)
-    trainer.train(cfg.train.epochs)
+    project_name = f'{cfg.model.architecture}_{cfg.ds.name}_{cfg.action}'
+    model_name = f'{cfg.model.architecture}_{cfg.ds.name}'
+
+    with wandb.init(project=project_name):
+        trainer = Trainer(cfg, train_ds, val_ds, device, model_name)
+        trainer.train(cfg.train.epochs)
 
 
-# def train_model_active(cfg: DictConfig):
-#     print(cfg.active)
-#
-#     ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size)
-#     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='valid', size=cfg.train.dataset_size)
-#
-#     unlabelled_ids = set(range(len(ds)))
-#
-#     model = SalsaNext(cfg.ds.num_classes)
-#     model.to(device)
-#
-#     optimizer = torch.optim.Adam(model.parameters(), cfg.train.learning_rate)
-#     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
-#
-#     unlabelled_ds = deepcopy(ds)
-#     # TODO: need to be tested, change n_iters=5 based on active learning termination criteria
-#     for _ in range(5):
-#         unlabelled_loader = DataLoader(unlabelled_ds, batch_size=cfg.train.batch_size,
-#                                        shuffle=False, num_workers=gpu_count * 4)
-#
-#         log.info("Selecting data samples with high entropy...")
-#         train_ids = select_ids(loader=unlabelled_loader, model=model)
-#         unlabelled_ids = unlabelled_ids - train_ids
-#
-#         # check if selected train indices do not intersect with the rest of indices
-#         assert train_ids.isdisjoint(unlabelled_ids)
-#         assert unlabelled_ids.isdisjoint(train_ids)
-#
-#         train_ds = deepcopy(ds)
-#         train_ds.choose_data(list(train_ids))
-#
-#         unlabelled_ds = deepcopy(ds)
-#         unlabelled_ds.choose_data(list(unlabelled_ids))
-#
-#         log.info(f"Train dataset length: {len(train_ds)}")
-#         log.info(f"Test dataset length: {len(unlabelled_ds)}")
-#
-#         trainer = Trainer(model=model, cfg=cfg, train_ds=train_ds,
-#                           val_ds=val_ds, optimizer=optimizer, scheduler=scheduler)
-#
-#         best_iou = trainer.train(cfg.train.epochs, cfg.path.models)
-#         print(f"Best IoU: {best_iou}")
+def train_model_active(cfg: DictConfig):
+    train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size)
+    val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size)
 
+    project_name = f'{cfg.model.architecture}_{cfg.ds.name}_{cfg.action}'
+    model_name = f'{cfg.model.architecture}_{cfg.ds.name}'
 
-def test_model(cfg):
-    test_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='valid', size=cfg.test.dataset_size)
-
-    model_path = os.path.join(cfg.path.models, 'pretrained', cfg.test.model_name)
-    model = SalsaNext(cfg.ds.num_classes)
-    model.load_state_dict(torch.load(model_path))
-    model.to(device)
-
-    trainer = Trainer(model=model, cfg=cfg, val_ds=test_ds)
-    trainer.test(vis=True)
-
-
-def check_termination_condition(cfg, best_iou, dataset_size):
-    if cfg.active.termination_criterion == 'max_samples':
-        return len(dataset_size) >= cfg.active.max_samples
-    elif cfg.active.termination_criterion == 'min_iou':
-        return best_iou >= cfg.active.min_iou
+    with wandb.init(project=project_name):
+        trainer = ActiveTrainer(cfg, train_ds, val_ds, device, model_name)
+        trainer.train(cfg.train.epochs)

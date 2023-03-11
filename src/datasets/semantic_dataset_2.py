@@ -77,6 +77,11 @@ class SemanticDataset(Dataset):
         poses = poses[indices]
         return poses
 
+    @property
+    def fully_labeled(self):
+        # TODO: Check all the labels or global cloud
+        return np.all(np.concatenate(self.selection_masks) == 0)
+
     def _initialize(self):
         """Initialize the dataset. Load the scans, labels, poses and selection masks. The data has following shape:
 
@@ -100,6 +105,9 @@ class SemanticDataset(Dataset):
             crop_sequence_format(self.cloud_maps, self.size)
             crop_sequence_format(self.selection_masks, self.size)
 
+            # Crop sequences based on the samples that left
+            self.sequences = self.sequences[:len(self._poses)]
+
     def update(self):
         """Update the selection masks. This is used when the dataset is used in an active
         training loop after the new labels are available.
@@ -110,7 +118,7 @@ class SemanticDataset(Dataset):
         if self.size is not None:
             crop_sequence_format(self.selection_masks, self.size)
 
-    def label_global_voxels(self, voxels: np.ndarray, sequence: int):
+    def label_global_voxels(self, voxels: iter, sequence: int):
         """Select the labels for training based on the global voxel indices.
 
         :param voxels: (C, V) - C: number of clouds, V: number of selected voxels in the i-th cloud
@@ -154,8 +162,7 @@ class SemanticDataset(Dataset):
 
         for sample_idx in sample_indices:
             with h5py.File(seq_labels[sample_idx], 'r+') as f:
-                label_mask = f['label_mask']
-                label_mask[:] = 1
+                f['label_mask'][:] = 1
 
     def __getitem__(self, idx):
         """ Return the idx-th sample in the dataset which is selected by the selection mask.

@@ -1,17 +1,15 @@
 import os
-import sys
 
 import torch
 import wandb
 import numpy as np
-import open3d as o3d
 from tqdm import tqdm
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 
 from src.kitti360 import KITTI360Dataset
-from src.model import PointNet
-from src.learning.crosspartition import compute_weight_loss, compute_loss
+from src.models import PointNet
+from old.crosspartition import compute_weight_loss, compute_loss
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 

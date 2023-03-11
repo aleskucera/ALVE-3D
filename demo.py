@@ -9,7 +9,7 @@ from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
 from src.utils import set_paths, visualize_global_cloud
-from src.dataset import SemanticDataset
+from src.datasets import SemanticDataset
 from src.kitti360 import KITTI360Converter, create_kitti360_config
 from src.laserscan import LaserScan, ScanVis
 

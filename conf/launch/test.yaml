@@ -1,6 +1,0 @@
-# @package _global_
-defaults:
-  - override /hydra: test
-
-action: test
-

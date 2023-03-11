@@ -6,7 +6,7 @@ import hydra
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src import train_model, test_model, train_partition
+from src import train_model, train_model_active, train_partition
 from src.utils import set_paths
 from src.kitti360 import KITTI360Converter
 
@@ -22,8 +22,8 @@ def main(cfg: DictConfig):
 
     if cfg.action == 'train':
         train_model(cfg)
-    elif cfg.action == 'test':
-        test_model(cfg)
+    elif cfg.action == 'train_active':
+        train_model_active(cfg)
     elif cfg.action == 'train_partition':
         train_partition(cfg)
     elif cfg.action == 'convert_kitti360':

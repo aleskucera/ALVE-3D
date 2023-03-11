@@ -1,9 +1,10 @@
-import numpy as np
 import wandb
 import torch
+import numpy as np
 import seaborn as sn
 import matplotlib.pyplot as plt
-from torchmetrics.classification import MulticlassAccuracy, MulticlassJaccardIndex, MulticlassConfusionMatrix
+from torchmetrics.classification import MulticlassAccuracy, \
+    MulticlassJaccardIndex, MulticlassConfusionMatrix
 
 
 def get_logger(logger_type: str, num_classes: int, labels: dict, device: torch.device, ignore_index: int):
