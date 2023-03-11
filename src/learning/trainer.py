@@ -12,6 +12,7 @@ from .logger import get_logger
 from src.models import get_model
 from src.datasets import get_parser
 from src.active_selectors import get_selector
+from src.losses import LovaszSoftmax
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +53,9 @@ class BaseTrainer(object):
             outputs = self.model(inputs)
 
             print(f'outputs shape: {outputs.shape}')
-            loss = self.loss_fn(outputs, targets)
+            loss_fn = LovaszSoftmax(ignore=0)
+            loss = loss_fn(outputs, targets)
+            # loss = self.loss_fn(outputs, targets)
             loss.backward()
 
             self.optimizer.step()
@@ -115,7 +118,7 @@ class ActiveTrainer(BaseTrainer):
     def __init__(self, cfg: DictConfig, train_ds: Dataset, val_ds: Dataset, device: torch.device, model_name: str):
         super().__init__(cfg, train_ds, val_ds, device, model_name)
         self.max_iou = 0
-        self.selector = get_selector('random', self.train_ds.path, self.train_ds.sequences, device)
+        self.selector = get_selector('std', self.train_ds.path, self.train_ds.sequences, device)
 
     def train(self, epochs: int):
         while not self.selector.is_finished():

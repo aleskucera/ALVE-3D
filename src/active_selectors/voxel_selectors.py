@@ -37,12 +37,29 @@ class VoxelCloud(object):
         self.labeled_voxels[voxels] = True
         dataset.label_voxels(voxels.cpu().numpy(), self.sequence, self.seq_cloud_id)
 
-    def get_std_values(self):
+    def get_std_values_2(self):
         values = torch.full((self.size,), float('nan'), dtype=torch.float32, device=self.device)
         for voxel in tqdm(torch.unique(self.voxel_map)):
             voxel_values = self.values[self.voxel_map == voxel]
             voxel_std = torch.std(voxel_values)
             values[voxel] = voxel_std
+        return self._append_mapping(values)
+
+    def get_std_values(self):
+        values = torch.full((self.size,), float('nan'), dtype=torch.float32, device=self.device)
+
+        # Sort the values ascending by voxel map
+        sorted_indices = torch.argsort(self.voxel_map)
+        sorted_values = self.values[sorted_indices]
+
+        # Split the values to a multidimensional tensor, where each row contains the values of a voxel
+        unique_voxels, counts = torch.unique(self.voxel_map, return_counts=True)
+        voxel_values = torch.split(sorted_values, counts.tolist())
+
+        # Calculate the standard deviation of each voxel and assign it to the corresponding voxel
+        voxel_stds = torch.tensor([torch.std(v) for v in voxel_values], device=self.device)
+        values[unique_voxels] = voxel_stds
+
         return self._append_mapping(values)
 
     def get_random_values(self):
@@ -53,8 +70,8 @@ class VoxelCloud(object):
     def _append_mapping(self, values: torch.Tensor):
         nan_indices = torch.isnan(values)
         filtered_values = values[~nan_indices]
-        filtered_voxel_indices = torch.arange(self.size)[~nan_indices]
-        filtered_cloud_ids = torch.full((self.size,), self.id, dtype=torch.int32)[~nan_indices]
+        filtered_voxel_indices = torch.arange(self.size, device=self.device)[~nan_indices]
+        filtered_cloud_ids = torch.full((self.size,), self.id, dtype=torch.int32, device=self.device)[~nan_indices]
         return filtered_values, filtered_voxel_indices, filtered_cloud_ids
 
     def __len__(self):
@@ -102,22 +119,22 @@ class BaseVoxelSelector:
         model.to(self.device)
         with torch.no_grad():
             # Iterate over the dataset (len(dataset) would give only the already labeled samples in the dataset)
-            for i in tqdm(range(dataset.get_true_length()), desc='Mapping values to voxels'):
+            for i in tqdm(range(dataset.get_true_length()), desc='Mapping model output values to voxels'):
                 # Parse the data (get_item() is also special function for selector classes)
                 proj_image, proj_label, proj_voxel_map, sequence, seq_cloud_id = dataset.get_item(i)
                 proj_image, proj_label = proj_image.to(self.device), proj_label.to(self.device)
                 proj_voxel_map = proj_voxel_map.to(self.device)
 
                 # Get the model output for the sample
-                # model_output = torch.rand(proj_label.shape, dtype=torch.float32, device=self.device)
-                model_output = model(proj_image.unsqueeze(0))
+                model_output = torch.rand(proj_label.shape, dtype=torch.float32, device=self.device)
+                # model_output = model(proj_image.unsqueeze(0))
                 # TODO: Dimension problem
                 model_output = model_output.flatten()
                 voxel_map = proj_voxel_map.flatten().type(torch.long)
 
                 # Find the global cloud to which the sample belongs and map the values to the voxels
                 cloud = self._get_cloud(sequence, seq_cloud_id)
-                cloud.map_values(model_output, voxel_map)
+                cloud.add_values(model_output, voxel_map)
 
     @staticmethod
     def select_samples(values: torch.Tensor, voxel_map: torch.Tensor, cloud_map: torch.Tensor,

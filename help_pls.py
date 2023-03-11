@@ -3,6 +3,13 @@ import time
 
 import numpy as np
 from tqdm import tqdm
+import multiprocessing as mp
+
+
+def calc_voxel_std(values, voxel_map, voxel):
+    voxel_values = values[voxel_map == voxel]
+    voxel_std = np.std(voxel_values)
+    return (voxel, voxel_std)
 
 
 class VoxelCloud(object):
@@ -81,28 +88,59 @@ class VoxelCloud(object):
         other function can be used."""
 
         # Create an array to store the values, and initialize it with NaN
-        values = np.full((self.size,), float('nan'), dtype=np.float32)
+        # values1 = np.full((self.size,), float('nan'), dtype=np.float32)
 
         # Iterate over all voxels and calculate the standard deviation of the values in each voxel
-        # TODO: This for cycle is the problem, it takes too long
-        for voxel in tqdm(np.unique(self.voxel_map), desc='Calculating standard deviation'):
-            voxel_values = self.values[self.voxel_map == voxel]
-            voxel_std = np.std(voxel_values)
-            values[voxel] = voxel_std
-        return values
+        # TODO: This for cycle is the problem, it takes too long to calculate. Try to optimize it.
+        # start = time.time()
+        # for voxel in tqdm(np.unique(self.voxel_map), desc='Calculating standard deviation'):
+        #     voxel_values = self.values[self.voxel_map == voxel]
+        #     # print(voxel_values)
+        #     voxel_std = np.std(voxel_values)
+        #     values1[voxel] = voxel_std
+        # # print("here1:", values1)
+        #
+        # end = time.time()
+        # time1 = end - start
+        # print(f'\t - Time1: {time1}\n')
 
-    def get_std_values_2(self):
+        # # Last for cycle rewritten with numpy functions (much faster)
+        # values = np.full((self.size,), float('nan'), dtype=np.float32)
+        # voxel_values = self.values[np.isin(self.voxel_map, np.unique(self.voxel_map))]
+        # voxel_std = np.std(voxel_values)
+        # values[np.unique(self.voxel_map)] = voxel_std
+
+        start = time.time()
         values = np.full((self.size,), float('nan'), dtype=np.float32)
-
-        # Sort the values ascending by voxel map
-        sorted_indices = np.argsort(self.voxel_map)
-        sorted_values = self.values[sorted_indices]
-
+        # unique_voxels = np.unique(self.voxel_map)
+        # with mp.Pool(processes=mp.cpu_count()) as pool:
+        #     results = pool.starmap(calc_voxel_std, [(self.values, self.voxel_map, voxel) for voxel in unique_voxels])
+        # for voxel, voxel_std in results:
+        #     values[voxel] = voxel_std
         unique_voxels, counts = np.unique(self.voxel_map, return_counts=True)
-        voxel_values = np.split(sorted_values, np.cumsum(counts)[:-1])
-        voxel_stds = np.array([np.max(v) for v in voxel_values])
-        values[unique_voxels] = voxel_stds
-        return values
+        print(f'Cumulative sum: {np.cumsum(counts)[:-1]}')
+        voxel_values = np.split(self.values, np.cumsum(counts)[:-1])
+        # for val1 in voxel_values:
+        #     print(val1)
+        voxel_stds = np.array([np.std(vals) for vals in voxel_values])
+        np.put(values, unique_voxels, voxel_stds)
+        # print("here2:", values)
+        end = time.time()
+        time2 = end - start
+        print(f'\t - Time2: {time2}\n')
+
+        # print(f"Percentage of time saved: {(time1 - time2) / time1 * 100}%")
+
+        # # compare the two results
+        # wrong = 0
+        # right = 0
+        # for i in range(len(values)):
+        #     if values[i] == values1[i] or np.isnan(values[i]) == np.isnan(values1[i]):
+        #         right += 1
+        #     else:
+        #         wrong += 1
+        # print(f"Percentage of wrong values: {wrong / (wrong + right) * 100}%")
+        # return values
 
 
 if __name__ == '__main__':
@@ -112,7 +150,7 @@ if __name__ == '__main__':
     print('\nExample usage:\n')
     size = 10
     values = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-    voxel_map = np.array([0, 0, 2, 1, 1, 1, 2, 2, 2, 0])
+    voxel_map = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 2])
 
     cloud = VoxelCloud(size)
     cloud.add_values(values, voxel_map)
@@ -120,27 +158,19 @@ if __name__ == '__main__':
     print(f'\t - Values: {cloud.values}')
     print(f'\t - Voxel map: {cloud.voxel_map}')
 
-    std_values = cloud.get_std_values_2()
+    std_values = cloud.get_std_values()
 
     print(f'\t - Standard deviation of each voxel: {std_values}\n')
 
-    time.sleep(1)
+    # time.sleep(1)
 
     # What is already problem:
     print('\nWhat is already a problem (and dataset is much bigger):\n')
-    size = 1000000
+    size = 50000000
     values = np.random.rand(500000)
     voxel_map = np.random.randint(0, size, 500000)
 
     cloud = VoxelCloud(size)
     cloud.add_values(values, voxel_map)
 
-    # start = time.time()
-    # std_values = cloud.get_std_values()
-    # end = time.time()
-    # print(f'\t - Time: {end - start}\n')
-
-    start = time.time()
-    std_values = cloud.get_std_values_2()
-    end = time.time()
-    print(f'\t - Time: {end - start}\n')
+    std_values = cloud.get_std_values()

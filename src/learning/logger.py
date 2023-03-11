@@ -68,6 +68,9 @@ class SemanticLogger(object):
 
         self.batch_loss_history.append(loss)
 
+        print(outputs.shape)
+        print(targets.shape)
+
         self.acc.update(outputs, targets)
         self.iou.update(outputs, targets)
 

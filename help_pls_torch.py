@@ -78,31 +78,40 @@ class VoxelCloud(object):
         self.voxel_map = torch.cat((self.voxel_map, inactive_voxel_map), dim=0)
 
     def get_std_values(self):
-        """ Function which calculates the standard deviation of each voxel. Standard deviation is only an example, any
-        other function can be used."""
-
-        # Create a tensor to store the values, and initialize it with NaN
         values = torch.full((self.size,), float('nan'), dtype=torch.float32, device=self.device)
 
-        # Iterate over all voxels and calculate the standard deviation of the values in each voxel
-        # TODO: This for cycle is the problem, it takes too long to iterate over all voxels
-        for voxel in tqdm(torch.unique(self.voxel_map), desc='Calculating standard deviation'):
-            voxel_values = self.values[self.voxel_map == voxel]
-            voxel_std = torch.std(voxel_values)
-            values[voxel] = voxel_std
+        # Sort the values ascending by voxel map
+        sorted_indices = torch.argsort(self.voxel_map)
+        sorted_values = self.values[sorted_indices]
+
+        # Split the values to a multidimensional tensor, where each row contains the values of a voxel
+        unique_voxels, counts = torch.unique(self.voxel_map, return_counts=True)
+        voxel_values = torch.split(sorted_values, counts.tolist())
+
+        # Calculate the standard deviation of each voxel and assign it to the corresponding voxel
+        voxel_stds = []
+        for v in tqdm(voxel_values):
+            voxel_stds.append(torch.std(v))
+
+        voxel_stds = torch.tensor(voxel_stds, device=self.device)
+        # voxel_stds = torch.tensor([torch.std(v) for v in voxel_values])
+        values[unique_voxels] = voxel_stds
+
         return values
 
 
 if __name__ == '__main__':
     print(VoxelCloud.__doc__)
 
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
     # Example usage
     print('\nExample usage:\n')
     size = 10
-    values = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-    voxel_map = torch.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2, 2])
+    values = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dtype=torch.float32, device=device)
+    voxel_map = torch.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2, 2], dtype=torch.long, device=device)
 
-    cloud = VoxelCloud(size, torch.device('cpu'))
+    cloud = VoxelCloud(size, device)
     cloud.add_values(values, voxel_map)
 
     print(f'\t - Values: {cloud.values}')
