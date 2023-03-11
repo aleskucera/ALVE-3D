@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 
 from src.kitti360 import KITTI360Dataset
 from src.models import PointNet
-from old.crosspartition import compute_weight_loss, compute_loss
+from src.old.crosspartition import compute_weight_loss, compute_loss
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
