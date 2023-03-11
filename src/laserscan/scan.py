@@ -7,7 +7,7 @@ import torch
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from src.utils import project_scan
+from src.utils import project_points
 from src.utils.map import colorize, map_colors, map_labels, colorize_instances
 
 
@@ -219,8 +219,8 @@ class LaserScan:
         self.remissions = self.remissions[self.drop_mask]
 
         # Project data
-        projection = project_scan(self.points, self.proj_H,
-                                  self.proj_W, self.proj_fov_up, self.proj_fov_down)
+        projection = project_points(self.points, self.proj_H,
+                                    self.proj_W, self.proj_fov_up, self.proj_fov_down)
 
         self.proj_idx = projection['idx']
         self.proj_xyz = projection['xyz']

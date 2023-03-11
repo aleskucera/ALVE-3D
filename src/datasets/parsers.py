@@ -2,6 +2,13 @@ import torch
 
 
 def get_parser(parser_type: str, device: torch.device):
+    """ Get the parser for the dataset. Parser is used to parse the data from the dataset
+    __getitem__ method to the format that the training function expects.
+
+    :param parser_type: The type of parser to use (semantic, partition)
+    :param device: The device used for training
+    """
+
     if parser_type == 'semantic':
         return SemanticParser(device)
     elif parser_type == 'partition':

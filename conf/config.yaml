@@ -3,7 +3,6 @@ defaults:
 
   # Training and testing settings
   - ds: kitti-360
-  - test: default
   - train: default
   - model: salsa_next
   - active: default

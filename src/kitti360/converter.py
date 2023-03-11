@@ -11,7 +11,7 @@ from omegaconf import DictConfig
 from mpl_toolkits.axes_grid1 import ImageGrid
 
 from .ply import read_kitti360_ply
-from src.utils import project_scan
+from src.utils import project_points
 from src.utils import map_labels, map_colors
 from src.utils import transform_points, downsample_cloud, nearest_neighbors, \
     nearest_neighbors_2, connected_label_components, nn_graph
@@ -268,11 +268,11 @@ class KITTI360Converter:
         semantics = np.array(self.semantic_color)[indices[mask]]
 
         # Project the scan to the camera
-        projection = project_scan(scan_points, 64, 1024, 3, -25.0)
+        projection = project_points(scan_points, 64, 1024, 3, -25.0)
         proj_mask = projection['mask']
 
         # Project the filtered scan to the camera
-        filtered_projection = project_scan(scan_points[mask], 64, 1024, 3, -25.0)
+        filtered_projection = project_points(scan_points[mask], 64, 1024, 3, -25.0)
         filtered_proj_mask = filtered_projection['mask']
         filtered_proj_indices = filtered_projection['idx'][filtered_proj_mask]
 

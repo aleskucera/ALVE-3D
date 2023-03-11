@@ -66,9 +66,6 @@ def lovasz_softmax_flat(probs, labels, classes='present'):
       labels: [P] Tensor, ground truth labels (between 0 and C - 1)
       classes: 'all' for all, 'present' for classes present in labels, or a list of classes to average.
     """
-    print(f'function: {lovasz_softmax_flat.__name__}, probs shape: {probs.shape}')
-    print(f'function: {lovasz_softmax_flat.__name__}, labels shape: {labels.shape}')
-    print(f'function: {lovasz_softmax_flat.__name__}, classes: {classes}')
 
     if probs.numel() == 0:
         # only void pixels, the gradients should be 0
@@ -98,9 +95,6 @@ def flatten_probs(probs, labels, ignore=None):
     """
     Flattens predictions in the batch
     """
-    print(f'function: {flatten_probs.__name__}, probs shape: {probs.shape}, MY: [1,20,64,1024]')
-    print(f'function: {flatten_probs.__name__}, labels shape: {labels.shape}, MY: [1,64,1024]')
-    print(f'function: {flatten_probs.__name__}, ignore: {ignore}, MY: 0')
 
     if probs.dim() == 3:
         print(f'function: {flatten_probs.__name__}, THIS SHOULD NOT HAPPEN')

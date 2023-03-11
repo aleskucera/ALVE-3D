@@ -1,1 +1,1 @@
-from ._get_selector import get_selector
+from .main import get_selector

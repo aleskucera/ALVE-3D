@@ -1,40 +1,43 @@
-import time
-
 import h5py
 import torch
 import numpy as np
 from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
-from src.utils.project import project_scan
-from .utils import update_selection_mask, load_semantic_dataset
+from src.utils import project_points, map_labels, augment_points
+from .utils import load_sample_selection_mask, load_semantic_dataset
 
 
 class SemanticDataset(Dataset):
-    """Semantic dataset for active learning.
+    """PyTorch dataset wrapper for the semantic segmentation dataset. This dataset is used also for active learning.
+
 
     :param dataset_path: Path to the dataset.
-    :param cfg: Configuration object.
+    :param cfg: Configuration of the dataset.
     :param split: Split to load. ('train', 'val')
     :param size: Number of samples to load. If None all the samples are loaded (default: None)
+    :param active_mode: If True the dataset initializes in active
+                                 mode - deactivates all labels. (default: False)
+    :param sequences: List of sequences to load. If None all the sequences defined in config
+                      for a given split are loaded. (default: None)
     """
 
-    def __init__(self, dataset_path: str, cfg: DictConfig, split: str, mode: str = 'passive', sequences: iter = None,
-                 size: int = None):
+    def __init__(self, dataset_path: str, cfg: DictConfig, split: str, size: int = None,
+                 active_mode: bool = False, sequences: iter = None):
 
         assert split in ['train', 'val']
-        assert mode in ['passive', 'active']
 
         self.cfg = cfg
-        self.mode = mode
         self.size = size
         self.split = split
         self.path = dataset_path
+        self.label_map = cfg.learning_map
+        self.active = active_mode
 
-        if sequences is None:
-            self.sequences = cfg.split[split]
-        else:
+        if sequences is not None:
             self.sequences = sequences
+        else:
+            self.sequences = cfg.split[split]
 
         self.proj_W = cfg.projection.W
         self.proj_H = cfg.projection.H
@@ -54,16 +57,38 @@ class SemanticDataset(Dataset):
 
     @property
     def scan_files(self):
+        """ Returns an array of scans that are currently
+        selected. (labels are available)
+        """
+
         selected = np.where(self.selection_mask == 1)[0]
         return self.scans[selected]
 
     @property
     def label_files(self):
+        """ Returns an array of labels that are currently
+        selected. (labels are available)
+        """
+
         selected = np.where(self.selection_mask == 1)[0]
         return self.labels[selected]
 
     def _initialize(self):
-        data = load_semantic_dataset(self.path, self.sequences, self.split, self.mode)
+        """ Initialize the dataset. Sets the sample selection masks and sample masks to 0 or 1 based on the
+        active learning mode. Then loads the following data:
+
+        - scans: Array of paths to scans. (N,)
+        - labels: Array of paths to labels. (N,)
+        - poses: Array of poses. (N, 4, 4)
+        - sequence_map: Array of sequence indices that maps each sample to a sequence. (N,)
+        - cloud_map: Array of cloud indices that maps each sample to a global cloud. (N,)
+        - selection_mask: Array of 0 or 1 that indicates if the sample is selected or not. (N,)
+
+        Then the function crops the dataset to the desired size (self.size) and creates a sample map that maps
+        the samples to the original dataset.
+        """
+
+        data = load_semantic_dataset(self.path, self.sequences, self.split, self.active)
         self.scans, self.labels, self.poses, self.sequence_map, self.cloud_map, self.selection_mask = data
 
         self.poses = self.poses[:self.size]
@@ -76,25 +101,34 @@ class SemanticDataset(Dataset):
         self.sample_map = np.arange(len(self.scans))
 
     def update(self):
-        """Update the selection masks. This is used when the dataset is used in an active
-        training loop after the new labels are available.
+        """Loads the sample selection mask of the dataset from a disk. This is used when the dataset is
+        used in an active training loop after the new labels are available.
         """
 
-        self.selection_mask = update_selection_mask(self.path, self.sequences, self.split)[:self.size]
+        self.selection_mask = load_sample_selection_mask(self.path, self.sequences, self.split)[:self.size]
 
     def label_voxels(self, voxels: np.ndarray, sequence: int, cloud: int):
-        seq_indices = np.where(self.sequence_map == sequence)[0]
+        """ Label the voxels in the dataset. This is used when the dataset is used in an active training when
+        VoxelSelector object selects the samples to label. It updates the selection mask and the label masks
+        which contains points inside the selected voxels.
 
-        seq_labels = self.labels[seq_indices]
-        seq_cloud_map = self.cloud_map[seq_indices]
-        seq_sample_map = self.sample_map[seq_indices]
+        :param voxels: Array of voxel indices. (N,)
+        :param sequence: Sequence index.
+        :param cloud: Cloud index relative to the sequence.
+        """
 
-        cloud_indices = np.where(seq_cloud_map == cloud)[0]
+        # Select labels, cloud indices and sample indices for a given sequence
+        seq_labels = self.labels[np.where(self.sequence_map == sequence)[0]]
+        seq_cloud_map = self.cloud_map[np.where(self.sequence_map == sequence)[0]]
+        seq_sample_map = self.sample_map[np.where(self.sequence_map == sequence)[0]]
 
-        cloud_labels = seq_labels[cloud_indices]
-        cloud_sample_map = seq_sample_map[cloud_indices]
+        # From selected labels select the ones that belong to a given cloud
+        labels = seq_labels[np.where(seq_cloud_map == cloud)[0]]
+        sample_map = seq_sample_map[np.where(seq_cloud_map == cloud)[0]]
 
-        for label_file, sample_idx in zip(cloud_labels, cloud_sample_map):
+        for label_file, sample_idx in zip(labels, sample_map):
+
+            # Update the label mask
             with h5py.File(label_file, 'r+') as f:
                 voxel_map = f['voxel_map']
                 label_mask = f['label_mask']
@@ -105,31 +139,49 @@ class SemanticDataset(Dataset):
                     self.selection_mask[sample_idx] = 1
 
     def label_samples(self, sample_indices: np.ndarray):
-        """Label the samples in the dataset. This is used when the dataset is used in an active
-        training loop after the new labels are available.
+        """Label the samples in the dataset. This is used when the dataset is used in an active training when
+        SampleSelector object selects the samples to label. It updates the selection mask and the label masks
+        of the specified samples.
+
+        :param sample_indices: Array of sample indices. (N,)
         """
 
+        # Update the selection mask
         self.selection_mask[sample_indices] = 1
 
+        # Update the label masks
         for idx in sample_indices:
             with h5py.File(self.labels[idx], 'r+') as f:
                 label_mask = f['label_mask']
                 label_mask[:] = 1
 
-    def get_item(self, idx):
+    def get_item(self, idx) -> tuple[torch.Tensor, torch.Tensor, int, int]:
+        """ Return a sample from the dataset. Typically used in an active learning loop for selecting samples
+        to label. The difference between this function and __getitem__ is that this function returns the following data:
+
+        - Projected scan to the 2D plane (5, H, W)
+        - Projected voxel map to the 2D plane (H, W)
+        - Sequence index
+        - Cloud index
+
+        This function does not apply augmentations and does not return labels.
+
+        :param idx: Sample index.
+        :return: Projected scan, projected voxel map, sequence index, cloud index.
+        """
+
         # Load scan
         with h5py.File(self.scans[idx], 'r') as f:
             points = np.asarray(f['points'])
             colors = np.asarray(f['colors'])
             remissions = np.asarray(f['remissions']).flatten()
 
-        # Load label
+        # Load voxel map
         with h5py.File(self.labels[idx], 'r') as f:
-            labels = np.asarray(f['labels']).flatten()
             voxel_map = np.asarray(f['voxel_map']).flatten()
 
         # Project points to image
-        proj = project_scan(points, self.proj_H, self.proj_W, self.proj_fov_up, self.proj_fov_down)
+        proj = project_points(points, self.proj_H, self.proj_W, self.proj_fov_up, self.proj_fov_down)
         proj_depth, proj_idx, proj_mask = proj['depth'], proj['idx'], proj['mask']
 
         proj_remissions = np.full((self.proj_H, self.proj_W), -1, dtype=np.float32)
@@ -137,9 +189,6 @@ class SemanticDataset(Dataset):
 
         proj_colors = np.zeros((self.proj_H, self.proj_W, 3), dtype=np.float32)
         proj_colors[proj_mask] = colors[proj_idx[proj_mask]]
-
-        proj_labels = np.zeros((self.proj_H, self.proj_W), dtype=np.int32)
-        proj_labels[proj_mask] = labels[proj_idx[proj_mask]]
 
         proj_image = np.concatenate([proj_depth[..., np.newaxis],
                                      proj_remissions[..., np.newaxis],
@@ -149,12 +198,26 @@ class SemanticDataset(Dataset):
         proj_voxel_map[proj_mask] = voxel_map[proj_idx[proj_mask]]
 
         proj_image = torch.from_numpy(proj_image).permute(2, 0, 1)
-        proj_labels = torch.from_numpy(proj_labels)
         proj_voxel_map = torch.from_numpy(proj_voxel_map)
 
-        return proj_image, proj_labels, proj_voxel_map, self.sequence_map[idx], self.cloud_map[idx]
+        return proj_image, proj_voxel_map, self.sequence_map[idx], self.cloud_map[idx]
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray]:
+        """Returns a sample from the dataset. The sample is projected velodyne scan and the corresponding
+        label.
+
+        The function creates a sample by following the steps:
+        1. Load the scan and the label from the disk.
+        2. Apply the label mask to the label - some labels may be hidden for
+           training. (Only for active learning mode and training split)
+        3. Apply the augmentations to the scan and the label. (Only for training split)
+        4. Map the labels to the training labels.
+        5. Project the scan to the image.
+
+        :param idx: Sample index (indexing only from the labeled samples)
+        :return: Projected scan, projected label
+        """
+
         # Load scan
         with h5py.File(self.scan_files[idx], 'r') as f:
             points = np.asarray(f['points'])
@@ -166,22 +229,38 @@ class SemanticDataset(Dataset):
             labels = np.asarray(f['labels']).flatten()
             label_mask = np.asarray(f['label_mask']).flatten()
 
-        # Apply mask
-        labels *= label_mask
+            # Map labels to training labels
+            labels = map_labels(labels, self.label_map)
 
-        # Project points to image
-        proj = project_scan(points, self.proj_H, self.proj_W, self.proj_fov_up, self.proj_fov_down)
+        if self.split == 'train':
+            # Apply label mask
+            labels *= label_mask
+
+            # Apply augmentations
+            points, drop_mask = augment_points(points, translation_prob=0.5,
+                                               rotation_prob=0.5, flip_prob=0.5,
+                                               drop_prob=0.5)
+            labels = labels[drop_mask]
+            colors = colors[drop_mask]
+            remissions = remissions[drop_mask]
+
+        # Project points to image and map the projection
+        proj = project_points(points, self.proj_H, self.proj_W, self.proj_fov_up, self.proj_fov_down)
         proj_depth, proj_idx, proj_mask = proj['depth'], proj['idx'], proj['mask']
 
+        # Project remissions
         proj_remissions = np.full((self.proj_H, self.proj_W), -1, dtype=np.float32)
         proj_remissions[proj_mask] = remissions[proj_idx[proj_mask]]
 
+        # Project colors
         proj_colors = np.zeros((self.proj_H, self.proj_W, 3), dtype=np.float32)
         proj_colors[proj_mask] = colors[proj_idx[proj_mask]]
 
+        # Project labels
         proj_labels = np.zeros((self.proj_H, self.proj_W), dtype=np.long)
         proj_labels[proj_mask] = labels[proj_idx[proj_mask]]
 
+        # Concatenate the projected image
         proj_image = np.concatenate([proj_depth[..., np.newaxis],
                                      proj_remissions[..., np.newaxis],
                                      proj_colors], axis=-1, dtype=np.float32)
@@ -193,7 +272,7 @@ class SemanticDataset(Dataset):
     def __len__(self):
         return np.sum(self.selection_mask)
 
-    def get_true_length(self):
+    def get_length(self):
         return len(self.scans)
 
     def __str__(self):

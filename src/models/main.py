@@ -3,7 +3,7 @@ from omegaconf import DictConfig
 import torchvision.models.segmentation as tms
 
 from .pointnet import PointNet
-from .SalsaNext import SalsaNext
+from .salsanext import SalsaNext
 
 
 def get_model(cfg: DictConfig, device: torch.device):

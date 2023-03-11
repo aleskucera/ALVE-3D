@@ -12,7 +12,6 @@ from .logger import get_logger
 from src.models import get_model
 from src.datasets import get_parser
 from src.active_selectors import get_selector
-from src.losses import LovaszSoftmax
 
 log = logging.getLogger(__name__)
 
@@ -25,9 +24,7 @@ class BaseTrainer(object):
         self.train_ds = train_ds
         self.model_name = model_name
 
-        batch_size, num_workers = cfg.train.batch_size, self._get_num_workers(device)
-        self.val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        self.train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+        self.batch_size, self.num_workers = cfg.train.batch_size, self._get_num_workers(device)
 
         self.model = get_model(cfg, device)
         self.loss_fn = get_loss(cfg.model.type, device)
@@ -40,28 +37,26 @@ class BaseTrainer(object):
         raise NotImplementedError
 
     def train_epoch(self, epoch: int, validate: bool = True) -> dict:
+        train_loader = DataLoader(self.train_ds, batch_size=self.batch_size,
+                                  shuffle=True, num_workers=self.num_workers)
         self.model.train()
-
-        for batch_idx, batch in enumerate(tqdm(self.train_loader)):
+        for batch_idx, batch in enumerate(tqdm(train_loader)):
             self.optimizer.zero_grad()
 
             inputs, targets = self.parser.parse_batch(batch)
 
-            print(f'inputs shape: {inputs.shape}')
-            print(f'targets shape: {targets.shape}')
-
             outputs = self.model(inputs)
 
-            print(f'outputs shape: {outputs.shape}')
-            loss_fn = LovaszSoftmax(ignore=0)
-            loss = loss_fn(outputs, targets)
-            # loss = self.loss_fn(outputs, targets)
+            loss = self.loss_fn(outputs, targets)
             loss.backward()
 
             self.optimizer.step()
 
-            self.logger.update(loss.item(), outputs, targets)
-        self.logger.log_train(epoch)
+            with torch.no_grad():
+                self.logger.update(loss.item(), outputs, targets)
+
+        with torch.no_grad():
+            self.logger.log_train(epoch)
 
         if validate:
             return self.validate(epoch)
@@ -69,14 +64,16 @@ class BaseTrainer(object):
             return {}
 
     def validate(self, epoch: int) -> dict:
+        val_loader = DataLoader(self.val_ds, batch_size=self.batch_size,
+                                shuffle=False, num_workers=self.num_workers)
         self.model.eval()
+        with torch.no_grad():
+            for batch_idx, batch in enumerate(tqdm(val_loader)):
+                inputs, targets = self.parser.parse_data(batch, self.device)
+                outputs = self.model(inputs)
+                loss = self.loss_fn(outputs, targets)
 
-        for batch_idx, batch in enumerate(tqdm(self.val_loader)):
-            inputs, targets = self.parser.parse_data(batch, self.device)
-            outputs = self.model(inputs)
-            loss = self.loss_fn(outputs, targets)
-
-            self.logger.update(loss.item(), outputs, targets)
+                self.logger.update(loss.item(), outputs, targets)
         return self.logger.log_val(epoch)
 
     @staticmethod
@@ -118,7 +115,7 @@ class ActiveTrainer(BaseTrainer):
     def __init__(self, cfg: DictConfig, train_ds: Dataset, val_ds: Dataset, device: torch.device, model_name: str):
         super().__init__(cfg, train_ds, val_ds, device, model_name)
         self.max_iou = 0
-        self.selector = get_selector('std', self.train_ds.path, self.train_ds.sequences, device)
+        self.selector = get_selector('std_voxels', self.train_ds.path, self.train_ds.sequences, device)
 
     def train(self, epochs: int):
         while not self.selector.is_finished():

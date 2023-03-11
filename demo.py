@@ -68,7 +68,7 @@ def visualize_dataset(cfg: DictConfig):
 
     # Create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path, cfg=cfg.ds,
-                              split=split, mode='passive', sequences=sequences, size=size)
+                              split=split, size=size, active=False, sequences=sequences)
 
     # Create scan object
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
@@ -89,7 +89,7 @@ def visualize_sequence(cfg: DictConfig) -> None:
 
     # Create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path, cfg=cfg.ds,
-                              split=split, mode='passive', sequences=sequences, size=size)
+                              split=split, size=size, active=False, sequences=sequences)
 
     # Create scan object
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)

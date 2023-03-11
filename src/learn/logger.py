@@ -10,6 +10,8 @@ from torchmetrics.classification import MulticlassAccuracy, \
 def get_logger(logger_type: str, num_classes: int, labels: dict, device: torch.device, ignore_index: int):
     if logger_type == 'semantic':
         return SemanticLogger(num_classes, labels, device, ignore_index)
+    elif logger_type == 'partition':
+        raise NotImplementedError
     else:
         raise ValueError(f'Unknown logger: {logger_type}')
 
@@ -67,9 +69,6 @@ class SemanticLogger(object):
         """
 
         self.batch_loss_history.append(loss)
-
-        print(outputs.shape)
-        print(targets.shape)
 
         self.acc.update(outputs, targets)
         self.iou.update(outputs, targets)
@@ -172,3 +171,8 @@ class SemanticLogger(object):
         wandb.log({"Confusion Matrix": wandb.Image(plt)}, step=epoch)
 
         plt.close()
+
+
+class PartitionLogger(object):
+    def __init__(self):
+        super().__init__()

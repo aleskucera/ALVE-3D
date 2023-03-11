@@ -1,8 +1,11 @@
+import random
+
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm
 from sklearn.neighbors import NearestNeighbors
 from sklearn.linear_model import RANSACRegressor
+from scipy.spatial.transform import Rotation as R
 
 from src.ply_c import libply_c
 from src.utils.map import colorize, colorize_instances
@@ -117,3 +120,32 @@ def visualize_global_cloud(points: iter, colors: iter, poses: iter, step: int = 
     # Down sample global cloud with voxel grid
     cloud, color = downsample_cloud(cloud, color, voxel_size=voxel_size)
     visualize_cloud(cloud, color)
+
+
+def calculate_radial_distances(points: np.ndarray, center: np.ndarray = None):
+    if center is None:
+        center = np.zeros(3)
+    return np.linalg.norm(points - center, axis=1)
+
+
+def augment_points(points: np.ndarray, translation_prob: float = 0.5, rotation_prob: float = 0.5,
+                   flip_prob: float = 0.5, drop_prob: float = 0.5):
+    if random.random() < flip_prob:
+        points[:, 0] *= -1
+
+    # Translate points
+    if random.random() < translation_prob:
+        points[:, 0] += random.uniform(-5, 5)
+        points[:, 1] += random.uniform(-3, 3)
+        points[:, 2] += random.uniform(-1, 0)
+
+    # Rotate points
+    if random.random() < rotation_prob:
+        deg = random.uniform(-180, 180)
+        rot = R.from_euler('z', deg, degrees=True)
+        points = rot.apply(points)
+
+    # Drop points
+    rng = np.random.default_rng()
+    drop_mask = rng.choice([False, True], size=points.shape[0], p=[drop_prob, 1 - drop_prob])
+    return points[drop_mask], drop_mask

@@ -5,16 +5,18 @@ import wandb
 from omegaconf import DictConfig
 
 from src.datasets import SemanticDataset
-from src.learning import Trainer, ActiveTrainer
+from .trainer import Trainer, ActiveTrainer
 
 log = logging.getLogger(__name__)
 
-gpu_count = torch.cuda.device_count()
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-log.info(f'Using device {device}')
 
+def train_semantic_model(cfg: DictConfig, device: torch.device):
+    """ Train a semantic segmentation model.
 
-def train_model(cfg: DictConfig):
+    :param cfg: The configuration of the project.
+    :param device: The device to train on.
+    """
+
     train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size)
     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size)
 
@@ -27,9 +29,15 @@ def train_model(cfg: DictConfig):
         trainer.train(cfg.train.epochs)
 
 
-def train_model_active(cfg: DictConfig):
-    train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active=True)
-    val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active=True)
+def train_semantic_model_active(cfg: DictConfig, device: torch.device):
+    """ Train a semantic segmentation model with active learning.
+
+    :param cfg: The configuration of the project.
+    :param device: The device to train on.
+    """
+
+    train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
+    val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=True)
 
     project_name = f'Active Semantic Model Training'
     group_name = f'{cfg.model.architecture} {cfg.ds.name}'
@@ -38,3 +46,13 @@ def train_model_active(cfg: DictConfig):
     with wandb.init(project=project_name, group=group_name):
         trainer = ActiveTrainer(cfg, train_ds, val_ds, device, model_name)
         trainer.train(cfg.train.epochs)
+
+
+def train_partition_model(cfg: DictConfig, device: torch.device):
+    """ Train a transformation model for partitioning a point cloud into a superpoints.
+
+    :param cfg: The configuration of the project.
+    :param device: The device to train on.
+    """
+
+    raise NotImplementedError
