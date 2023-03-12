@@ -1,6 +1,5 @@
 # @package _global_
 defaults:
-  - override /hydra: train
   - override /train: dev
 
 action: train

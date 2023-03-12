@@ -1,7 +1,6 @@
 # @package _global_
 
 defaults:
-  - override /hydra: train
   - override /train: partition
 
 action: train_partition

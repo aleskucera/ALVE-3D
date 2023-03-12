@@ -1,5 +1,3 @@
 # @package _global_
-defaults:
-  - override /hydra: train_active
 
 action: train_active
