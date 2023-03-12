@@ -1,3 +1,4 @@
+import os
 import logging
 
 import torch
@@ -23,9 +24,10 @@ def train_semantic_model(cfg: DictConfig, device: torch.device):
     project_name = f'Semantic Model Training'
     group_name = f'{cfg.model.architecture} {cfg.ds.name}'
     model_name = f'{cfg.model.architecture}_{cfg.ds.name}'
+    output_model_dir = os.path.join(cfg.path.models, 'semantic')
 
     with wandb.init(project=project_name, group=group_name):
-        trainer = Trainer(cfg, train_ds, val_ds, device, model_name)
+        trainer = Trainer(cfg, train_ds, val_ds, device, model_name, output_model_dir)
         trainer.train(cfg.train.epochs)
 
 
@@ -42,9 +44,10 @@ def train_semantic_model_active(cfg: DictConfig, device: torch.device):
     project_name = f'Active Semantic Model Training'
     group_name = f'{cfg.model.architecture} {cfg.ds.name}'
     model_name = f'{cfg.model.architecture}_{cfg.ds.name}'
+    output_model_dir = os.path.join(cfg.path.models, 'semantic_active')
 
     with wandb.init(project=project_name, group=group_name):
-        trainer = ActiveTrainer(cfg, train_ds, val_ds, device, model_name)
+        trainer = ActiveTrainer(cfg, train_ds, val_ds, device, model_name, output_model_dir, 'random_voxels')
         trainer.train(cfg.train.epochs)
 
 

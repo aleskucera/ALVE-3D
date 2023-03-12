@@ -1,6 +1,3 @@
-import os
-from typing import Iterable
-
 import torch
 from torch import nn
 from tqdm import tqdm
@@ -15,10 +12,8 @@ def calculate_entropy(output, eps=1e-6) -> torch.Tensor:
 
 
 class BaseSampleSelector:
-    def __init__(self, dataset_path: str, sequences: Iterable[int], device: torch.device,
-                 dataset_percentage: float = 10):
+    def __init__(self, dataset_path: str, device: torch.device, dataset_percentage: float = 10):
         self.device = device
-        self.sequences = sequences
         self.dataset_path = dataset_path
         self.dataset_percentage = dataset_percentage
 
@@ -35,9 +30,8 @@ class BaseSampleSelector:
 
 
 class RandomSampleSelector(BaseSampleSelector):
-    def __init__(self, dataset_path: str, sequences: Iterable[int], device: torch.device,
-                 dataset_percentage: float = 10):
-        super().__init__(dataset_path, sequences, device, dataset_percentage)
+    def __init__(self, dataset_path: str, device: torch.device, dataset_percentage: float = 10):
+        super().__init__(dataset_path, device, dataset_percentage)
 
     def select(self, dataset: Dataset, model: nn.Module):
         """ Select the samples to be labeled """
@@ -57,9 +51,9 @@ class RandomSampleSelector(BaseSampleSelector):
 
 
 class EntropySampleSelector(BaseSampleSelector):
-    def __init__(self, dataset_path: str, sequences: Iterable[int], device: torch.device,
+    def __init__(self, dataset_path: str, device: torch.device,
                  dataset_percentage: float = 10):
-        super().__init__(dataset_path, sequences, device, dataset_percentage)
+        super().__init__(dataset_path, device, dataset_percentage)
 
     def select(self, dataset: Dataset, model: nn.Module):
         selection_size = int(self.dataset_percentage * dataset.get_true_length() / 100)

@@ -97,8 +97,6 @@ def flatten_probs(probs, labels, ignore=None):
     """
 
     if probs.dim() == 3:
-        print(f'function: {flatten_probs.__name__}, THIS SHOULD NOT HAPPEN')
-
         # assumes output of a sigmoid layer
         B, H, W = probs.size()
         probs = probs.view(B, 1, H, W)
@@ -109,9 +107,6 @@ def flatten_probs(probs, labels, ignore=None):
     if ignore is None:
         return probs, labels
     valid = torch.ne(labels, ignore)
-    print(f'function: {flatten_probs.__name__}, valid shape: {valid.shape}, MY: [65536]')
-    print(
-        f'function: {flatten_probs.__name__}, valid.nonzero().squeeze() shape: {valid.squeeze().shape}, MY: [65536]')
     vprobs = probs[valid.nonzero().squeeze()]
     vlabels = labels[valid]
     return vprobs, vlabels

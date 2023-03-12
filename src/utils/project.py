@@ -32,8 +32,8 @@ def project_points(points: np.ndarray, H: int, W: int, fov_up: float, fov_down: 
     indices = indices[order]
 
     # Fill in projection matrix
-    proj_mask = proj_depth > 0
     proj_depth[proj_y, proj_x] = r
+    proj_mask = proj_depth > 0
     proj_xyz[proj_y, proj_x] = points
     proj_idx[proj_y, proj_x] = indices
 

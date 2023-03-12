@@ -155,7 +155,7 @@ class SemanticDataset(Dataset):
                 label_mask = f['label_mask']
                 label_mask[:] = 1
 
-    def get_item(self, idx) -> tuple[torch.Tensor, torch.Tensor, int, int]:
+    def get_item(self, idx) -> tuple[np.ndarray, np.ndarray, int, int]:
         """ Return a sample from the dataset. Typically used in an active learning loop for selecting samples
         to label. The difference between this function and __getitem__ is that this function returns the following data:
 
@@ -197,9 +197,7 @@ class SemanticDataset(Dataset):
         proj_voxel_map = np.zeros((self.proj_H, self.proj_W), dtype=np.int32)
         proj_voxel_map[proj_mask] = voxel_map[proj_idx[proj_mask]]
 
-        proj_image = torch.from_numpy(proj_image).permute(2, 0, 1)
-        proj_voxel_map = torch.from_numpy(proj_voxel_map)
-
+        proj_image = proj_image.transpose((2, 0, 1))
         return proj_image, proj_voxel_map, self.sequence_map[idx], self.cloud_map[idx]
 
     def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray]:
@@ -274,6 +272,20 @@ class SemanticDataset(Dataset):
 
     def get_length(self):
         return len(self.scans)
+
+    def get_dataset_structure(self):
+        order = np.argsort(self.sequence_map)
+        sequence_map = self.sequence_map[order]
+        cloud_map = self.cloud_map[order]
+
+        clouds_ids = np.array([], dtype=np.long)
+        sequences = np.array([], dtype=np.long)
+        for seq in np.unique(sequence_map):
+            seq_cloud_ids = np.unique(cloud_map[sequence_map == seq])
+            clouds_ids = np.concatenate((clouds_ids, seq_cloud_ids))
+            sequences = np.concatenate((sequences, np.full_like(seq_cloud_ids, seq)))
+
+        return clouds_ids, sequences
 
     def __str__(self):
         return f'\nSemanticDataset: {self.split}\n' \

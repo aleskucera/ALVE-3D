@@ -18,7 +18,11 @@ log = logging.getLogger(__name__)
 def main(cfg: DictConfig):
     # Set paths to absolute paths and update the output directory
     cfg = set_paths(cfg, HydraConfig.get().runtime.output_dir)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    if 'device' in cfg:
+        device = torch.device(cfg.device)
+    else:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     log.info(f'Starting action: {cfg.action} using device {device}')
 

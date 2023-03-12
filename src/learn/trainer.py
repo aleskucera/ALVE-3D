@@ -1,3 +1,4 @@
+import os
 import logging
 
 import torch
@@ -17,12 +18,14 @@ log = logging.getLogger(__name__)
 
 
 class BaseTrainer(object):
-    def __init__(self, cfg: DictConfig, train_ds: Dataset, val_ds: Dataset, device: torch.device, model_name: str):
+    def __init__(self, cfg: DictConfig, train_ds: Dataset, val_ds: Dataset,
+                 device: torch.device, model_name: str, output_dir: str):
         self.cfg = cfg
         self.device = device
         self.val_ds = val_ds
         self.train_ds = train_ds
         self.model_name = model_name
+        self.output_dir = output_dir
 
         self.batch_size, self.num_workers = cfg.train.batch_size, self._get_num_workers(device)
 
@@ -40,7 +43,7 @@ class BaseTrainer(object):
         train_loader = DataLoader(self.train_ds, batch_size=self.batch_size,
                                   shuffle=True, num_workers=self.num_workers)
         self.model.train()
-        for batch_idx, batch in enumerate(tqdm(train_loader)):
+        for batch_idx, batch in enumerate(tqdm(train_loader, desc=f'Training epoch number {epoch}')):
             self.optimizer.zero_grad()
 
             inputs, targets = self.parser.parse_batch(batch)
@@ -68,8 +71,8 @@ class BaseTrainer(object):
                                 shuffle=False, num_workers=self.num_workers)
         self.model.eval()
         with torch.no_grad():
-            for batch_idx, batch in enumerate(tqdm(val_loader)):
-                inputs, targets = self.parser.parse_data(batch, self.device)
+            for batch_idx, batch in enumerate(tqdm(val_loader, desc=f'Validation epoch number {epoch}')):
+                inputs, targets = self.parser.parse_batch(batch)
                 outputs = self.model(inputs)
                 loss = self.loss_fn(outputs, targets)
 
@@ -85,20 +88,28 @@ class BaseTrainer(object):
 
     def save_state(self, epoch: int, results: dict):
         self.model.eval()
-        save_dict = {'epoch': epoch,
-                     'model_state_dict': self.model.state_dict(),
-                     'optimizer_state_dict': self.optimizer.state_dict()}
+        state_dict = {'epoch': epoch,
+                      'model_state_dict': self.model.state_dict(),
+                      'optimizer_state_dict': self.optimizer.state_dict()}
 
         for key, value in results.items():
-            save_dict[key] = value
+            state_dict[key] = value
 
-        torch.save(save_dict, self.model_name)
+        os.makedirs(self.output_dir, exist_ok=True)
+        model_path = os.path.join(self.output_dir, f'{self.model_name}.pt')
+
+        log.info(f'Saving model to {model_path}...')
+
+        torch.save(state_dict, model_path)
+        artifact = wandb.Artifact(self.model_name, type='model')
+        artifact.add_file(model_path)
+        wandb.run.log_artifact(artifact)
 
 
 class Trainer(BaseTrainer):
-    def __init__(self, cfg: DictConfig, train_ds: Dataset, val_ds: Dataset, device: torch.device, model_name: str,
-                 main_metric: str = 'iou'):
-        super().__init__(cfg, train_ds, val_ds, device, model_name)
+    def __init__(self, cfg: DictConfig, train_ds: Dataset, val_ds: Dataset, device: torch.device,
+                 model_name: str, output_dir: str, main_metric: str = 'iou'):
+        super().__init__(cfg, train_ds, val_ds, device, model_name, output_dir)
         self.max_main_metric = 0
         self.main_metric = main_metric
 
@@ -112,10 +123,14 @@ class Trainer(BaseTrainer):
 
 
 class ActiveTrainer(BaseTrainer):
-    def __init__(self, cfg: DictConfig, train_ds: Dataset, val_ds: Dataset, device: torch.device, model_name: str):
-        super().__init__(cfg, train_ds, val_ds, device, model_name)
+    def __init__(self, cfg: DictConfig, train_ds: Dataset, val_ds: Dataset,
+                 device: torch.device, model_name: str, output_dir: str, method: str):
+        super().__init__(cfg, train_ds, val_ds, device, model_name, output_dir)
         self.max_iou = 0
-        self.selector = get_selector('std_voxels', self.train_ds.path, self.train_ds.sequences, device)
+        self.method = method
+
+        cloud_ids, sequence_map = train_ds.get_dataset_structure()
+        self.selector = get_selector(self.method, self.train_ds.path, cloud_ids, sequence_map, device)
 
     def train(self, epochs: int):
         while not self.selector.is_finished():
