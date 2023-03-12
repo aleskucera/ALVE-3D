@@ -13,8 +13,8 @@ projection:
   fov_down: -25.0
 sequences: [ 0, 2, 3, 4, 5, 6, 7, 9, 10 ]
 split:
-  train: [ 0, 2, 3, 4, 5, 6, 7, 9, 10 ]
-  val: [ 0, 2, 3, 4, 5, 6, 7, 9, 10 ]
+  train: [ 3 ]
+  val: [ 3 ]
 labels:
   0: unlabeled
   1: ego vehicle
@@ -62,6 +62,27 @@ labels:
   43: unknown vehicle
   44: unknown object
   -1: license plate
+labels_train:
+  0: void
+  1: road
+  2: sidewalk
+  3: building
+  4: wall
+  5: fence
+  6: pole
+  7: traffic light
+  8: traffic sign
+  9: vegetation
+  10: terrain
+  11: sky
+  12: person
+  13: rider
+  14: car
+  15: truck
+  16: bus
+  17: train
+  18: motorcycle
+  19: bicycle
 color_map:
   0: [ 0, 0, 0 ]
   1: [ 0, 0, 0 ]

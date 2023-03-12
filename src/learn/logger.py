@@ -167,6 +167,9 @@ class SemanticLogger(object):
         plt.ylabel('True labels')
         plt.title('Multiclass Confusion Matrix')
 
+        # Print confusion matrix
+        plt.show()
+
         # Log confusion matrix to W&B
         wandb.log({"Confusion Matrix": wandb.Image(plt)}, step=epoch)
 
