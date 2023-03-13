@@ -141,11 +141,11 @@ class SemanticLogger(object):
         return {'loss': loss, 'acc': acc, 'iou': iou}
 
     def _log_class_accuracy(self, class_acc: torch.Tensor, epoch: int):
-        for class_name, class_acc in zip(self.label_names, class_acc.tolist()):
+        for class_name, class_acc in zip(self.label_names, class_acc.tolist().pop(self.ignore_index)):
             wandb.log({f"Accuracy - {class_name}": class_acc}, step=epoch)
 
     def _log_class_iou(self, class_iou: torch.Tensor, epoch: int):
-        for class_name, class_iou in zip(self.label_names, class_iou.tolist()):
+        for class_name, class_iou in zip(self.label_names, class_iou.tolist().pop(self.ignore_index)):
             wandb.log({f"IoU - {class_name}": class_iou}, step=epoch)
 
     def _log_confusion_matrix(self, confusion_matrix: torch.Tensor, epoch: int):
