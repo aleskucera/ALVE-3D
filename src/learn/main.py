@@ -21,7 +21,10 @@ def train_semantic_model(cfg: DictConfig, device: torch.device):
     train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size)
     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size)
 
-    project_name = f'Semantic Model Training Test'
+    log.info(f'Loaded train dataset: \n{train_ds}')
+    log.info(f'Loaded val dataset: \n{val_ds}')
+
+    project_name = f'Semantic Model Training'
     group_name = f'{cfg.model.architecture} {cfg.ds.name}'
     model_name = f'{cfg.model.architecture}_{cfg.ds.name}'
     output_model_dir = os.path.join(cfg.path.models, 'semantic')
