@@ -141,12 +141,16 @@ class SemanticLogger(object):
         return {'loss': loss, 'acc': acc, 'iou': iou}
 
     def _log_class_accuracy(self, class_acc: torch.Tensor, epoch: int):
-        for class_name, class_acc in zip(self.label_names, class_acc.tolist().pop(self.ignore_index)):
-            wandb.log({f"Accuracy - {class_name}": class_acc}, step=epoch)
+        class_acc = class_acc.tolist()
+        del class_acc[self.ignore_index]
+        for name, acc in zip(self.label_names, class_acc):
+            wandb.log({f"Accuracy - {name}": acc}, step=epoch)
 
     def _log_class_iou(self, class_iou: torch.Tensor, epoch: int):
-        for class_name, class_iou in zip(self.label_names, class_iou.tolist().pop(self.ignore_index)):
-            wandb.log({f"IoU - {class_name}": class_iou}, step=epoch)
+        class_iou = class_iou.tolist()
+        del class_iou[self.ignore_index]
+        for name, iou in zip(self.label_names, class_iou):
+            wandb.log({f"IoU - {name}": iou}, step=epoch)
 
     def _log_confusion_matrix(self, confusion_matrix: torch.Tensor, epoch: int):
         conf_matrix = confusion_matrix.numpy()
@@ -166,9 +170,6 @@ class SemanticLogger(object):
         plt.xlabel('Predicted labels')
         plt.ylabel('True labels')
         plt.title('Multiclass Confusion Matrix')
-
-        # Print confusion matrix
-        plt.show()
 
         # Log confusion matrix to W&B
         wandb.log({"Confusion Matrix": wandb.Image(plt)}, step=epoch)
