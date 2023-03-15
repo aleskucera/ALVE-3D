@@ -281,6 +281,8 @@ class LaserScan:
             with h5py.File(filename, 'r') as f:
                 semantics = np.array(f['labels']).flatten()
                 label_mask = np.array(f['label_mask']).flatten()
+                voxel_map = np.array(f['voxel_map']).flatten()
+                print(f'Labels: {semantics.shape}, Voxel: {voxel_map.shape}')
                 # semantics *= label_mask
                 instances = None
         else:

@@ -39,25 +39,17 @@ class KITTI360Converter:
         # Transformation from velodyne to camera frame file
         self.calib_path = os.path.join(cfg.ds.path, 'calibration', 'calib_cam_to_velo.txt')
 
-        # Sequence windows (global clouds)
-        static_windows_path = os.path.join(self.semantics_path, 'train', self.seq_name, 'static')
-        dynamic_windows_path = os.path.join(self.semantics_path, 'train', self.seq_name, 'dynamic')
+        static_windows_dir = os.path.join(self.semantics_path, 'train', self.seq_name, 'static')
+        dynamic_windows_dir = os.path.join(self.semantics_path, 'train', self.seq_name, 'dynamic')
+        self.static_windows = sorted([os.path.join(static_windows_dir, f) for f in os.listdir(static_windows_dir)])
+        self.dynamic_windows = sorted([os.path.join(dynamic_windows_dir, f) for f in os.listdir(dynamic_windows_dir)])
 
-        # ----------------- Sequence windows -----------------
-        self.static_windows = [os.path.join(static_windows_path, f) for f in os.listdir(static_windows_path)]
-        self.dynamic_windows = [os.path.join(dynamic_windows_path, f) for f in os.listdir(dynamic_windows_path)]
-
-        self.static_windows.sort()
-        self.dynamic_windows.sort()
-
-        assert len(self.static_windows) == len(
-            self.dynamic_windows), 'Number of static and dynamic windows must be equal'
-
+        # Create a disjoint set of ranges for the windows
         self.window_ranges = get_disjoint_ranges(self.static_windows)
-        self.cloud_names = names_from_ranges(self.window_ranges)
-        self.dataset_indices, self.train_samples, self.val_samples = self.get_splits(self.window_ranges,
-                                                                                     self.train_windows_path,
-                                                                                     self.val_windows_path)
+
+        # Get the train and validation splits with the corresponding new cloud names (without overlap)
+        splits = self.get_splits(self.window_ranges, self.train_windows_path, self.val_windows_path)
+        self.train_samples, self.val_samples, self.train_clouds, self.val_clouds = splits
 
         # ----------------- Conversion attributes -----------------
         self.static_threshold = cfg.conversion.static_threshold
@@ -109,50 +101,63 @@ class KITTI360Converter:
         self.k_nn_local = 20
 
     def convert(self):
-        """Convert KITTI-360 dataset to SemanticKITTI format. This function will create a sequence directory in the
-        KITTI-360 dataset directory.
+        """Convert KITTI-360 dataset to SemanticKITTI format. That is done by following these steps:
+
+        1. Create a new directory structure for the sequence
+        2. Load the static windows, dynamic windows and the voxel clouds
+        3. For each scan:
+            - Load the velodyne scan
+            - Transform the scan to the world frame
+            - Find the nearest points in the dynamic window and remove them from the scan
+            - Find the nearest points in the static window and assign them corresponding RGB colors
+            - Find the nearest points in the voxel clouds and assign them corresponding labels and voxel ID
+            - Save the scan and the labels in the new directory structure
+        4. Save the sequence info (train and val samples)
 
         The sequence directory will contain the following files:
             - velodyne: Velodyne scans
-            - labels: SemanticKITTI labels
-            - info.npz: Sequence info (poses, train and val samples)
+            - labels: Labels for each scan
+            - info.npz: Sequence info (train and val samples)
+            - voxel_clouds: Voxel clouds for each window in the KITTI-360 dataset (this has to be created beforehand)
         """
 
         # Create output directories
         sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
 
+        # Labels directory
         labels_dir = os.path.join(sequence_path, 'labels')
-        velodyne_dir = os.path.join(sequence_path, 'velodyne')
-
         os.makedirs(labels_dir, exist_ok=True)
+
+        # Velodyne directory
+        velodyne_dir = os.path.join(sequence_path, 'velodyne')
         os.makedirs(velodyne_dir, exist_ok=True)
 
-        global_clouds_dir = os.path.join(sequence_path, 'global_clouds')
-        assert os.path.exists(global_clouds_dir), f'Global clouds directory {global_clouds_dir} does not exist'
-        global_clouds = [os.path.join(global_clouds_dir, f) for f in os.listdir(global_clouds_dir)]
-        global_clouds.sort()
+        # Clouds directory
+        voxel_clouds_dir = os.path.join(sequence_path, 'voxel_clouds')
+        assert os.path.exists(voxel_clouds_dir), f'Global clouds directory {voxel_clouds_dir} does not exist'
 
-        cloud_map = []
+        voxel_clouds = sorted([os.path.join(voxel_clouds_dir, f) for f in os.listdir(voxel_clouds_dir)])
 
-        for i, files in enumerate(zip(self.static_windows, self.dynamic_windows, global_clouds)):
+        for i, files in enumerate(zip(self.static_windows, self.dynamic_windows, voxel_clouds)):
             log.info(f'Converting window {i + 1}/{self.num_windows}')
-            static_file, dynamic_file, global_cloud_file = files
 
-            static_points, static_colors, semantic, _ = read_kitti360_ply(static_file)
+            # Load the static and dynamic windows
+            static_file, dynamic_file, voxel_cloud_file = files
+            static_points, static_colors, _, _ = read_kitti360_ply(static_file)
             dynamic_points, _, _, _ = read_kitti360_ply(dynamic_file)
 
-            with h5py.File(global_cloud_file, 'r') as f:
-                global_points = np.asarray(f['points'])
+            # Load the voxel cloud
+            with h5py.File(voxel_cloud_file, 'r') as f:
+                voxel_points = np.asarray(f['points'])
+                voxel_labels = np.asarray(f['labels'])
 
             # For each scan in the window, find the points that belong to it and write them to a files
             log.info(f'Window range: {self.window_ranges[i]}')
             start, end = self.window_ranges[i]
-            for j in tqdm(range(start, end + 1)):
+            for j in tqdm(range(start, end + 1), desc=f'Creating samples {start} - {end}'):
                 scan = read_scan(self.velodyne_path, j)
                 scan_points = scan[:, :3]
-                scan_remissions = scan[:, 3][:, np.newaxis]
-
-                cloud_map.append(i)
+                scan_remissions = scan[:, 3]
 
                 # Transform scan to the current pose
                 transformed_scan_points = transform_points(scan_points, self.poses[j])
@@ -169,41 +174,46 @@ class KITTI360Converter:
                 dists, indices = nearest_neighbors_2(static_points, transformed_scan_points, k_nn=1)
                 mask = np.logical_and(dists >= 0, dists <= self.static_threshold)
                 colors = static_colors[indices[mask]].astype(np.float32)
-                semantics = semantic[indices[mask]].astype(np.uint8)
+                transformed_scan_points = transformed_scan_points[mask]
+                scan_remissions = scan_remissions[mask]
+                scan_points = scan_points[mask]
 
-                # Find neighbours in the global cloud and assign their index
-                dists, global_indices = nearest_neighbors_2(global_points, transformed_scan_points, k_nn=1)
+                # Find neighbours in the voxel cloud and assign their label and index
+                dists, voxel_indices = nearest_neighbors_2(voxel_points, transformed_scan_points, k_nn=1)
+                labels = voxel_labels[voxel_indices].astype(np.uint8)
 
                 # Write the scan to a file
                 with h5py.File(os.path.join(velodyne_dir, f'{j:06d}.h5'), 'w') as f:
                     f.create_dataset('colors', data=colors, dtype=np.float32)
-                    f.create_dataset('points', data=scan_points[mask], dtype=np.float32)
-                    f.create_dataset('remissions', data=scan_remissions[mask], dtype=np.float32)
+                    f.create_dataset('points', data=scan_points, dtype=np.float32)
+                    f.create_dataset('remissions', data=scan_remissions, dtype=np.float32)
+                    f.create_dataset('pose', data=self.poses[j], dtype=np.float32)
 
                 # Write the labels to a file
                 with h5py.File(os.path.join(labels_dir, f'{j:06d}.h5'), 'w') as f:
-                    f.create_dataset('labels', data=semantics, dtype=np.uint8)
-                    f.create_dataset('voxel_map', data=global_indices, dtype=np.uint32)
-                    f.create_dataset('label_mask', data=np.zeros_like(semantics, dtype=np.bool), dtype=np.bool)
+                    f.create_dataset('labels', data=labels, dtype=np.uint8)
+                    f.create_dataset('voxel_map', data=voxel_indices, dtype=np.uint32)
+                    f.create_dataset('label_mask', data=np.zeros_like(labels, dtype=np.bool), dtype=np.bool)
 
         # Write the sequence info to a file
         with h5py.File(os.path.join(sequence_path, 'info.h5'), 'w') as f:
             f.create_dataset('val', data=self.val_samples)
             f.create_dataset('train', data=self.train_samples)
-            f.create_dataset('poses', data=self.poses[self.dataset_indices])
-            f.create_dataset('cloud_map', data=np.array(cloud_map), dtype=np.uint32)
+            f.create_dataset('val_clouds', data=np.array(self.train_clouds), dtype=np.str_)
+            f.create_dataset('train_clouds', data=np.array(self.train_clouds), dtype=np.str_)
             f.create_dataset('selection_mask', data=np.ones(len(self.train_samples), dtype=np.bool))
 
     def create_global_clouds(self):
         sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
-        global_cloud_dir = os.path.join(sequence_path, 'global_clouds')
+        global_cloud_dir = os.path.join(sequence_path, 'voxel_clouds')
         os.makedirs(global_cloud_dir, exist_ok=True)
 
-        for window_file, name in tqdm(zip(self.static_windows, self.cloud_names)):
-            output_file = h5py.File(os.path.join(global_cloud_dir, f'{name}.h5'), 'w')
+        clouds = np.sort(np.concatenate([self.train_clouds, self.val_clouds]))
+        for window, name in tqdm(zip(self.static_windows, clouds), total=len(clouds), desc='Creating global clouds'):
+            output_file = h5py.File(os.path.join(global_cloud_dir, name), 'w')
 
             # Read static window and downsample
-            points, colors, labels, _ = read_kitti360_ply(window_file)
+            points, colors, labels, _ = read_kitti360_ply(window)
             points, colors, labels = downsample_cloud(points, colors, labels, 0.2)
 
             # Compute graph edges
@@ -216,15 +226,50 @@ class KITTI360Converter:
             objects = connected_label_components(labels, edge_sources, edge_targets)
             edge_transitions = objects[edge_sources] != objects[edge_targets]
 
+            # Create label mask
+            label_mask = np.zeros(len(points), dtype=np.bool)
+
             output_file.create_dataset('points', data=points, dtype='float32')
             output_file.create_dataset('colors', data=colors, dtype='float32')
-            output_file.create_dataset('labels', data=labels, dtype='uint8')
+            output_file.create_dataset('labels', data=labels.flatten(), dtype='uint8')
             output_file.create_dataset('objects', data=objects, dtype='uint32')
+            output_file.create_dataset('label_mask', data=label_mask, dtype='bool')
 
             output_file.create_dataset('edge_sources', data=edge_sources, dtype='uint32')
             output_file.create_dataset('edge_targets', data=edge_targets, dtype='uint32')
             output_file.create_dataset('edge_transitions', data=edge_transitions, dtype='uint8')
             output_file.create_dataset('local_neighbors', data=local_neighbors, dtype='uint32')
+
+    def get_splits(self, window_ranges: list[tuple[int, int]], train_file: str, val_file: str) -> tuple:
+        """ Get the train and validation splits for the dataset. Also returns the cloud names.
+
+        :param window_ranges: List of tuples containing the start and end scan of each window.
+        :param train_file: Path to the train split file.
+        :param val_file: Path to the validation split file.
+        :return: Tuple containing the train and validation splits and the cloud names.
+        """
+
+        val_clouds = np.array([], dtype=np.str_)
+        val_samples = np.array([], dtype=np.str_)
+        train_clouds = np.array([], dtype=np.str_)
+        train_samples = np.array([], dtype=np.str_)
+
+        val_ranges = [get_window_range(path) for path in read_txt(val_file, self.seq_name)]
+        train_ranges = [get_window_range(path) for path in read_txt(train_file, self.seq_name)]
+
+        for i, window in enumerate(window_ranges):
+            cloud_name = f'{window[0]:06d}_{window[1]:06d}.h5'
+            window_samples = np.array([f'{j:06d}.h5' for j in np.arange(window[0], window[1] + 1)])
+            for train_range in train_ranges:
+                if train_range[0] == window[0]:
+                    train_samples = np.concatenate((train_samples, window_samples))
+                    train_clouds = np.append(train_clouds, cloud_name)
+            for val_range in val_ranges:
+                if val_range[0] == window[0]:
+                    val_samples = np.concatenate((val_samples, window_samples))
+                    val_clouds = np.append(val_clouds, cloud_name)
+
+        return train_samples, val_samples, train_clouds, val_clouds
 
     def update_window(self):
         static_points, static_colors, self.semantic, _ = read_kitti360_ply(self.static_windows[self.window_num])
@@ -300,28 +345,6 @@ class KITTI360Converter:
 
         self.scan.points = o3d.utility.Vector3dVector(transformed_scan_points)
         self.scan.colors = o3d.utility.Vector3dVector(scan_colors)
-
-    def get_splits(self, window_ranges: list[tuple[int, int]], train_path: str, val_path: str) -> tuple:
-
-        dataset_indices = []
-        val_indices = []
-        train_indices = []
-
-        train_ranges = [get_window_range(path) for path in read_txt(train_path, self.seq_name)]
-        val_ranges = [get_window_range(path) for path in read_txt(val_path, self.seq_name)]
-
-        for window in window_ranges:
-            dataset_indices += list(range(window[0], window[1] + 1))
-            for train_range in train_ranges:
-                if train_range[0] == window[0]:
-                    train_indices += list(range(window[0], window[1] + 1))
-            for val_range in val_ranges:
-                if val_range[0] == window[0]:
-                    val_indices += list(range(window[0], window[1] + 1))
-
-        train_samples = np.searchsorted(dataset_indices, train_indices)
-        val_samples = np.searchsorted(dataset_indices, val_indices)
-        return dataset_indices, train_samples, val_samples
 
     def next_window(self, vis):
         self.window_num += 1

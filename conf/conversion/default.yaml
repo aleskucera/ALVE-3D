@@ -1,6 +1,6 @@
 sequence: 3
 static_threshold: 0.2
-dynamic_threshold: 0.2
+dynamic_threshold: 0.25
 
 # Only for visualization
 visualization_step: 30

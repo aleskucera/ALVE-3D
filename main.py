@@ -30,8 +30,6 @@ def main(cfg: DictConfig):
         train_semantic_model(cfg, device)
     elif cfg.action == 'train_active':
         train_semantic_model_active(cfg, device)
-    # elif cfg.action == 'train_partition':
-    #     train_partition(cfg)
     elif cfg.action == 'convert_kitti360':
         converter = KITTI360Converter(cfg)
         converter.create_global_clouds()
