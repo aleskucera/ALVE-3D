@@ -30,8 +30,8 @@ def initialize_dataset(dataset_path: str, sequences: list, active: bool = False)
 
         # Update the selection mask in the info file and load the train samples
         with h5py.File(info_path, 'r+') as f:
-            train_samples = np.asarray(f['train'])
-            train_clouds = np.asarray(f['train_clouds'])
+            train_samples = np.asarray(f['train']).astype(np.str_)
+            train_clouds = np.asarray(f['train_clouds']).astype(np.str_)
             train_labels = np.array([os.path.join(labels_dir, t) for t in train_samples], dtype=np.str_)
             train_clouds = np.array([os.path.join(clouds_dir, t) for t in train_clouds], dtype=np.str_)
             selection_mask = np.zeros_like(f['selection_mask']) if active else np.ones_like(f['selection_mask'])
@@ -83,7 +83,7 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
         scans_dir = os.path.join(sequence_dir, 'velodyne')
 
         with h5py.File(info_path, 'r+') as f:
-            split_samples = np.asarray(f[split])
+            split_samples = np.asarray(f[split]).astype(np.str_)
             seq_cloud_map = create_cloud_map(np.asarray(f[f'{split}_clouds']))
             seq_selection_mask = np.asarray(f['selection_mask']) if split == 'train' else np.ones_like(split_samples)
 
