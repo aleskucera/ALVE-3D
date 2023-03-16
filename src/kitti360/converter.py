@@ -138,13 +138,16 @@ class KITTI360Converter:
 
         voxel_clouds = sorted([os.path.join(voxel_clouds_dir, f) for f in os.listdir(voxel_clouds_dir)])
 
+        val_samples, train_samples = self.val_samples.astype('S'), self.train_samples.astype('S')
+        val_clouds, train_clouds = self.val_clouds.astype('S'), self.train_clouds.astype('S')
+
         # Write the sequence info to a file
         with h5py.File(os.path.join(sequence_path, 'info.h5'), 'w') as f:
-            f.create_dataset('val', data=self.val_samples)
-            f.create_dataset('train', data=self.train_samples)
-            f.create_dataset('val_clouds', data=self.train_clouds)
-            f.create_dataset('train_clouds', data=self.train_clouds)
-            f.create_dataset('selection_mask', data=np.ones(len(self.train_samples), dtype=np.bool))
+            f.create_dataset('val', data=val_samples)
+            f.create_dataset('train', data=train_samples)
+            f.create_dataset('val_clouds', data=train_clouds)
+            f.create_dataset('train_clouds', data=train_clouds)
+            f.create_dataset('selection_mask', data=np.ones(len(train_samples), dtype=np.bool))
 
         for i, files in enumerate(zip(self.static_windows, self.dynamic_windows, voxel_clouds)):
             log.info(f'Converting window {i + 1}/{self.num_windows}')
@@ -249,10 +252,10 @@ class KITTI360Converter:
         :return: Tuple containing the train and validation splits and the cloud names.
         """
 
-        val_clouds = np.array([], dtype='S')
-        val_samples = np.array([], dtype='S')
-        train_clouds = np.array([], dtype='S')
-        train_samples = np.array([], dtype='S')
+        val_clouds = np.array([], dtype=np.str_)
+        val_samples = np.array([], dtype=np.str_)
+        train_clouds = np.array([], dtype=np.str_)
+        train_samples = np.array([], dtype=np.str_)
 
         val_ranges = [get_window_range(path) for path in read_txt(val_file, self.seq_name)]
         train_ranges = [get_window_range(path) for path in read_txt(train_file, self.seq_name)]
@@ -269,7 +272,7 @@ class KITTI360Converter:
                     val_samples = np.concatenate((val_samples, window_samples))
                     val_clouds = np.append(val_clouds, cloud_name)
 
-        return train_samples, val_samples, train_clouds.astype('S'), val_clouds.astype('S')
+        return train_samples, val_samples, train_clouds, val_clouds
 
     def update_window(self):
         static_points, static_colors, self.semantic, _ = read_kitti360_ply(self.static_windows[self.window_num])
