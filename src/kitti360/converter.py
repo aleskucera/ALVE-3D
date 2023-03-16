@@ -138,6 +138,14 @@ class KITTI360Converter:
 
         voxel_clouds = sorted([os.path.join(voxel_clouds_dir, f) for f in os.listdir(voxel_clouds_dir)])
 
+        # Write the sequence info to a file
+        with h5py.File(os.path.join(sequence_path, 'info.h5'), 'w') as f:
+            f.create_dataset('val', data=self.val_samples)
+            f.create_dataset('train', data=self.train_samples)
+            f.create_dataset('val_clouds', data=self.train_clouds)
+            f.create_dataset('train_clouds', data=self.train_clouds)
+            f.create_dataset('selection_mask', data=np.ones(len(self.train_samples), dtype=np.bool))
+
         for i, files in enumerate(zip(self.static_windows, self.dynamic_windows, voxel_clouds)):
             log.info(f'Converting window {i + 1}/{self.num_windows}')
 
@@ -195,14 +203,6 @@ class KITTI360Converter:
                     f.create_dataset('voxel_map', data=voxel_indices, dtype=np.uint32)
                     f.create_dataset('label_mask', data=np.zeros_like(labels, dtype=np.bool), dtype=np.bool)
 
-        # Write the sequence info to a file
-        with h5py.File(os.path.join(sequence_path, 'info.h5'), 'w') as f:
-            f.create_dataset('val', data=self.val_samples, dtype=np.str_)
-            f.create_dataset('train', data=self.train_samples, dtype=np.str_)
-            f.create_dataset('val_clouds', data=np.array(self.train_clouds), dtype=np.str_)
-            f.create_dataset('train_clouds', data=np.array(self.train_clouds), dtype=np.str_)
-            f.create_dataset('selection_mask', data=np.ones(len(self.train_samples), dtype=np.bool))
-
     def create_global_clouds(self):
         sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
         global_cloud_dir = os.path.join(sequence_path, 'voxel_clouds')
@@ -249,17 +249,17 @@ class KITTI360Converter:
         :return: Tuple containing the train and validation splits and the cloud names.
         """
 
-        val_clouds = np.array([], dtype=np.str_)
-        val_samples = np.array([], dtype=np.str_)
-        train_clouds = np.array([], dtype=np.str_)
-        train_samples = np.array([], dtype=np.str_)
+        val_clouds = np.array([], dtype='S')
+        val_samples = np.array([], dtype='S')
+        train_clouds = np.array([], dtype='S')
+        train_samples = np.array([], dtype='S')
 
         val_ranges = [get_window_range(path) for path in read_txt(val_file, self.seq_name)]
         train_ranges = [get_window_range(path) for path in read_txt(train_file, self.seq_name)]
 
         for i, window in enumerate(window_ranges):
             cloud_name = f'{window[0]:06d}_{window[1]:06d}.h5'
-            window_samples = np.array([f'{j:06d}.h5' for j in np.arange(window[0], window[1] + 1)], dtype=np.str_)
+            window_samples = np.array([f'{j:06d}.h5' for j in np.arange(window[0], window[1] + 1)], dtype='S')
             for train_range in train_ranges:
                 if train_range[0] == window[0]:
                     train_samples = np.concatenate((train_samples, window_samples))
@@ -269,7 +269,7 @@ class KITTI360Converter:
                     val_samples = np.concatenate((val_samples, window_samples))
                     val_clouds = np.append(val_clouds, cloud_name)
 
-        return train_samples, val_samples, train_clouds, val_clouds
+        return train_samples, val_samples, train_clouds.astype('S'), val_clouds.astype('S')
 
     def update_window(self):
         static_points, static_colors, self.semantic, _ = read_kitti360_ply(self.static_windows[self.window_num])
