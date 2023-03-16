@@ -197,8 +197,8 @@ class KITTI360Converter:
 
         # Write the sequence info to a file
         with h5py.File(os.path.join(sequence_path, 'info.h5'), 'w') as f:
-            f.create_dataset('val', data=self.val_samples)
-            f.create_dataset('train', data=self.train_samples)
+            f.create_dataset('val', data=self.val_samples, dtype=np.str_)
+            f.create_dataset('train', data=self.train_samples, dtype=np.str_)
             f.create_dataset('val_clouds', data=np.array(self.train_clouds), dtype=np.str_)
             f.create_dataset('train_clouds', data=np.array(self.train_clouds), dtype=np.str_)
             f.create_dataset('selection_mask', data=np.ones(len(self.train_samples), dtype=np.bool))
@@ -259,7 +259,7 @@ class KITTI360Converter:
 
         for i, window in enumerate(window_ranges):
             cloud_name = f'{window[0]:06d}_{window[1]:06d}.h5'
-            window_samples = np.array([f'{j:06d}.h5' for j in np.arange(window[0], window[1] + 1)])
+            window_samples = np.array([f'{j:06d}.h5' for j in np.arange(window[0], window[1] + 1)], dtype=np.str_)
             for train_range in train_ranges:
                 if train_range[0] == window[0]:
                     train_samples = np.concatenate((train_samples, window_samples))

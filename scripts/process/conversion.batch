@@ -2,7 +2,7 @@
 
 #SBATCH --nodes=1                         # 1 node
 #SBATCH --ntasks-per-node=4               # 8 CPUs per node
-#SBATCH --time=23:00:00                   # time limits: 12 hours
+#SBATCH --time=1-00:00:00                   # time limits: 1 day
 #SBATCH --error=conversion_3.err          # standard error file
 #SBATCH --output=conversion_3.out         # standard output file
 #SBATCH --partition=amd                   # partition name
