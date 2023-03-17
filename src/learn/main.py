@@ -22,8 +22,7 @@ def train_semantic_model(cfg: DictConfig, device: torch.device):
 
     project_name = f'Semantic Model Training'
     group_name = f'{cfg.model.architecture} {cfg.ds.name}'
-    model_name = f'{cfg.model.architecture}_{cfg.ds.name}'
-    output_model_dir = os.path.join(cfg.path.models, 'semantic')
+    model_path = os.path.join(cfg.path.models, 'semantic', f'{cfg.model.architecture}_{cfg.ds.name}')
 
     run = wandb.init(project=project_name, group=group_name, resume=resume)
 
@@ -33,9 +32,8 @@ def train_semantic_model(cfg: DictConfig, device: torch.device):
     log.info(f'Loaded train dataset: \n{train_ds}')
     log.info(f'Loaded val dataset: \n{val_ds}')
 
-    with wandb.init(project=project_name, group=group_name):
-        trainer = Trainer(cfg, train_ds, val_ds, device, model_name, output_model_dir, resume)
-        trainer.train(cfg.train.epochs)
+    trainer = Trainer(cfg, train_ds, val_ds, device, model_path, resume)
+    trainer.train()
 
 
 def train_semantic_model_active(cfg: DictConfig, device: torch.device):
@@ -56,13 +54,3 @@ def train_semantic_model_active(cfg: DictConfig, device: torch.device):
     with wandb.init(project=project_name, group=group_name):
         trainer = ActiveTrainer(cfg, train_ds, val_ds, device, model_name, output_model_dir, 'random_voxels')
         trainer.train(cfg.train.epochs)
-
-
-def train_partition_model(cfg: DictConfig, device: torch.device):
-    """ Train a transformation model for partitioning a point cloud into a superpoints.
-
-    :param cfg: The configuration of the project.
-    :param device: The device to train on.
-    """
-
-    raise NotImplementedError
