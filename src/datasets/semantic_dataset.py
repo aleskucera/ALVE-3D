@@ -31,6 +31,7 @@ class SemanticDataset(Dataset):
 
         self.cfg = cfg
         self.size = size
+        self.init = init
         self.split = split
         self.path = dataset_path
         self.active = active_mode
