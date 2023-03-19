@@ -91,11 +91,12 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
         seq_scans = np.array([os.path.join(scans_dir, t) for t in split_samples], dtype=np.str_)
         seq_labels = np.array([os.path.join(labels_dir, t) for t in split_samples], dtype=np.str_)
 
-        scans = np.concatenate((scans, seq_scans), axis=0)
-        labels = np.concatenate((labels, seq_labels), axis=0)
-        cloud_map = np.concatenate((cloud_map, seq_cloud_map), axis=0)
-        selection_mask = np.concatenate((selection_mask, seq_selection_mask), axis=0)
-        sequence_map = np.concatenate((sequence_map, np.full_like(split_samples, fill_value=sequence)), axis=0)
+        scans = np.concatenate((scans, seq_scans), axis=0).astype(np.str_)
+        labels = np.concatenate((labels, seq_labels), axis=0).astype(np.str_)
+        cloud_map = np.concatenate((cloud_map, seq_cloud_map), axis=0).astype(np.int32)
+        selection_mask = np.concatenate((selection_mask, seq_selection_mask), axis=0).astype(bool)
+        sequence_map = np.concatenate((sequence_map, np.full_like(split_samples, fill_value=sequence)), axis=0).astype(
+            np.int32)
 
         print(f'Scans type: {scans.dtype}')
         print(f'Labels type: {labels.dtype}')
