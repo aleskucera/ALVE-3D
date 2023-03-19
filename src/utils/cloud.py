@@ -7,6 +7,7 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.linear_model import RANSACRegressor
 from scipy.spatial.transform import Rotation as R
 
+import wandb
 from src.ply_c import libply_c
 from src.utils.map import colorize, colorize_instances
 
@@ -100,14 +101,8 @@ def transform_points(points: np.ndarray, transform: np.ndarray):
     return np.matmul(points, transform.T)[:, :3]
 
 
-def visualize_global_cloud(points: iter, colors: iter, poses: iter, step: int = 10,
-                           voxel_size: float = 0.2) -> None:
+def visualize_global_cloud(points: iter, colors: iter, poses: iter, voxel_size: float = 0.2, log: bool = False) -> None:
     cloud, cloud_color = [], []
-
-    points = points[::step]
-    colors = colors[::step]
-    poses = poses[::step]
-
     for p, c, pos in tqdm(zip(points, colors, poses), total=len(points), desc='Creating global cloud'):
         transformed_points = transform_points(p, pos)
 
@@ -119,7 +114,11 @@ def visualize_global_cloud(points: iter, colors: iter, poses: iter, step: int = 
 
     # Down sample global cloud with voxel grid
     cloud, color = downsample_cloud(cloud, color, voxel_size=voxel_size)
-    visualize_cloud(cloud, color)
+
+    if log:
+        wandb.log({'global_cloud': [wandb.Object3D(np.concatenate([cloud, color * 255], axis=1))]})
+    else:
+        visualize_cloud(cloud, color)
 
 
 def calculate_radial_distances(points: np.ndarray, center: np.ndarray = None):

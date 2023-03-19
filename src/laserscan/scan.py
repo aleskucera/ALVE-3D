@@ -75,6 +75,7 @@ class LaserScan:
         self.points = None
         self.color = None
         self.remissions = None
+        self.pose = None
 
         self.radius = None
         self.drop_mask = None
@@ -131,11 +132,6 @@ class LaserScan:
         self.proj_superpoints = None
         self.proj_superpoints_color = None
 
-        # Global indices
-        self.global_indices = None
-        self.global_cloud_num = None
-        self.label_mask = None
-
     def __len__(self):
         return self.points.shape[0]
 
@@ -168,7 +164,8 @@ class LaserScan:
             with h5py.File(filename, 'r') as f:
                 points = np.array(f['points'])
                 color = np.array(f['colors'])
-                remissions = np.array(f['remissions']).flatten()
+                remissions = np.array(f['remissions'])
+                self.pose = np.array(f['pose'])
         else:
             raise ValueError('Invalid file extension')
         self.set_scan(points, remissions, color, flip_prob, trans_prob, rot_prob, drop_prob)
@@ -280,10 +277,8 @@ class LaserScan:
         elif filename.endswith('.h5'):
             with h5py.File(filename, 'r') as f:
                 semantics = np.array(f['labels']).flatten()
-                label_mask = np.array(f['label_mask']).flatten()
-                voxel_map = np.array(f['voxel_map']).flatten()
-                print(f'Labels: {semantics.shape}, Voxel: {voxel_map.shape}')
-                # semantics *= label_mask
+                # label_mask = np.array(f['label_mask']).flatten()
+                # voxel_map = np.array(f['voxel_map']).flatten()
                 instances = None
         else:
             raise ValueError('Invalid file extension')

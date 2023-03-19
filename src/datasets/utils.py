@@ -98,12 +98,6 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
         sequence_map = np.concatenate((sequence_map, np.full_like(split_samples, fill_value=sequence)), axis=0).astype(
             np.int32)
 
-        print(f'Scans type: {scans.dtype}')
-        print(f'Labels type: {labels.dtype}')
-        print(f'Cloud map type: {cloud_map.dtype}')
-        print(f'Sequence map type: {sequence_map.dtype}')
-        print(f'Selection mask type: {selection_mask.dtype}')
-
     return scans, labels, sequence_map, cloud_map, selection_mask
 
 

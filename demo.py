@@ -84,27 +84,35 @@ def visualize_sequence(cfg: DictConfig) -> None:
 
     size = cfg.size if 'size' in cfg else None
     split = cfg.split if 'split' in cfg else 'train'
-    sequences = [cfg.sequence] if 'sequence' in cfg else [3]
+    sequence = cfg.sequence if 'sequence' in cfg else 3
 
     # Create dataset
-    dataset = SemanticDataset(dataset_path=cfg.ds.path, cfg=cfg.ds,
-                              split=split, size=size, sequences=sequences)
+    train_ds = SemanticDataset(dataset_path=cfg.ds.path, cfg=cfg.ds, split='train', size=size, sequences=[sequence])
+    val_ds = SemanticDataset(dataset_path=cfg.ds.path, cfg=cfg.ds, split='val', size=size, sequences=[sequence])
 
     # Create scan object
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
 
     # Load the sequence
     points, colors, poses = [], [], []
-    for i in tqdm(range(len(dataset)), desc='Loading sequence'):
-        scan.open_scan(dataset.scan_files[i])
-        scan.open_label(dataset.label_files[i])
-        pose = dataset.poses[i]
+    for i in tqdm(range(len(train_ds)), desc='Loading train sequence'):
+        scan.open_scan(train_ds.scan_files[i])
+        scan.open_label(train_ds.label_files[i])
 
         points.append(scan.points)
         colors.append(scan.sem_label_color)
-        poses.append(pose)
+        poses.append(scan.pose)
 
-    visualize_global_cloud(points, colors, poses, step=5, voxel_size=0.2)
+    for i in tqdm(range(len(val_ds)), desc='Loading val sequence'):
+        scan.open_scan(val_ds.scan_files[i])
+        scan.open_label(val_ds.label_files[i])
+
+        points.append(scan.points)
+        colors.append(scan.sem_label_color)
+        poses.append(scan.pose)
+
+    with wandb.init(project='Sequence Visualization 2', group=cfg.ds.name, name=f'Sequence {sequence}'):
+        visualize_global_cloud(points, colors, poses, voxel_size=1, log=True)
 
 
 def log_sequence(cfg: DictConfig) -> None:
