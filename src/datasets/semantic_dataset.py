@@ -49,7 +49,6 @@ class SemanticDataset(Dataset):
         self.proj_fov_up = cfg.projection.fov_up
         self.proj_fov_down = cfg.projection.fov_down
 
-        self.poses = None
         self.scans = None
         self.labels = None
 
@@ -94,9 +93,8 @@ class SemanticDataset(Dataset):
         """
 
         data = load_semantic_dataset(self.path, self.sequences, self.split, self.active, self.init)
-        self.scans, self.labels, self.poses, self.sequence_map, self.cloud_map, self.selection_mask = data
+        self.scans, self.labels, self.sequence_map, self.cloud_map, self.selection_mask = data
 
-        self.poses = self.poses[:self.size]
         self.scans = self.scans[:self.size]
         self.labels = self.labels[:self.size]
         self.sequence_map = self.sequence_map[:self.size]
