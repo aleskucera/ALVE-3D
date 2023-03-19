@@ -85,7 +85,8 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
         with h5py.File(info_path, 'r+') as f:
             split_samples = np.asarray(f[split]).astype(np.str_)
             seq_cloud_map = create_cloud_map(np.asarray(f[f'{split}_clouds']).astype(np.str_))
-            seq_selection_mask = np.asarray(f['selection_mask']) if split == 'train' else np.ones_like(split_samples)
+            seq_selection_mask = np.asarray(f['selection_mask']).astype(bool) if split == 'train' else np.ones_like(
+                split_samples)
 
         seq_scans = np.array([os.path.join(scans_dir, t) for t in split_samples], dtype=np.str_)
         seq_labels = np.array([os.path.join(labels_dir, t) for t in split_samples], dtype=np.str_)
@@ -95,6 +96,12 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
         cloud_map = np.concatenate((cloud_map, seq_cloud_map), axis=0)
         selection_mask = np.concatenate((selection_mask, seq_selection_mask), axis=0)
         sequence_map = np.concatenate((sequence_map, np.full_like(split_samples, fill_value=sequence)), axis=0)
+
+        print(f'Scans type: {scans.dtype}')
+        print(f'Labels type: {labels.dtype}')
+        print(f'Cloud map type: {cloud_map.dtype}')
+        print(f'Sequence map type: {sequence_map.dtype}')
+        print(f'Selection mask type: {selection_mask.dtype}')
 
     return scans, labels, sequence_map, cloud_map, selection_mask
 
