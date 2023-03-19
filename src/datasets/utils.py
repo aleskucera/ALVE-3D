@@ -84,7 +84,7 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
 
         with h5py.File(info_path, 'r+') as f:
             split_samples = np.asarray(f[split]).astype(np.str_)
-            seq_cloud_map = create_cloud_map(np.asarray(f[f'{split}_clouds']))
+            seq_cloud_map = create_cloud_map(np.asarray(f[f'{split}_clouds']).astype(np.str_))
             seq_selection_mask = np.asarray(f['selection_mask']) if split == 'train' else np.ones_like(split_samples)
 
         seq_scans = np.array([os.path.join(scans_dir, t) for t in split_samples], dtype=np.str_)
