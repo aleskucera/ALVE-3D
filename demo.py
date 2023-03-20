@@ -112,7 +112,7 @@ def visualize_sequence(cfg: DictConfig) -> None:
         poses.append(scan.pose)
 
     with wandb.init(project='Sequence Visualization 2', group=cfg.ds.name, name=f'Sequence {sequence}'):
-        visualize_global_cloud(points, colors, poses, voxel_size=1, log=True)
+        visualize_global_cloud(points, colors, poses, voxel_size=2, log=True)
 
 
 def log_sequence(cfg: DictConfig) -> None:
