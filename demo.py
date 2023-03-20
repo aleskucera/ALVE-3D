@@ -95,7 +95,7 @@ def visualize_sequence(cfg: DictConfig) -> None:
 
     # Load the sequence
     points, colors, poses = [], [], []
-    for i in tqdm(range(len(train_ds)), desc='Loading train sequence'):
+    for i in tqdm(range(0, len(train_ds), 10), desc='Loading train sequence'):
         scan.open_scan(train_ds.scan_files[i])
         scan.open_label(train_ds.label_files[i])
 
@@ -103,7 +103,7 @@ def visualize_sequence(cfg: DictConfig) -> None:
         colors.append(scan.sem_label_color)
         poses.append(scan.pose)
 
-    for i in tqdm(range(len(val_ds)), desc='Loading val sequence'):
+    for i in tqdm(range(0, len(val_ds), 10), desc='Loading val sequence'):
         scan.open_scan(val_ds.scan_files[i])
         scan.open_label(val_ds.label_files[i])
 
