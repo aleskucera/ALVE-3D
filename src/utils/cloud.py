@@ -102,6 +102,10 @@ def transform_points(points: np.ndarray, transform: np.ndarray):
 
 
 def visualize_global_cloud(points: iter, colors: iter, poses: iter, voxel_size: float = 0.2, log: bool = False) -> None:
+    points = points[::10]
+    colors = colors[::10]
+    poses = poses[::10]
+
     cloud, cloud_color = [], []
     for p, c, pos in tqdm(zip(points, colors, poses), total=len(points), desc='Creating global cloud'):
         transformed_points = transform_points(p, pos)
