@@ -81,7 +81,7 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
 
     scans = np.array([], dtype=np.str_)
     labels = np.array([], dtype=np.str_)
-    cloud_map = np.array([], dtype=np.int32)
+    cloud_map = np.array([], dtype=np.str_)
     sequence_map = np.array([], dtype=np.int32)
     selection_mask = np.array([], dtype=bool)
 
@@ -90,19 +90,22 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
         info_path = os.path.join(sequence_dir, 'info.h5')
         labels_dir = os.path.join(sequence_dir, 'labels')
         scans_dir = os.path.join(sequence_dir, 'velodyne')
+        clouds_dir = os.path.join(sequence_dir, 'voxel_clouds')
 
         with h5py.File(info_path, 'r+') as f:
             split_samples = np.asarray(f[split]).astype(np.str_)
-            seq_cloud_map = create_cloud_map(np.asarray(f[f'{split}_clouds']).astype(np.str_))
+            seq_clouds = np.asarray(f[f'{split}_clouds']).astype(np.str_)
+            seq_cloud_map = create_cloud_map(seq_clouds)
             seq_selection_mask = np.asarray(f['selection_mask']).astype(bool) if split == 'train' else np.ones_like(
                 split_samples)
 
         seq_scans = np.array([os.path.join(scans_dir, t) for t in split_samples], dtype=np.str_)
         seq_labels = np.array([os.path.join(labels_dir, t) for t in split_samples], dtype=np.str_)
+        seq_cloud_map = np.array([os.path.join(clouds_dir, t) for t in seq_cloud_map], dtype=np.str_)
 
         scans = np.concatenate((scans, seq_scans), axis=0).astype(np.str_)
         labels = np.concatenate((labels, seq_labels), axis=0).astype(np.str_)
-        cloud_map = np.concatenate((cloud_map, seq_cloud_map), axis=0).astype(np.int32)
+        cloud_map = np.concatenate((cloud_map, seq_cloud_map), axis=0).astype(np.str_)
         selection_mask = np.concatenate((selection_mask, seq_selection_mask), axis=0).astype(bool)
         sequence_map = np.concatenate((sequence_map, np.full_like(split_samples, fill_value=sequence)), axis=0).astype(
             np.int32)
@@ -111,6 +114,16 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
 
 
 def create_cloud_map(clouds: np.ndarray) -> np.ndarray:
+    cloud_map = np.array([], dtype=np.str_)
+    for cloud_file in sorted(clouds):
+        cloud_name = os.path.splitext(cloud_file)[0]
+        split_cloud_name = cloud_name.split('_')
+        cloud_size = int(split_cloud_name[1]) - int(split_cloud_name[0]) + 1
+        cloud_map = np.concatenate((cloud_map, np.tile(cloud_file, cloud_size)), axis=0).astype(np.str_)
+    return cloud_map
+
+
+def create_cloud_map_2(clouds: np.ndarray) -> np.ndarray:
     """ Create a cloud map which maps every sample to the specific cloud it belongs to. The index of the
     cloud is relative to the sequence. The cloud map is created by executing a following steps:
 

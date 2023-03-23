@@ -22,15 +22,15 @@ class VoxelCloud(object):
     :param seq_cloud_id: The id of the cloud in the sequence (unique for each cloud in sequence)
     """
 
-    def __init__(self, path: str, size: int, label_mask: torch.Tensor, cloud_id: int, sequence: int, seq_cloud_id: int):
+    def __init__(self, path: str, size: int, label_mask: torch.Tensor, cloud_id: int):
         self.eps = 1e-6  # Small value to avoid division by zero
         self.path = path
         self.size = size
         self.labeled_voxels = label_mask
 
         self.id = cloud_id
-        self.sequence = sequence
-        self.seq_cloud_id = seq_cloud_id
+        # self.sequence = sequence
+        # self.seq_cloud_id = seq_cloud_id
 
         self.voxel_map = torch.zeros((0,), dtype=torch.int32)
         self.distances = torch.zeros((0,), dtype=torch.float32)
@@ -68,6 +68,13 @@ class VoxelCloud(object):
         self.distances = torch.cat((self.distances, unlabeled_distances), dim=0)
         self.voxel_map = torch.cat((self.voxel_map, unlabeled_voxel_map), dim=0)
 
+    def reset(self) -> None:
+        """ Reset the cloud by removing all predictions and other information. """
+
+        self.voxel_map = torch.zeros((0,), dtype=torch.int32)
+        self.distances = torch.zeros((0,), dtype=torch.float32)
+        self.predictions = torch.zeros((0,), dtype=torch.float32)
+
     def label_voxels(self, voxels: torch.Tensor, dataset: Dataset) -> None:
         """ Label the given voxels in the dataset. The voxels are labeled by updating the `labeled_voxels` attribute,
         changing `label_map` of each sample on the disk and `selected_mask` of the sequence the cloud belongs to.
@@ -80,7 +87,7 @@ class VoxelCloud(object):
         self.labeled_voxels[voxels] = True
         with h5py.File(self.path, 'r+') as f:
             f['label_mask'][...] = self.labeled_voxels.numpy()
-        dataset.label_voxels(voxels.numpy(), self.sequence, self.seq_cloud_id)
+        dataset.label_voxels(voxels.numpy(), self.path)
 
     def get_viewpoint_entropies(self):
         """ Calculate the viewpoint entropy for each voxel in the cloud. This is done by executing the following steps:
@@ -242,8 +249,7 @@ class VoxelCloud(object):
     def __str__(self):
         ret = f'\nVoxelCloud:\n' \
               f'\t - Cloud ID = {self.id}, \n' \
-              f'\t - Sequence = {self.sequence}, \n' \
-              f'\t - Cloud ID relative to sequence = {self.seq_cloud_id}, \n' \
+              f'\t - Cloud path = {self.path}, \n' \
               f'\t - Number of voxels in cloud = {self.size}\n' \
               f'\t - Number of model predictions = {self.predictions.shape[0]}\n'
         if self.num_classes > 0:
@@ -278,8 +284,7 @@ if __name__ == '__main__':
     print(f'\nVoxel map:\n{voxel_mapping}\n')
 
     # Create a voxel cloud with 3 voxels
-    cloud = VoxelCloud(path='', size=3, label_mask=torch.zeros(3, dtype=torch.bool),
-                       cloud_id=0, sequence=0, seq_cloud_id=0)
+    cloud = VoxelCloud(path='/path/to/cloud', size=3, label_mask=torch.zeros(3, dtype=torch.bool), cloud_id=0)
 
     print(f'\nCreating cloud with 3 voxels and adding 5 predictions:\n')
     cloud.add_predictions(model_outputs, radial_distances, voxel_mapping)

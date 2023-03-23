@@ -32,7 +32,7 @@ def main(cfg: DictConfig):
         train_semantic_model_active(cfg, device)
     elif cfg.action == 'convert_kitti360':
         converter = KITTI360Converter(cfg)
-        converter.create_global_clouds()
+        # converter.create_global_clouds()
         converter.convert()
     else:
         log.error(f'The action "{cfg.action}" is not supported')

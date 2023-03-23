@@ -25,13 +25,13 @@ class SemanticDataset(Dataset):
     """
 
     def __init__(self, dataset_path: str, cfg: DictConfig, split: str, size: int = None,
-                 active_mode: bool = False, sequences: iter = None, init: bool = False):
+                 active_mode: bool = False, sequences: iter = None, resume: bool = False):
 
         assert split in ['train', 'val']
 
         self.cfg = cfg
         self.size = size
-        self.init = init
+        self.resume = resume
         self.split = split
         self.path = dataset_path
         self.active = active_mode
@@ -92,7 +92,7 @@ class SemanticDataset(Dataset):
         the samples to the original dataset.
         """
 
-        data = load_semantic_dataset(self.path, self.sequences, self.split, self.active, self.init)
+        data = load_semantic_dataset(self.path, self.sequences, self.split, self.active, self.resume)
         self.scans, self.labels, self.sequence_map, self.cloud_map, self.selection_mask = data
 
         self.scans = self.scans[:self.size]
@@ -120,9 +120,9 @@ class SemanticDataset(Dataset):
         for sequence, mask in zip(sequences, selection_masks):
             info_file = os.path.join(self.path, 'sequences', f'{sequence:02d}', 'info.h5')
             with h5py.File(info_file, 'r+') as f:
-                f['selection_mask'][...] = mask
+                f['selection_mask'][:mask.shape[0]] = mask
 
-    def label_voxels(self, voxels: np.ndarray, sequence: int, cloud: int) -> None:
+    def label_voxels(self, voxels: np.ndarray, cloud_path: str) -> None:
         """ Label the voxels in the dataset. This is used when the dataset is used in an active training when
         VoxelSelector object selects the samples to label. It updates the selection mask and the label masks
         which contains points inside the selected voxels.
@@ -132,14 +132,8 @@ class SemanticDataset(Dataset):
         :param cloud: Cloud index relative to the sequence.
         """
 
-        # Select labels, cloud indices and sample indices for a given sequence
-        seq_labels = self.labels[np.where(self.sequence_map == sequence)[0]]
-        seq_cloud_map = self.cloud_map[np.where(self.sequence_map == sequence)[0]]
-        seq_sample_map = self.sample_map[np.where(self.sequence_map == sequence)[0]]
-
-        # From selected sequence labels and sample indices select the ones that are in the given cloud
-        labels = seq_labels[np.where(seq_cloud_map == cloud)[0]]
-        sample_map = seq_sample_map[np.where(seq_cloud_map == cloud)[0]]
+        labels = self.labels[np.where(self.cloud_map == cloud_path)[0]]
+        sample_map = self.sample_map[np.where(self.cloud_map == cloud_path)[0]]
 
         # Iterate over all labels, which points can be inside the selected voxels
         for label_file, sample_idx in tqdm(zip(labels, sample_map), total=len(labels), desc='Labeling voxels'):
@@ -203,7 +197,7 @@ class SemanticDataset(Dataset):
         # Load voxel map
         with h5py.File(self.labels[idx], 'r') as f:
             labels = np.asarray(f['labels']).flatten()
-            voxel_map = np.asarray(f['voxel_map']).flatten()
+            voxel_map = np.asarray(f['voxel_map']).flatten().astype(np.float32)
             voxel_map[labels == self.ignore_index] = float('nan')
 
         # Project points to image and map the projection
@@ -227,7 +221,7 @@ class SemanticDataset(Dataset):
         proj_voxel_map = np.full((self.proj_H, self.proj_W), float('nan'), dtype=np.float32)
         proj_voxel_map[proj_mask] = voxel_map[proj_idx[proj_mask]]
 
-        return proj_scan, proj_distances, proj_voxel_map, self.sequence_map[idx], self.cloud_map[idx]
+        return proj_scan, proj_distances, proj_voxel_map, self.cloud_map[idx]
 
     def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray]:
         """Returns a sample from the dataset. The sample is projected velodyne scan and the corresponding
@@ -296,28 +290,47 @@ class SemanticDataset(Dataset):
     def get_full_length(self):
         return len(self.scans)
 
-    def get_dataset_clouds(self) -> tuple[np.ndarray, np.ndarray]:
-        """ Returns the clouds which are in the dataset for the VoxelSelector class. The structure is a tuple of two
-        arrays. The first array contains the cloud ids with respect to the sequence and the second
-        array contains the sequence ids mapping each cloud to a sequence.
+    def get_dataset_clouds(self) -> np.ndarray:
+        return np.unique(self.cloud_map)
 
-        :return: Cloud ids, sequence map
-        """
+    def get_statistics(self, ignore: int = 0) -> tuple[np.ndarray, np.ndarray, float]:
+        cloud_paths = self.get_dataset_clouds()
 
-        # Sort the maps by the sequence id
-        order = np.argsort(self.sequence_map)
-        sequence_map = self.sequence_map[order]
-        cloud_map = self.cloud_map[order]
+        counter = 0
+        labeled_counter = 0
 
-        clouds_ids, sequences = np.array([], dtype=np.long), np.array([], dtype=np.long)
-        for sequence in np.unique(sequence_map):
-            seq_cloud_ids = np.unique(cloud_map[sequence_map == sequence])
-            clouds_ids = np.concatenate((clouds_ids, seq_cloud_ids))
-            sequences = np.concatenate((sequences, np.full_like(seq_cloud_ids, sequence)))
+        class_counts = np.zeros(self.num_classes, dtype=np.long)
+        labeled_class_counts = np.zeros(self.num_classes, dtype=np.long)
 
-        return clouds_ids, sequences
+        for path in cloud_paths:
+            with h5py.File(path, 'r') as f:
+                labels = np.asarray(f['labels']).flatten()
+                label_mask = np.asarray(f['label_mask']).flatten()
+                labels = map_labels(labels, self.label_map)
 
-    def calculate_class_statistics(self) -> np.ndarray:
+                # Add counts to the class counts
+                all_labels = labels[labels != ignore]
+                unique_labels, counts = np.unique(all_labels, return_counts=True)
+                class_counts[unique_labels] += counts
+                counter += np.sum(counts)
+
+                # Add counts to the labeled class counts
+                selected_labels = labels * label_mask
+                selected_labels = selected_labels[selected_labels != ignore]
+                unique_labels, counts = np.unique(selected_labels, return_counts=True)
+                labeled_class_counts[unique_labels] += counts
+                labeled_counter += np.sum(counts)
+
+        # Check if there are zeros because of the division
+        class_counts[class_counts == 0] = 1
+
+        class_distribution = class_counts / counter
+        class_progress = labeled_class_counts / class_counts
+        labeled_ratio = labeled_counter / counter
+
+        return class_distribution, class_progress, labeled_ratio
+
+    def calculate_class_statistics_2(self) -> np.ndarray:
         """ Calculates the class ratios in the dataset. (The number of labeled points / the number of
         points in for each class)
 

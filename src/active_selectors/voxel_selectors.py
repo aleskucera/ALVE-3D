@@ -14,21 +14,18 @@ class BaseVoxelSelector:
     """ Base class for voxel selectors
 
     :param dataset_path: Path to the dataset
-    :param seq_cloud_ids: Array of cloud ids with respect to the sequence
-    :param sequence_map: Array of sequence ids that maps each cloud to a sequence
     :param device: Device to use for computations
     :param dataset_percentage: Percentage of the dataset to be labeled each iteration (default: 10)
     """
 
-    def __init__(self, dataset_path: str, seq_cloud_ids: np.ndarray, sequence_map: np.ndarray,
+    def __init__(self, dataset_path: str, cloud_paths: np.ndarray,
                  device: torch.device, dataset_percentage: float = 10):
         self.device = device
         self.dataset_path = dataset_path
         self.dataset_percentage = dataset_percentage
 
-        self.cloud_ids = torch.arange(len(seq_cloud_ids), dtype=torch.long, device=device)
-        self.seq_cloud_ids = torch.from_numpy(seq_cloud_ids).type(torch.long).to(device)
-        self.sequence_map = torch.from_numpy(sequence_map).type(torch.long).to(device)
+        self.cloud_ids = torch.arange(len(cloud_paths), dtype=torch.long, device=device)
+        self.cloud_paths = cloud_paths
 
         self.clouds = []
         self.num_voxels = 0
@@ -42,17 +39,24 @@ class BaseVoxelSelector:
         voxels to be labeled each iteration and if the dataset is fully labeled.
         """
 
-        # Iterate over each cloud id given and determine the file path, then create a VoxelCloud object
-        for cloud_id, seq_cloud_id, sequence in zip(self.cloud_ids, self.seq_cloud_ids, self.sequence_map):
-            clouds_dir = os.path.join(self.dataset_path, 'sequences', f'{sequence:02d}', 'global_clouds')
-            seq_cloud_files = sorted([os.path.join(clouds_dir, cloud) for cloud in os.listdir(clouds_dir)])
-
-            cloud_file = seq_cloud_files[seq_cloud_id]
-            with h5py.File(cloud_file, 'r') as f:
+        for cloud_id, cloud_path in zip(self.cloud_ids, self.cloud_paths):
+            with h5py.File(cloud_path, 'r') as f:
                 num_voxels = f['points'].shape[0]
                 label_mask = torch.tensor(f['label_mask'][...]).type(torch.bool)
                 self.num_voxels += num_voxels
-                self.clouds.append(VoxelCloud(cloud_file, num_voxels, label_mask, cloud_id, sequence, seq_cloud_id))
+                self.clouds.append(VoxelCloud(cloud_path, num_voxels, label_mask, cloud_id))
+
+        # # Iterate over each cloud id given and determine the file path, then create a VoxelCloud object
+        # for cloud_id, seq_cloud_id, sequence in zip(self.cloud_ids, self.seq_cloud_ids, self.sequence_map):
+        #     clouds_dir = os.path.join(self.dataset_path, 'sequences', f'{sequence:02d}', 'global_clouds')
+        #     seq_cloud_files = sorted([os.path.join(clouds_dir, cloud) for cloud in os.listdir(clouds_dir)])
+        #
+        #     cloud_file = seq_cloud_files[seq_cloud_id]
+        #     with h5py.File(cloud_file, 'r') as f:
+        #         num_voxels = f['points'].shape[0]
+        #         label_mask = torch.tensor(f['label_mask'][...]).type(torch.bool)
+        #         self.num_voxels += num_voxels
+        #         self.clouds.append(VoxelCloud(cloud_file, num_voxels, label_mask, cloud_id, sequence, seq_cloud_id))
 
     def select(self, dataset: Dataset, model: nn.Module):
         """ Select the voxels to be labeled """
@@ -62,17 +66,17 @@ class BaseVoxelSelector:
     def is_finished(self):
         return self.voxels_labeled == self.num_voxels
 
-    def get_cloud(self, sequence: int, seq_cloud_id: int):
+    def get_cloud(self, cloud_path: str):
         """ Get the VoxelCloud object for the given sequence and cloud id """
         for cloud in self.clouds:
-            if cloud.sequence == sequence and cloud.seq_cloud_id == seq_cloud_id:
+            if cloud.path == cloud_path:
                 return cloud
 
 
 class RandomVoxelSelector(BaseVoxelSelector):
-    def __init__(self, dataset_path: str, cloud_ids: np.ndarray, sequence_map: np.ndarray, device: torch.device,
+    def __init__(self, dataset_path: str, cloud_paths: np.ndarray, device: torch.device,
                  dataset_percentage: float = 10):
-        super().__init__(dataset_path, cloud_ids, sequence_map, device, dataset_percentage)
+        super().__init__(dataset_path, cloud_paths, device, dataset_percentage)
 
     def select(self, dataset: Dataset, model: nn.Module):
         """ Select the voxels to be labeled randomly, but simulate the
@@ -98,8 +102,8 @@ class RandomVoxelSelector(BaseVoxelSelector):
         num_classes = 18
         selection_size = int(self.num_voxels * self.dataset_percentage / 100)
 
-        for i in tqdm(range(dataset.get_length()), desc='Simulating model forward pass and voxels mapping'):
-            _, proj_distances, proj_voxel_map, sequence, seq_cloud_id = dataset.get_item(i)
+        for i in tqdm(range(dataset.get_full_length()), desc='Simulating model forward pass and voxels mapping'):
+            _, proj_distances, proj_voxel_map, cloud_path = dataset.get_item(i)
             proj_voxel_map = torch.from_numpy(proj_voxel_map).type(torch.long)
             proj_distances = torch.from_numpy(proj_distances).type(torch.float32)
 
@@ -115,7 +119,7 @@ class RandomVoxelSelector(BaseVoxelSelector):
             model_output, distances, voxel_map = model_output[~nan_mask], distances[~nan_mask], voxel_map[~nan_mask]
 
             # Find the VoxelCloud object and add the generated predictions
-            cloud = self.get_cloud(sequence, seq_cloud_id)
+            cloud = self.get_cloud(cloud_path)
             cloud.add_predictions(model_output, distances, voxel_map)
 
         # Calculate the viewpoint entropies for each voxel
@@ -137,12 +141,13 @@ class RandomVoxelSelector(BaseVoxelSelector):
         # Label the selected voxels
         for cloud in self.clouds:
             cloud.label_voxels(selected_voxels[cloud_map == cloud.id], dataset)
+            cloud.reset()
 
 
 class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
-    def __init__(self, dataset_path: str, cloud_ids: np.ndarray, sequence_map: np.ndarray, device: torch.device,
+    def __init__(self, dataset_path: str, cloud_paths: np.ndarray, device: torch.device,
                  dataset_percentage: float = 10):
-        super().__init__(dataset_path, cloud_ids, sequence_map, device, dataset_percentage)
+        super().__init__(dataset_path, cloud_paths, device, dataset_percentage)
 
     def select(self, dataset: Dataset, model: nn.Module):
         """ Select the voxels to be labeled by calculating the Viewpoint Entropy for each voxel and
@@ -168,8 +173,8 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
         model.eval()
         model.to(self.device)
         with torch.no_grad():
-            for i in tqdm(range(dataset.get_length()), desc='Mapping model output values to voxels'):
-                proj_image, proj_distances, proj_voxel_map, sequence, seq_cloud_id = dataset.get_item(i)
+            for i in tqdm(range(dataset.get_full_length()), desc='Mapping model output values to voxels'):
+                proj_image, proj_distances, proj_voxel_map, cloud_path = dataset.get_item(i)
                 proj_image = torch.from_numpy(proj_image).type(torch.float32).unsqueeze(0).to(self.device)
                 proj_distances = torch.from_numpy(proj_distances).type(torch.float32)
                 proj_voxel_map = torch.from_numpy(proj_voxel_map).type(torch.long)

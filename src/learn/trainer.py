@@ -103,9 +103,9 @@ class BaseTrainer(object):
         # Calculate the loss and metrics of the current epoch and log them, then return the history
         return self.logger.log_val(self.epoch)
 
-    def save_state(self, history: dict):
-        os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
-        log.info(f'Saving model state to {self.model_path}...')
+    def save_state(self, path: str, history: dict):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        log.info(f'Saving model state to {path}...')
 
         # Create state dictionary and save it
         self.model.eval()
@@ -113,7 +113,7 @@ class BaseTrainer(object):
                       'history': history,
                       'model_state_dict': self.model.state_dict(),
                       'optimizer_state_dict': self.optimizer.state_dict()}
-        torch.save(state_dict, self.model_path)
+        torch.save(state_dict, path)
 
         # Create metadata for W&B artifact
         metadata = {'epoch': self.epoch}
@@ -123,16 +123,17 @@ class BaseTrainer(object):
         # Create W&B artifact and log it
         artifact = wandb.Artifact(self.model_name, type='model', metadata=metadata,
                                   description='Model state with optimizer state and metric history for each epoch.')
-        artifact.add_file(self.model_path)
+        artifact.add_file(path)
         wandb.run.log_artifact(artifact)
 
-    def load_state(self):
-        if os.path.exists(self.model_path):
-            state_path = self.model_path
+    def load_state(self, path: str):
+        if os.path.exists(path):
+            state_path = path
         else:
-            artifact = wandb.use_artifact(f'{self.model_name}:latest')
+            model_name = os.path.basename(path)
+            artifact = wandb.use_artifact(f'{model_name}:latest')
             artifact_dir = artifact.download()
-            state_path = os.path.join(artifact_dir, self.model_name)
+            state_path = os.path.join(artifact_dir, f'{model_name}.pt')
 
         log.info(f'Loading model state from {state_path}...')
 
@@ -149,10 +150,10 @@ class Trainer(BaseTrainer):
         super().__init__(cfg, train_ds, val_ds, device, model_path, resume)
 
     def train(self):
-        while not self.logger.iou_converged:
+        while not self.logger.miou_converged:
             history = self.train_epoch(validate=True)
-            if self.logger.iou_improved:
-                self.save_state(history)
+            if self.logger.miou_improved:
+                self.save_state(self.model_path, history)
             self.epoch += 1
 
 
@@ -160,19 +161,45 @@ class ActiveTrainer(BaseTrainer):
     def __init__(self, cfg: DictConfig, train_ds: Dataset, val_ds: Dataset,
                  device: torch.device, model_path: str, method: str, resume: bool = False):
         super().__init__(cfg, train_ds, val_ds, device, model_path, resume)
+
+        # Initialize the selector
         self.method = method
-        cloud_ids, sequence_map = train_ds.get_dataset_structure()
-        self.selector = get_selector(self.method, self.train_ds.path, cloud_ids, sequence_map, device)
+        cloud_paths = train_ds.get_dataset_clouds()
+        self.selector = get_selector(method, train_ds.path, cloud_paths, device)
+
+        self.project_name = f'Active Semantic Model Training'
+        self.group_name = f'Test logging'
+        self.model_path = model_path
+
+        # Save the initial state of the model and optimizer for train() to use
+        # if not resume:
+        #     self.save_state(self.model_path, self.logger.history)
 
     def train(self):
-        while not self.selector.is_finished:
-            self.selector.select(self.train_ds, self.model)
-            statistics = self.train_ds.statistics
-            self.logger.log_statistics(statistics, self.epoch)
+        end = False
+        counter = 0
+        last_labeled_ratio = -1
+        while not end:
+            # Load the model state and start the wandb run reset logger
+            # self.load_state(self.model_path)
 
-            while not self.logger.iou_converged:
-                history = self.train_epoch(validate=True)
-                if self.logger.iou_improved:
-                    self.save_state(history)
-                self.epoch += 1
-            break
+            # Select the next labels to be labeled with loaded model
+            self.selector.select(self.train_ds, self.model)
+
+            # Log the new dataset statistics
+            class_distribution, class_progress, labeled_ratio = self.train_ds.get_statistics()
+            if labeled_ratio == last_labeled_ratio:
+                end = True
+            last_labeled_ratio = labeled_ratio
+
+            with wandb.init(project=self.project_name, group=self.group_name, name=f'{self.method}_{counter}'):
+                self.logger.log_dataset_statistics(class_distribution, class_progress, labeled_ratio)
+
+            # # Train the model until convergence
+            # while not self.logger.miou_converged:
+            #     history = self.train_epoch(validate=True)
+            #     if self.logger.miou_improved:
+            #         self.save_state(self.model_path, history)
+            #     self.epoch += 1
+
+            counter += 1

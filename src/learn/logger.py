@@ -53,17 +53,38 @@ class SemanticLogger(object):
 
         self.batch_loss_history = []
 
-        self.history = {'loss train': [], 'loss val': [],
-                        'miou': [], 'class iou': [],
-                        'accuracy': [], 'class accuracy': [],
-                        'confusion matrix': [], 'dataset statistics': []}
+        self.history = {
+
+            # Loss
+            'loss_val': [],
+            'loss_train': [],
+
+            # IoU
+            'miou_val': [],
+            'miou_train': [],
+            'class_iou': [],
+
+            # Accuracy
+            'accuracy_val': [],
+            'accuracy_train': [],
+            'class_accuracy': [],
+
+            # Confusion matrix
+            'confusion_matrix': [],
+
+            # Dataset statistics
+            'class_distribution': [],
+            'class_labeling_progress': [],
+            'labeled_ratio': []
+        }
 
     @property
     def miou_converged(self):
         """ Check if IoU has converged. If the IoU has
         not improved for 10 epochs, the training is stopped.
         """
-
+        if len(self.history['miou']) == 0:
+            return False
         return len(self.history['miou']) - np.argmax(self.history['miou']) > 10
 
     @property
@@ -71,7 +92,8 @@ class SemanticLogger(object):
         """ Check if IoU has improved. If the last IoU
         is the maximum, the model is saved.
         """
-
+        if len(self.history['miou']) < 5:
+            return False
         return len(self.history['miou']) - np.argmax(self.history['miou']) == 1
 
     def load_history(self, history: dict):
@@ -96,73 +118,111 @@ class SemanticLogger(object):
 
         self.conf_matrix.update(outputs, targets)
 
-    def log_train(self, epoch: int) -> dict:
+    def reset(self):
+        self.acc.reset()
+        self.iou.reset()
+        self.class_acc.reset()
+        self.class_iou.reset()
+        self.conf_matrix.reset()
+
+        self.history['loss_val'] = []
+        self.history['loss_train'] = []
+
+        self.history['miou_val'] = []
+        self.history['miou_train'] = []
+        self.history['class_iou'] = []
+
+        self.history['accuracy_val'] = []
+        self.history['accuracy_train'] = []
+        self.history['class_accuracy'] = []
+
+        self.history['confusion_matrix'] = []
+
+    def log_train(self, epoch: int):
         """Log train metrics to W&B
 
         :param epoch: Current epoch
         """
 
-        return self._log_epoch(epoch, 'train')
+        # Compute loss and metrics
+        acc = self.acc.compute().cpu().item()
+        iou = self.iou.compute().cpu().item()
+        loss = sum(self.batch_loss_history) / len(self.batch_loss_history)
 
-    def log_val(self, epoch: int) -> dict:
+        # Log loss
+        self.history[f'loss_train'].append(loss)
+        wandb.log({f"Loss Train": loss}, step=epoch)
+
+        # Log metrics
+        self.history[f'miou_train'].append(iou)
+        wandb.log({f"MIoU Train": iou}, step=epoch)
+
+        self.history[f'accuracy_train'].append(acc)
+        wandb.log({f"Accuracy Train": acc}, step=epoch)
+
+        # Reset batch loss and metrics
+        self.iou.reset()
+        self.acc.reset()
+        self.batch_loss_history = []
+
+    def log_val(self, epoch: int):
         """Log val metrics to W&B
 
         :param epoch: Current epoch
         """
 
-        return self._log_epoch(epoch, 'val')
-
-    def log_dataset_statistics(self, statistics: np.ndarray, epoch: int):
-        self.history['dataset statistics'].append(statistics)
-        statistics = np.delete(statistics, self.ignore_index)
-        for name, stat in zip(self.label_names, statistics):
-            wandb.log({f"Label ratio - {name}": stat}, step=epoch)
-
-    def _log_epoch(self, epoch: int, phase: str) -> dict:
-        """Log epoch metrics to W&B
-
-        :param epoch: Current epoch
-        :param phase: 'train' or 'val'
-        """
-
         # Compute loss and metrics
-        loss = sum(self.batch_loss_history) / len(self.batch_loss_history)
         acc = self.acc.compute().cpu().item()
         iou = self.iou.compute().cpu().item()
         class_acc = self.class_acc.compute().cpu()
         class_iou = self.class_iou.compute().cpu()
         conf_matrix = self.conf_matrix.compute().cpu()
+        loss = sum(self.batch_loss_history) / len(self.batch_loss_history)
 
         # Log loss
-        self.history[phase].append(loss)
-        wandb.log({f"Loss {phase}": loss}, step=epoch)
+        self.history[f'loss_val'].append(loss)
+        wandb.log({f"Loss Val": loss}, step=epoch)
 
         # Log metrics
-        self.history['accuracy'].append(acc)
-        wandb.log({f"Accuracy {phase}": acc}, step=epoch)
+        self.history['miou_val'].append(iou)
+        wandb.log({f"MIoU Val": iou}, step=epoch)
 
-        self.history['miou'].append(iou)
-        wandb.log({f"MIoU {phase}": iou}, step=epoch)
+        self.history['accuracy_val'].append(acc)
+        wandb.log({f"Accuracy Val": acc}, step=epoch)
 
-        if phase == 'val':
-            self.history['class accuracy'].append(class_acc)
-            self._log_class_accuracy(class_acc, epoch)
+        self.history['class_accuracy'].append(class_acc)
+        self._log_class_accuracy(class_acc, epoch)
 
-            self.history['class iou'].append(class_iou)
-            self._log_class_iou(class_iou, epoch)
+        self.history['class_iou'].append(class_iou)
+        self._log_class_iou(class_iou, epoch)
 
-            self.history['confusion matrix'].append(conf_matrix)
-            self._log_confusion_matrix(conf_matrix, epoch)
+        self.history['confusion_matrix'].append(conf_matrix)
+        self._log_confusion_matrix(conf_matrix, epoch)
 
         # Reset batch loss and metrics
-        self.batch_loss_history = []
         self.iou.reset()
         self.acc.reset()
         self.class_acc.reset()
         self.class_iou.reset()
         self.conf_matrix.reset()
+        self.batch_loss_history = []
 
-        return self.history
+    def log_dataset_statistics(self, class_distribution: np.ndarray, class_labeling_progress: np.ndarray,
+                               percentage: float):
+        self._log_class_distribution(class_distribution, percentage)
+        self._log_class_labeling_progress(class_labeling_progress, percentage)
+
+    def _log_class_distribution(self, class_distribution: np.ndarray, percentage: float):
+        class_distribution = np.delete(class_distribution, self.ignore_index)
+        data = [[name, value] for name, value in zip(self.label_names, class_distribution)]
+        table = wandb.Table(data=data, columns=["Class", "Distribution"])
+        wandb.log({f"Class Distribution - {percentage:.2f}%": wandb.plot.bar(table, "Class", "Distribution")})
+
+    def _log_class_labeling_progress(self, class_labeling_progress: np.ndarray, percentage: float):
+        class_labeling_progress = np.delete(class_labeling_progress, self.ignore_index)
+        data = [[name, value] for name, value in zip(self.label_names, class_labeling_progress)]
+        table = wandb.Table(data=data, columns=["Class", "Labeling Progress"])
+        wandb.log({f"Class Labeling Progress - {percentage:.2f}%": wandb.plot.bar(table, "Class", "Labeling Progress")})
 
     def _log_class_accuracy(self, class_acc: torch.Tensor, epoch: int):
         class_acc = class_acc.tolist()

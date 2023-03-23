@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import logging
 
@@ -20,7 +21,7 @@ def train_semantic_model(cfg: DictConfig, device: torch.device):
 
     resume = cfg.resume if 'resume' in cfg else False
 
-    project_name = f'Semantic Model Training'
+    project_name = f'Semantic Model Training Dev'
     group_name = f'{cfg.model.architecture} {cfg.ds.name}'
     model_path = os.path.join(cfg.path.models, 'semantic', f'{cfg.model.architecture}_{cfg.ds.name}')
 
@@ -42,15 +43,19 @@ def train_semantic_model_active(cfg: DictConfig, device: torch.device):
     :param cfg: The configuration of the project.
     :param device: The device to train on.
     """
+    resume = cfg.resume if 'resume' in cfg else False
 
-    train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
-    val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=True)
+    train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train',
+                               size=100, active_mode=True, resume=resume)
+    val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val',
+                             size=cfg.train.dataset_size, active_mode=True, resume=resume)
 
-    project_name = f'Active Semantic Model Training'
-    group_name = f'{cfg.model.architecture} {cfg.ds.name}'
-    model_name = f'{cfg.model.architecture}_{cfg.ds.name}'
-    output_model_dir = os.path.join(cfg.path.models, 'semantic_active')
+    log.info(f'Loaded train dataset: \n{train_ds}')
+    log.info(f'Loaded val dataset: \n{val_ds}')
 
-    with wandb.init(project=project_name, group=group_name):
-        trainer = ActiveTrainer(cfg, train_ds, val_ds, device, model_name, output_model_dir, 'random_voxels')
-        trainer.train(cfg.train.epochs)
+    method = 'random_voxels'
+    model_path = os.path.join(cfg.path.models, 'active_semantic',
+                              f'{cfg.model.architecture}_{cfg.ds.name}_{method}.pt')
+
+    trainer = ActiveTrainer(cfg, train_ds, val_ds, device, model_path, method, resume)
+    trainer.train()
