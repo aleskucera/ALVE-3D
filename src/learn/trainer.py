@@ -165,6 +165,7 @@ class ActiveTrainer(BaseTrainer):
         # Initialize the selector
         self.method = method
         cloud_paths = train_ds.get_dataset_clouds()
+        print(cloud_paths)
         self.selector = get_selector(method, train_ds.path, cloud_paths, device)
 
         self.project_name = f'Active Semantic Model Training'
@@ -188,9 +189,10 @@ class ActiveTrainer(BaseTrainer):
 
             # Log the new dataset statistics
             class_distribution, class_progress, labeled_ratio = self.train_ds.get_statistics()
-            if labeled_ratio == last_labeled_ratio:
+            if labeled_ratio == last_labeled_ratio or labeled_ratio >= 0.95:
                 end = True
             last_labeled_ratio = labeled_ratio
+            print(f'Labeled ratio: {labeled_ratio:.2f}')
 
             with wandb.init(project=self.project_name, group=self.group_name, name=f'{self.method}_{counter}'):
                 self.logger.log_dataset_statistics(class_distribution, class_progress, labeled_ratio)

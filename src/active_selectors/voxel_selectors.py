@@ -38,13 +38,15 @@ class BaseVoxelSelector:
         The function also computes the total number of voxels in the dataset to determine the number of
         voxels to be labeled each iteration and if the dataset is fully labeled.
         """
-
+        print(f'Cloud paths: {self.cloud_paths}')
         for cloud_id, cloud_path in zip(self.cloud_ids, self.cloud_paths):
             with h5py.File(cloud_path, 'r') as f:
                 num_voxels = f['points'].shape[0]
                 label_mask = torch.tensor(f['label_mask'][...]).type(torch.bool)
+                voxel_mask = torch.tensor(f['voxel_mask'][...]).type(torch.bool)
                 self.num_voxels += num_voxels
                 self.clouds.append(VoxelCloud(cloud_path, num_voxels, label_mask, cloud_id))
+                print(f'Voxel mask percentage: {voxel_mask.sum() / len(voxel_mask)}')
 
         # # Iterate over each cloud id given and determine the file path, then create a VoxelCloud object
         # for cloud_id, seq_cloud_id, sequence in zip(self.cloud_ids, self.seq_cloud_ids, self.sequence_map):
@@ -114,9 +116,9 @@ class RandomVoxelSelector(BaseVoxelSelector):
             distances = proj_distances.flatten()
             voxel_map = proj_voxel_map.flatten()
 
-            # Remove the voxels where voxel map is NaN (empty pixel or ignore class)
-            nan_mask = torch.isnan(voxel_map)
-            model_output, distances, voxel_map = model_output[~nan_mask], distances[~nan_mask], voxel_map[~nan_mask]
+            # Remove the voxels where voxel map is -1 or 0 (empty pixel or ignore class)
+            valid = (voxel_map != -1)
+            model_output, distances, voxel_map = model_output[valid], distances[valid], voxel_map[valid]
 
             # Find the VoxelCloud object and add the generated predictions
             cloud = self.get_cloud(cloud_path)
@@ -136,7 +138,9 @@ class RandomVoxelSelector(BaseVoxelSelector):
         # Select the voxels with the highest values
         order = torch.argsort(values, descending=True)
         voxel_map, cloud_map = voxel_map[order], cloud_map[order]
+        print(f'Number of voxels: {len(voxel_map)}')
         selected_voxels, cloud_map = voxel_map[:selection_size], cloud_map[:selection_size]
+        print(f'Number of selected voxels: {len(selected_voxels)}')
 
         # Label the selected voxels
         for cloud in self.clouds:

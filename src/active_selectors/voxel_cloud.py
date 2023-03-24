@@ -88,6 +88,9 @@ class VoxelCloud(object):
         with h5py.File(self.path, 'r+') as f:
             f['label_mask'][...] = self.labeled_voxels.numpy()
         dataset.label_voxels(voxels.numpy(), self.path)
+        print(f'Labeling {len(voxels)} voxels in cloud {self.id}.')
+        print(f'Number of labeled voxels: {self.labeled_voxels.sum()}')
+        print(f'Percentage of labeled voxels: {self.labeled_voxels.sum() / self.size * 100:.2f}%')
 
     def get_viewpoint_entropies(self):
         """ Calculate the viewpoint entropy for each voxel in the cloud. This is done by executing the following steps:

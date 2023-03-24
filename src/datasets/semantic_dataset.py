@@ -171,7 +171,7 @@ class SemanticDataset(Dataset):
         # Update the selection masks also on the disk
         self.update_sequence_selection_masks()
 
-    def get_item(self, idx) -> tuple[np.ndarray, np.ndarray, np.ndarray, int, int]:
+    def get_item(self, idx) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
         """ Return a sample from the dataset. Typically used in an active learning loop for
         selecting samples to label. The difference between this function and __getitem__ is that
         this function returns the following data:
@@ -198,7 +198,7 @@ class SemanticDataset(Dataset):
         with h5py.File(self.labels[idx], 'r') as f:
             labels = np.asarray(f['labels']).flatten()
             voxel_map = np.asarray(f['voxel_map']).flatten().astype(np.float32)
-            voxel_map[labels == self.ignore_index] = float('nan')
+            voxel_map[labels == self.ignore_index] = -1
 
         # Project points to image and map the projection
         proj = project_points(points, self.proj_H, self.proj_W, self.proj_fov_up, self.proj_fov_down)
@@ -218,7 +218,7 @@ class SemanticDataset(Dataset):
                                     proj_colors], axis=-1, dtype=np.float32).transpose((2, 0, 1))
 
         # Project voxel map
-        proj_voxel_map = np.full((self.proj_H, self.proj_W), float('nan'), dtype=np.float32)
+        proj_voxel_map = np.full((self.proj_H, self.proj_W), -1, dtype=np.int64)
         proj_voxel_map[proj_mask] = voxel_map[proj_idx[proj_mask]]
 
         return proj_scan, proj_distances, proj_voxel_map, self.cloud_map[idx]
@@ -306,7 +306,9 @@ class SemanticDataset(Dataset):
             with h5py.File(path, 'r') as f:
                 labels = np.asarray(f['labels']).flatten()
                 label_mask = np.asarray(f['label_mask']).flatten()
+                voxel_mask = self.get_voxel_mask(path, len(labels))
                 labels = map_labels(labels, self.label_map)
+                labels *= voxel_mask
 
                 # Add counts to the class counts
                 all_labels = labels[labels != ignore]
@@ -330,12 +332,28 @@ class SemanticDataset(Dataset):
 
         return class_distribution, class_progress, labeled_ratio
 
-    def calculate_class_statistics_2(self) -> np.ndarray:
+    def get_voxel_mask(self, cloud_path: str, cloud_size: int) -> np.ndarray:
+        voxel_mask = np.zeros(cloud_size, dtype=np.bool)
+        sample_map = self.sample_map[np.where(self.cloud_map == cloud_path)[0]]
+
+        # Iterate over all labels, which points can be inside the selected voxels
+        for i in sample_map:
+            _, _, voxel_map, _ = self.get_item(i)
+            voxel_map = voxel_map.flatten()
+            valid = (voxel_map != -1)
+            voxel_map = voxel_map[valid]
+            voxel_mask[voxel_map] = True
+
+        return voxel_mask
+
+    def get_statistics_2(self, ignore: int = 0) -> np.ndarray:
         """ Calculates the class ratios in the dataset. (The number of labeled points / the number of
         points in for each class)
 
         :return: Class ratios
         """
+        counter = 0
+        labeled_counter = 0
 
         class_counts = np.zeros(self.num_classes, dtype=np.long)
         labeled_class_counts = np.zeros(self.num_classes, dtype=np.long)
@@ -343,25 +361,29 @@ class SemanticDataset(Dataset):
         for label in tqdm(self.labels, desc='Calculating class counts'):
             with h5py.File(label, 'r') as f:
                 labels = np.asarray(f['labels']).flatten()
+                label_mask = np.asarray(f['label_mask']).flatten()
                 labels = map_labels(labels, self.label_map)
 
                 # Add counts to the class counts
-                unique_labels, counts = np.unique(labels, return_counts=True)
+                all_labels = labels[labels != ignore]
+                unique_labels, counts = np.unique(all_labels, return_counts=True)
                 class_counts[unique_labels] += counts
+                counter += np.sum(counts)
 
                 if label in self.label_files:
-                    # If the dataset is train split, also apply the label mask
-                    if self.split == 'train':
-                        label_mask = np.asarray(f['label_mask']).flatten()
-                        labels *= label_mask
-
-                    # Add counts to the labeled class counts
-                    unique_labels, counts = np.unique(labels, return_counts=True)
+                    selected_labels = labels * label_mask
+                    selected_labels = selected_labels[selected_labels != ignore]
+                    unique_labels, counts = np.unique(selected_labels, return_counts=True)
                     labeled_class_counts[unique_labels] += counts
+                    labeled_counter += np.sum(counts)
 
-        class_ratios = labeled_class_counts / class_counts
-        class_ratios[np.isnan(class_ratios)] = 0
-        return class_ratios
+        class_counts[class_counts == 0] = 1
+
+        class_distribution = class_counts / counter
+        class_progress = labeled_class_counts / class_counts
+        labeled_ratio = labeled_counter / counter
+
+        return class_distribution, class_progress, labeled_ratio
 
     def __str__(self):
         return f'\nSemanticDataset: {self.split}\n' \

@@ -46,7 +46,7 @@ def train_semantic_model_active(cfg: DictConfig, device: torch.device):
     resume = cfg.resume if 'resume' in cfg else False
 
     train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train',
-                               size=100, active_mode=True, resume=resume)
+                               size=cfg.train.dataset_size, active_mode=True, resume=resume)
     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val',
                              size=cfg.train.dataset_size, active_mode=True, resume=resume)
 

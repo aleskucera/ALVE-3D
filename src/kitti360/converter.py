@@ -265,8 +265,8 @@ class KITTI360Converter:
                     f.create_dataset('voxel_map', data=voxel_indices.astype(np.uint32), dtype=np.uint32)
                     f.create_dataset('label_mask', data=np.zeros_like(labels, dtype=np.bool), dtype=np.bool)
 
-            with h5py.File(voxel_cloud_file, 'r+') as f:
-                f.create_dataset('voxel_mask', data=voxel_mask, dtype=np.bool)
+            # with h5py.File(voxel_cloud_file, 'r+') as f:
+            #     f.create_dataset('voxel_mask', data=voxel_mask, dtype=np.bool)
 
     def create_global_clouds(self):
         sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
