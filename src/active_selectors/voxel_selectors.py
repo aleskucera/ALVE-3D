@@ -174,7 +174,7 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
         # Calculate, how many voxels should be labeled
         selection_size = int(self.num_voxels * self.dataset_percentage / 100)
 
-        clouds = torch.unique(torch.tensor(dataset.cloud_map, dtype=torch.long))
+        clouds = np.unique(dataset.cloud_map)
         viewpoint_entropies = torch.tensor([], dtype=torch.float32, device=self.device)
         voxel_map = torch.tensor([], dtype=torch.long, device=self.device)
         cloud_map = torch.tensor([], dtype=torch.long, device=self.device)
@@ -183,7 +183,7 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
         model.to(self.device)
         with torch.no_grad():
             for cloud in clouds:
-                indices = torch.where(torch.tensor(dataset.cloud_map, dtype=torch.long) == cloud)[0]
+                indices = np.where(dataset.cloud_map == cloud)[0]
 
                 for i in tqdm(indices, desc='Mapping model output values to voxels'):
                     proj_image, proj_distances, proj_voxel_map, cloud_path = dataset.get_item(i)
