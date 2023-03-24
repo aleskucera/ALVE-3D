@@ -184,7 +184,7 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
         with torch.no_grad():
             for cloud in clouds:
                 indices = np.where(dataset.cloud_map == cloud)[0]
-
+                cloud_obj = self.get_cloud(cloud)
                 for i in tqdm(indices, desc='Mapping model output values to voxels'):
                     proj_image, proj_distances, proj_voxel_map, cloud_path = dataset.get_item(i)
                     proj_image = torch.from_numpy(proj_image).type(torch.float32).unsqueeze(0).to(self.device)
@@ -203,10 +203,9 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
                     valid = (voxel_map != -1)
                     model_output, distances, voxel_map = model_output[valid], distances[valid], voxel_map[valid]
 
-                    cloud_obj = self.get_cloud(cloud_path)
                     cloud_obj.add_predictions(model_output.cpu(), distances, voxel_map)
 
-                entropies, cloud_voxel_map, cloud_cloud_map = cloud.get_viewpoint_entropies()
+                entropies, cloud_voxel_map, cloud_cloud_map = cloud_obj.get_viewpoint_entropies()
                 viewpoint_entropies = torch.cat((viewpoint_entropies, entropies))
                 voxel_map = torch.cat((voxel_map, cloud_voxel_map))
                 cloud_map = torch.cat((cloud_map, cloud_cloud_map))
