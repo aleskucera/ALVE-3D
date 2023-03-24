@@ -53,7 +53,7 @@ def train_semantic_model_active(cfg: DictConfig, device: torch.device):
     log.info(f'Loaded train dataset: \n{train_ds}')
     log.info(f'Loaded val dataset: \n{val_ds}')
 
-    method = 'random_voxels'
+    method = 'entropy_voxels'
     model_path = os.path.join(cfg.path.models, 'active_semantic',
                               f'{cfg.model.architecture}_{cfg.ds.name}_{method}.pt')
 

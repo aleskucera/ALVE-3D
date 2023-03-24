@@ -185,7 +185,8 @@ class ActiveTrainer(BaseTrainer):
             # self.load_state(self.model_path)
 
             # Select the next labels to be labeled with loaded model
-            self.selector.select(self.train_ds, self.model)
+            with wandb.init(project='select'):
+                self.selector.select(self.train_ds, self.model)
 
             # Log the new dataset statistics
             class_distribution, class_progress, labeled_ratio = self.train_ds.get_statistics()
