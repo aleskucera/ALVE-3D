@@ -43,10 +43,10 @@ class BaseVoxelSelector:
             with h5py.File(cloud_path, 'r') as f:
                 num_voxels = f['points'].shape[0]
                 label_mask = torch.tensor(f['label_mask'][...]).type(torch.bool)
-                voxel_mask = torch.tensor(f['voxel_mask'][...]).type(torch.bool)
+                # voxel_mask = torch.tensor(f['voxel_mask'][...]).type(torch.bool)
                 self.num_voxels += num_voxels
                 self.clouds.append(VoxelCloud(cloud_path, num_voxels, label_mask, cloud_id))
-                print(f'Voxel mask percentage: {voxel_mask.sum() / len(voxel_mask)}')
+                # print(f'Voxel mask percentage: {voxel_mask.sum() / len(voxel_mask)}')
 
         # # Iterate over each cloud id given and determine the file path, then create a VoxelCloud object
         # for cloud_id, seq_cloud_id, sequence in zip(self.cloud_ids, self.seq_cloud_ids, self.sequence_map):
