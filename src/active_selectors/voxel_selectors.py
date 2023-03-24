@@ -210,7 +210,6 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
                 voxel_map = torch.cat((voxel_map, cloud_voxel_map))
                 cloud_map = torch.cat((cloud_map, cloud_cloud_map))
 
-                cloud_obj = self.get_cloud(cloud)
                 cloud_obj.reset()
 
             # Select the samples with the highest viewpoint entropy
