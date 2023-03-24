@@ -138,9 +138,7 @@ class RandomVoxelSelector(BaseVoxelSelector):
         # Select the voxels with the highest values
         order = torch.argsort(values, descending=True)
         voxel_map, cloud_map = voxel_map[order], cloud_map[order]
-        print(f'Number of voxels: {len(voxel_map)}')
         selected_voxels, cloud_map = voxel_map[:selection_size], cloud_map[:selection_size]
-        print(f'Number of selected voxels: {len(selected_voxels)}')
 
         # Label the selected voxels
         for cloud in self.clouds:
@@ -192,10 +190,10 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
                 voxel_map = proj_voxel_map.flatten()
 
                 # Remove the voxels where voxel map is NaN (empty pixel or ignore class)
-                nan_mask = torch.isnan(voxel_map)
-                model_output, distances, voxel_map = model_output[~nan_mask], distances[~nan_mask], voxel_map[~nan_mask]
+                valid = (voxel_map != -1)
+                model_output, distances, voxel_map = model_output[valid], distances[valid], voxel_map[valid]
 
-                cloud = self.get_cloud(sequence, seq_cloud_id)
+                cloud = self.get_cloud(cloud_path)
                 cloud.add_predictions(model_output.cpu(), distances, voxel_map)
 
             # Calculate the viewpoint entropies for each voxel
