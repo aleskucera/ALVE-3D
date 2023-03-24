@@ -97,7 +97,7 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
             seq_clouds = np.asarray(f[f'{split}_clouds']).astype(np.str_)
             seq_cloud_map = create_cloud_map(seq_clouds)
             seq_selection_mask = np.asarray(f['selection_mask']).astype(bool) if split == 'train' else np.ones_like(
-                split_samples)
+                split_samples, dtype=bool)
 
         seq_scans = np.array([os.path.join(scans_dir, t) for t in split_samples], dtype=np.str_)
         seq_labels = np.array([os.path.join(labels_dir, t) for t in split_samples], dtype=np.str_)
