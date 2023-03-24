@@ -100,6 +100,63 @@ class KITTI360Converter:
         self.k_nn_adj = 5
         self.k_nn_local = 20
 
+    def convert_2(self):
+        # Create output directories
+        sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
+
+        # Labels directory
+        labels_dir = os.path.join(sequence_path, 'labels')
+        os.makedirs(labels_dir, exist_ok=True)
+
+        # Velodyne directory
+        velodyne_dir = os.path.join(sequence_path, 'velodyne')
+        os.makedirs(velodyne_dir, exist_ok=True)
+
+        # Clouds directory
+        voxel_clouds_dir = os.path.join(sequence_path, 'voxel_clouds')
+        assert os.path.exists(voxel_clouds_dir), f'Global clouds directory {voxel_clouds_dir} does not exist'
+
+        voxel_clouds = sorted([os.path.join(voxel_clouds_dir, f) for f in os.listdir(voxel_clouds_dir)])
+
+        val_samples, train_samples = self.val_samples.astype('S'), self.train_samples.astype('S')
+        val_clouds, train_clouds = self.val_clouds.astype('S'), self.train_clouds.astype('S')
+
+        # Write the sequence info to a file
+        with h5py.File(os.path.join(sequence_path, 'info.h5'), 'w') as f:
+            f.create_dataset('val', data=val_samples)
+            f.create_dataset('train', data=train_samples)
+            f.create_dataset('val_clouds', data=val_clouds)
+            f.create_dataset('train_clouds', data=train_clouds)
+            f.create_dataset('selection_mask', data=np.ones(len(train_samples), dtype=np.bool))
+
+        for i, files in enumerate(zip(self.static_windows, self.dynamic_windows, voxel_clouds)):
+            log.info(f'Converting window {i + 1}/{self.num_windows}')
+
+            # Load the static and dynamic windows
+            _, _, voxel_cloud_file = files
+
+            # Load the voxel cloud
+            with h5py.File(voxel_cloud_file, 'r') as f:
+                voxel_points = np.asarray(f['points'])
+                voxel_labels = np.asarray(f['labels'])
+
+            voxel_mask = np.zeros_like(voxel_labels, dtype=np.bool)
+
+            # For each scan in the window, find the points that belong to it and write them to a files
+            log.info(f'Window range: {self.window_ranges[i]}')
+            start, end = self.window_ranges[i]
+            for j in tqdm(range(start, end + 1), desc=f'Creating samples {start} - {end}'):
+                with h5py.File(os.path.join(labels_dir, f'{j:06d}.h5'), 'r') as f:
+                    voxel_indices = np.asarray(f['voxel_map'])
+                    voxel_mask[voxel_indices] = True
+
+            # Save the voxel mask
+            print(f'Voxel cloud file: {voxel_cloud_file}')
+            with h5py.File(voxel_cloud_file, 'r+') as f:
+                if 'voxel_mask' in f:
+                    del f['voxel_mask']
+                f.create_dataset('voxel_mask', data=voxel_mask, dtype=np.bool)
+
     def convert(self):
         """Convert KITTI-360 dataset to SemanticKITTI format. That is done by following these steps:
 
@@ -149,62 +206,67 @@ class KITTI360Converter:
             f.create_dataset('train_clouds', data=train_clouds)
             f.create_dataset('selection_mask', data=np.ones(len(train_samples), dtype=np.bool))
 
-        # for i, files in enumerate(zip(self.static_windows, self.dynamic_windows, voxel_clouds)):
-        #     log.info(f'Converting window {i + 1}/{self.num_windows}')
-        #
-        #     # Load the static and dynamic windows
-        #     static_file, dynamic_file, voxel_cloud_file = files
-        #     static_points, static_colors, _, _ = read_kitti360_ply(static_file)
-        #     dynamic_points, _, _, _ = read_kitti360_ply(dynamic_file)
-        #
-        #     # Load the voxel cloud
-        #     with h5py.File(voxel_cloud_file, 'r') as f:
-        #         voxel_points = np.asarray(f['points'])
-        #         voxel_labels = np.asarray(f['labels'])
-        #
-        #     # For each scan in the window, find the points that belong to it and write them to a files
-        #     log.info(f'Window range: {self.window_ranges[i]}')
-        #     start, end = self.window_ranges[i]
-        #     for j in tqdm(range(start, end + 1), desc=f'Creating samples {start} - {end}'):
-        #         scan = read_scan(self.velodyne_path, j)
-        #         scan_points = scan[:, :3]
-        #         scan_remissions = scan[:, 3]
-        #
-        #         # Transform scan to the current pose
-        #         transformed_scan_points = transform_points(scan_points, self.poses[j])
-        #
-        #         # Find neighbors in the dynamic window and remove dynamic points
-        #         if len(dynamic_points) > 0:
-        #             dists, indices = nearest_neighbors_2(dynamic_points, transformed_scan_points, k_nn=1)
-        #             mask = np.logical_and(dists >= 0, dists <= self.dynamic_threshold)
-        #             transformed_scan_points = transformed_scan_points[~mask]
-        #             scan_remissions = scan_remissions[~mask]
-        #             scan_points = scan_points[~mask]
-        #
-        #         # Find neighbours in the static window and assign their color
-        #         dists, indices = nearest_neighbors_2(static_points, transformed_scan_points, k_nn=1)
-        #         mask = np.logical_and(dists >= 0, dists <= self.static_threshold)
-        #         colors = static_colors[indices[mask]].astype(np.float32)
-        #         transformed_scan_points = transformed_scan_points[mask]
-        #         scan_remissions = scan_remissions[mask]
-        #         scan_points = scan_points[mask]
-        #
-        #         # Find neighbours in the voxel cloud and assign their label and index
-        #         dists, voxel_indices = nearest_neighbors_2(voxel_points, transformed_scan_points, k_nn=1)
-        #         labels = voxel_labels[voxel_indices].astype(np.uint8)
-        #
-        #         # Write the scan to a file
-        #         with h5py.File(os.path.join(velodyne_dir, f'{j:06d}.h5'), 'w') as f:
-        #             f.create_dataset('colors', data=colors, dtype=np.float32)
-        #             f.create_dataset('points', data=scan_points, dtype=np.float32)
-        #             f.create_dataset('remissions', data=scan_remissions, dtype=np.float32)
-        #             f.create_dataset('pose', data=self.poses[j], dtype=np.float32)
-        #
-        #         # Write the labels to a file
-        #         with h5py.File(os.path.join(labels_dir, f'{j:06d}.h5'), 'w') as f:
-        #             f.create_dataset('labels', data=labels, dtype=np.uint8)
-        #             f.create_dataset('voxel_map', data=voxel_indices, dtype=np.uint32)
-        #             f.create_dataset('label_mask', data=np.zeros_like(labels, dtype=np.bool), dtype=np.bool)
+        for i, files in enumerate(zip(self.static_windows, self.dynamic_windows, voxel_clouds)):
+            log.info(f'Converting window {i + 1}/{self.num_windows}')
+
+            # Load the static and dynamic windows
+            static_file, dynamic_file, voxel_cloud_file = files
+            static_points, static_colors, _, _ = read_kitti360_ply(static_file)
+            dynamic_points, _, _, _ = read_kitti360_ply(dynamic_file)
+
+            # Load the voxel cloud
+            with h5py.File(voxel_cloud_file, 'r') as f:
+                voxel_points = np.asarray(f['points'])
+                voxel_labels = np.asarray(f['labels'])
+            voxel_mask = np.zeros(len(voxel_points), dtype=np.bool)
+
+            # For each scan in the window, find the points that belong to it and write them to a files
+            log.info(f'Window range: {self.window_ranges[i]}')
+            start, end = self.window_ranges[i]
+            for j in tqdm(range(start, end + 1), desc=f'Creating samples {start} - {end}'):
+                scan = read_scan(self.velodyne_path, j)
+                scan_points = scan[:, :3]
+                scan_remissions = scan[:, 3]
+
+                # Transform scan to the current pose
+                transformed_scan_points = transform_points(scan_points, self.poses[j])
+
+                # Find neighbors in the dynamic window and remove dynamic points
+                if len(dynamic_points) > 0:
+                    dists, indices = nearest_neighbors_2(dynamic_points, transformed_scan_points, k_nn=1)
+                    mask = np.logical_and(dists >= 0, dists <= self.dynamic_threshold)
+                    transformed_scan_points = transformed_scan_points[~mask]
+                    scan_remissions = scan_remissions[~mask]
+                    scan_points = scan_points[~mask]
+
+                # Find neighbours in the static window and assign their color
+                dists, indices = nearest_neighbors_2(static_points, transformed_scan_points, k_nn=1)
+                mask = np.logical_and(dists >= 0, dists <= self.static_threshold)
+                colors = static_colors[indices[mask]].astype(np.float32)
+                transformed_scan_points = transformed_scan_points[mask]
+                scan_remissions = scan_remissions[mask]
+                scan_points = scan_points[mask]
+
+                # Find neighbours in the voxel cloud and assign their label and index
+                dists, voxel_indices = nearest_neighbors_2(voxel_points, transformed_scan_points, k_nn=1)
+                labels = voxel_labels[voxel_indices].astype(np.uint8)
+                voxel_mask[voxel_indices] = True
+
+                # Write the scan to a file
+                with h5py.File(os.path.join(velodyne_dir, f'{j:06d}.h5'), 'w') as f:
+                    f.create_dataset('colors', data=colors, dtype=np.float32)
+                    f.create_dataset('points', data=scan_points, dtype=np.float32)
+                    f.create_dataset('remissions', data=scan_remissions, dtype=np.float32)
+                    f.create_dataset('pose', data=self.poses[j], dtype=np.float32)
+
+                # Write the labels to a file
+                with h5py.File(os.path.join(labels_dir, f'{j:06d}.h5'), 'w') as f:
+                    f.create_dataset('labels', data=labels, dtype=np.uint8)
+                    f.create_dataset('voxel_map', data=voxel_indices.astype(np.uint32), dtype=np.uint32)
+                    f.create_dataset('label_mask', data=np.zeros_like(labels, dtype=np.bool), dtype=np.bool)
+
+            with h5py.File(voxel_cloud_file, 'r+') as f:
+                f.create_dataset('voxel_mask', data=voxel_mask, dtype=np.bool)
 
     def create_global_clouds(self):
         sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
