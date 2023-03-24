@@ -174,40 +174,45 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
         # Calculate, how many voxels should be labeled
         selection_size = int(self.num_voxels * self.dataset_percentage / 100)
 
+        clouds = torch.unique(torch.tensor(dataset.cloud_map, dtype=torch.long))
+        viewpoint_entropies = torch.tensor([], dtype=torch.float32, device=self.device)
+        voxel_map = torch.tensor([], dtype=torch.long, device=self.device)
+        cloud_map = torch.tensor([], dtype=torch.long, device=self.device)
+
         model.eval()
         model.to(self.device)
         with torch.no_grad():
-            for i in tqdm(range(dataset.get_full_length()), desc='Mapping model output values to voxels'):
-                proj_image, proj_distances, proj_voxel_map, cloud_path = dataset.get_item(i)
-                proj_image = torch.from_numpy(proj_image).type(torch.float32).unsqueeze(0).to(self.device)
-                proj_distances = torch.from_numpy(proj_distances).type(torch.float32)
-                proj_voxel_map = torch.from_numpy(proj_voxel_map).type(torch.long)
+            for cloud in clouds:
+                indices = torch.where(torch.tensor(dataset.cloud_map, dtype=torch.long) == cloud)[0]
 
-                # Forward pass
-                model_output = model(proj_image)
+                for i in tqdm(indices, desc='Mapping model output values to voxels'):
+                    proj_image, proj_distances, proj_voxel_map, cloud_path = dataset.get_item(i)
+                    proj_image = torch.from_numpy(proj_image).type(torch.float32).unsqueeze(0).to(self.device)
+                    proj_distances = torch.from_numpy(proj_distances).type(torch.float32)
+                    proj_voxel_map = torch.from_numpy(proj_voxel_map).type(torch.long)
 
-                # Change the shape of the model output to (num_voxels, num_classes)
-                model_output = model_output.squeeze(0).flatten(start_dim=1).permute(1, 0)
-                distances = proj_distances.flatten()
-                voxel_map = proj_voxel_map.flatten()
+                    # Forward pass
+                    model_output = model(proj_image)
 
-                # Remove the voxels where voxel map is NaN (empty pixel or ignore class)
-                valid = (voxel_map != -1)
-                model_output, distances, voxel_map = model_output[valid], distances[valid], voxel_map[valid]
+                    # Change the shape of the model output to (num_voxels, num_classes)
+                    model_output = model_output.squeeze(0).flatten(start_dim=1).permute(1, 0)
+                    distances = proj_distances.flatten()
+                    voxel_map = proj_voxel_map.flatten()
 
-                cloud = self.get_cloud(cloud_path)
-                cloud.add_predictions(model_output.cpu(), distances, voxel_map)
+                    # Remove the voxels where voxel map is NaN (empty pixel or ignore class)
+                    valid = (voxel_map != -1)
+                    model_output, distances, voxel_map = model_output[valid], distances[valid], voxel_map[valid]
 
-            # Calculate the viewpoint entropies for each voxel
-            viewpoint_entropies = torch.tensor([], dtype=torch.float32, device=self.device)
-            voxel_map = torch.tensor([], dtype=torch.long, device=self.device)
-            cloud_map = torch.tensor([], dtype=torch.long, device=self.device)
+                    cloud = self.get_cloud(cloud_path)
+                    cloud.add_predictions(model_output.cpu(), distances, voxel_map)
 
-            for cloud in tqdm(self.clouds, desc='Calculating the Viewpoint Entropy for each voxel'):
                 entropies, cloud_voxel_map, cloud_cloud_map = cloud.get_viewpoint_entropies()
                 viewpoint_entropies = torch.cat((viewpoint_entropies, entropies.to(self.device)))
                 voxel_map = torch.cat((voxel_map, cloud_voxel_map.to(self.device)))
                 cloud_map = torch.cat((cloud_map, cloud_cloud_map.to(self.device)))
+
+                cloud_obj = self.get_cloud(cloud)
+                cloud_obj.reset()
 
             # Select the samples with the highest viewpoint entropy
             order = torch.argsort(viewpoint_entropies, descending=True)
