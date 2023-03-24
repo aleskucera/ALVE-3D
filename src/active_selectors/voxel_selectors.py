@@ -203,8 +203,8 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
                     valid = (voxel_map != -1)
                     model_output, distances, voxel_map = model_output[valid], distances[valid], voxel_map[valid]
 
-                    cloud = self.get_cloud(cloud_path)
-                    cloud.add_predictions(model_output.cpu(), distances, voxel_map)
+                    cloud_obj = self.get_cloud(cloud_path)
+                    cloud_obj.add_predictions(model_output.cpu(), distances, voxel_map)
 
                 entropies, cloud_voxel_map, cloud_cloud_map = cloud.get_viewpoint_entropies()
                 viewpoint_entropies = torch.cat((viewpoint_entropies, entropies))
