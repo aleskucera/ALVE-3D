@@ -217,7 +217,7 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
             # Select the samples with the highest viewpoint entropy
             order = torch.argsort(all_viewpoint_entropies, descending=True)
             all_voxel_map, all_cloud_map = all_voxel_map[order], all_cloud_map[order]
-            selected_voxels, cloud_map = all_voxel_map[:selection_size], all_cloud_map[:selection_size]
+            selected_voxels, cloud_map = all_voxel_map[:selection_size].cpu(), all_cloud_map[:selection_size].cpu()
 
             # Label the selected voxels
             for cloud in self.clouds:
