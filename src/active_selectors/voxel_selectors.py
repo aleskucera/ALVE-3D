@@ -210,16 +210,12 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
                 all_voxel_map = torch.cat((all_voxel_map, cloud_voxel_map))
                 all_cloud_map = torch.cat((all_cloud_map, cloud_cloud_map))
 
-                print(f'Voxel map shape {all_voxel_map.shape}')
-                print(f'Cloud map shape {all_cloud_map.shape}')
-                print(f'Viewpoint entropies shape {all_viewpoint_entropies.shape}')
-
                 cloud_obj.reset()
 
             # Select the samples with the highest viewpoint entropy
-            order = torch.argsort(viewpoint_entropies, descending=True)
-            voxel_map, cloud_map = voxel_map[order], cloud_map[order]
-            selected_voxels, cloud_map = voxel_map[:selection_size], cloud_map[:selection_size]
+            order = torch.argsort(all_viewpoint_entropies, descending=True)
+            all_voxel_map, all_cloud_map = all_voxel_map[order], all_cloud_map[order]
+            selected_voxels, cloud_map = all_voxel_map[:selection_size], all_cloud_map[:selection_size]
 
             # Label the selected voxels
             for cloud in self.clouds:
