@@ -165,7 +165,6 @@ class ActiveTrainer(BaseTrainer):
         # Initialize the selector
         self.method = method
         cloud_paths = train_ds.get_dataset_clouds()
-        print(cloud_paths)
         self.selector = get_selector(method, train_ds.path, cloud_paths, device)
 
         self.project_name = f'Active Semantic Model Training'
@@ -183,6 +182,7 @@ class ActiveTrainer(BaseTrainer):
         while not end:
             # Load the model state and start the wandb run reset logger
             # self.load_state(self.model_path)
+            self.logger.reset()
 
             # Select the next labels to be labeled with loaded model
             with wandb.init(project='select'):
@@ -204,5 +204,4 @@ class ActiveTrainer(BaseTrainer):
                 if self.logger.miou_improved:
                     self.save_state(self.model_path, history)
                 self.epoch += 1
-
             counter += 1
