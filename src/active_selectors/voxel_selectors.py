@@ -175,9 +175,9 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
         selection_size = int(self.num_voxels * self.dataset_percentage / 100)
 
         clouds = np.unique(dataset.cloud_map)
-        viewpoint_entropies = torch.tensor([], dtype=torch.float32)
-        voxel_map = torch.tensor([], dtype=torch.long)
-        cloud_map = torch.tensor([], dtype=torch.long)
+        all_viewpoint_entropies = torch.tensor([], dtype=torch.float32)
+        all_voxel_map = torch.tensor([], dtype=torch.long)
+        all_cloud_map = torch.tensor([], dtype=torch.long)
 
         model.eval()
         model.to(self.device)
@@ -206,9 +206,13 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
                     cloud_obj.add_predictions(model_output.cpu(), distances, voxel_map)
 
                 entropies, cloud_voxel_map, cloud_cloud_map = cloud_obj.get_viewpoint_entropies()
-                viewpoint_entropies = torch.cat((viewpoint_entropies, entropies))
-                voxel_map = torch.cat((voxel_map, cloud_voxel_map))
-                cloud_map = torch.cat((cloud_map, cloud_cloud_map))
+                all_viewpoint_entropies = torch.cat((all_viewpoint_entropies, entropies))
+                all_voxel_map = torch.cat((all_voxel_map, cloud_voxel_map))
+                all_cloud_map = torch.cat((all_cloud_map, cloud_cloud_map))
+
+                print(f'Voxel map shape {all_voxel_map.shape}')
+                print(f'Cloud map shape {all_cloud_map.shape}')
+                print(f'Viewpoint entropies shape {all_viewpoint_entropies.shape}')
 
                 cloud_obj.reset()
 
