@@ -178,7 +178,7 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
         all_voxel_map = torch.tensor([], dtype=torch.long)
         all_cloud_map = torch.tensor([], dtype=torch.long)
 
-        loader = DataLoader(selection_dataset, batch_size=8, shuffle=False, num_workers=4)
+        loader = DataLoader(selection_dataset, batch_size=32, shuffle=False, num_workers=4)
         last_cloud = None
 
         model.eval()
