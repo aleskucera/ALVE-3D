@@ -6,7 +6,7 @@ import torch
 import wandb
 from omegaconf import DictConfig
 
-from src.datasets import SemanticDataset
+from src.datasets import SemanticDataset, SelectionDataset
 from .trainer import Trainer, ActiveTrainer
 
 log = logging.getLogger(__name__)
@@ -49,6 +49,7 @@ def train_semantic_model_active(cfg: DictConfig, device: torch.device):
                                size=cfg.train.dataset_size, active_mode=True, resume=resume)
     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val',
                              size=cfg.train.dataset_size, active_mode=True, resume=resume)
+    sel_ds = SelectionDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size)
 
     log.info(f'Loaded train dataset: \n{train_ds}')
     log.info(f'Loaded val dataset: \n{val_ds}')
@@ -57,5 +58,5 @@ def train_semantic_model_active(cfg: DictConfig, device: torch.device):
     model_path = os.path.join(cfg.path.models, 'active_semantic',
                               f'{cfg.model.architecture}_{cfg.ds.name}_{method}.pt')
 
-    trainer = ActiveTrainer(cfg, train_ds, val_ds, device, model_path, method, resume)
+    trainer = ActiveTrainer(cfg, train_ds, val_ds, sel_ds, device, model_path, method, resume)
     trainer.train()

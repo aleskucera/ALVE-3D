@@ -1,4 +1,5 @@
 import os
+from torch.utils.data import DataLoader
 
 import h5py
 import numpy as np
@@ -151,7 +152,7 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
                  dataset_percentage: float = 10):
         super().__init__(dataset_path, cloud_paths, device, dataset_percentage)
 
-    def select(self, dataset: Dataset, model: nn.Module):
+    def select(self, dataset: Dataset, selection_dataset: Dataset, model: nn.Module):
         """ Select the voxels to be labeled by calculating the Viewpoint Entropy for each voxel and
         selecting the voxels with the highest Viewpoint Entropy. The function executes following steps:
 
@@ -177,9 +178,53 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
         all_voxel_map = torch.tensor([], dtype=torch.long)
         all_cloud_map = torch.tensor([], dtype=torch.long)
 
+        loader = DataLoader(selection_dataset, batch_size=32, shuffle=False, num_workers=4)
+        last_cloud = None
+
         model.eval()
         model.to(self.device)
         with torch.no_grad():
+            for batch in tqdm(loader, desc='Calculating viewpoint entropies'):
+                proj_image, proj_distances, proj_voxel_map, cloud_path = batch
+
+                # Forward pass
+                proj_image = proj_image.type(torch.float32).to(self.device)
+                model_output = model(proj_image)
+
+                # print(f'proj_image shape: {proj_image.shape}')
+                # print(f'model_output shape: {model_output.shape}')
+                # print(f'proj_distances shape: {proj_distances.shape}')
+                # print(f'proj_voxel_map shape: {proj_voxel_map.shape}')
+                # if len(cloud_path) > 1:
+                # print(f'cloud_path: {cloud_path}')
+
+                # Change the shape of the model output to (num_voxels, num_classes)
+                for i in range(model_output.shape[0]):
+                    out = model_output[i].flatten(start_dim=1).permute(1, 0).cpu()
+                    dis = proj_distances[i].type(torch.float32).flatten()
+                    vox = proj_voxel_map[i].type(torch.long).flatten()
+
+                    # print(f'out shape: {out.shape}')
+                    # print(f'dis shape: {dis.shape}')
+                    # print(f'vox shape: {vox.shape}')
+
+                    valid = (vox != -1)
+                    out, dis, vox = out[valid], dis[valid], vox[valid]
+
+                    cloud = self.get_cloud(cloud_path[i])
+                    cloud.add_predictions(out, dis, vox)
+
+                    if last_cloud is None:
+                        last_cloud = cloud_path[i]
+                    elif last_cloud != cloud_path[i]:
+                        cloud = self.get_cloud(last_cloud)
+                        values, voxel_map, cloud_map = cloud.get_viewpoint_entropies()
+                        all_viewpoint_entropies = torch.cat((all_viewpoint_entropies, values))
+                        all_voxel_map = torch.cat((all_voxel_map, voxel_map))
+                        all_cloud_map = torch.cat((all_cloud_map, cloud_map))
+                        cloud.reset()
+                        last_cloud = cloud_path[i]
+
             for cloud in clouds:
                 indices = np.where(dataset.cloud_map == cloud)[0]
                 cloud_obj = self.get_cloud(cloud)

@@ -158,11 +158,12 @@ class Trainer(BaseTrainer):
 
 
 class ActiveTrainer(BaseTrainer):
-    def __init__(self, cfg: DictConfig, train_ds: Dataset, val_ds: Dataset,
+    def __init__(self, cfg: DictConfig, train_ds: Dataset, val_ds: Dataset, sel_ds: Dataset,
                  device: torch.device, model_path: str, method: str, resume: bool = False):
         super().__init__(cfg, train_ds, val_ds, device, model_path, resume)
 
         # Initialize the selector
+        self.sel_ds = sel_ds
         self.method = method
         cloud_paths = train_ds.get_dataset_clouds()
         self.selector = get_selector(method, train_ds.path, cloud_paths, device)
@@ -186,7 +187,7 @@ class ActiveTrainer(BaseTrainer):
 
             # Select the next labels to be labeled with loaded model
             with wandb.init(project='select'):
-                self.selector.select(self.train_ds, self.model)
+                self.selector.select(self.train_ds, self.sel_ds, self.model)
 
             # Log the new dataset statistics
             class_distribution, class_progress, labeled_ratio = self.train_ds.get_statistics()

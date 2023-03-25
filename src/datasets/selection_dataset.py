@@ -31,7 +31,6 @@ class SelectionDataset(Dataset):
 
         self.cfg = cfg
         self.size = size
-        self.resume = resume
         self.split = split
         self.path = dataset_path
         self.active = active_mode
@@ -74,7 +73,7 @@ class SelectionDataset(Dataset):
         the samples to the original dataset.
         """
 
-        data = load_semantic_dataset(self.path, self.sequences, self.split, self.active, self.resume, selection=True)
+        data = load_semantic_dataset(self.path, self.sequences, self.split, self.active, selection=True)
         self.scans, self.labels, self.sequence_map, self.cloud_map, self.selection_mask = data
 
         self.scans = self.scans[:self.size]
