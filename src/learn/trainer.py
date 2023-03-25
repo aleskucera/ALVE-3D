@@ -44,7 +44,7 @@ class BaseTrainer(object):
     def train(self):
         raise NotImplementedError
 
-    def train_epoch(self, validate: bool = True) -> dict:
+    def train_epoch(self, validate: bool = True):
         """ Train the model for one epoch. If validate is True, the model will be validated after the epoch.
 
         :param validate: Whether to validate the model after the epoch.
@@ -78,9 +78,10 @@ class BaseTrainer(object):
             self.logger.log_train(self.epoch)
 
         # Validate the model
-        return self.validate() if validate else {}
+        if validate:
+            self.validate()
 
-    def validate(self) -> dict:
+    def validate(self):
         """ Validate the model.
 
         :return: The logger history. Can be used to save the model state and then resume training from that point.
@@ -101,7 +102,7 @@ class BaseTrainer(object):
                 self.logger.update(loss.item(), outputs, targets)
 
         # Calculate the loss and metrics of the current epoch and log them, then return the history
-        return self.logger.log_val(self.epoch)
+        self.logger.log_val(self.epoch)
 
     def save_state(self, path: str, history: dict):
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -151,9 +152,9 @@ class Trainer(BaseTrainer):
 
     def train(self):
         while not self.logger.miou_converged:
-            history = self.train_epoch(validate=True)
+            self.train_epoch(validate=True)
             if self.logger.miou_improved:
-                self.save_state(self.model_path, history)
+                self.save_state(self.model_path, self.logger.history)
             self.epoch += 1
 
 
@@ -201,8 +202,8 @@ class ActiveTrainer(BaseTrainer):
 
                 # Train the model until convergence
                 while not self.logger.miou_converged:
-                    history = self.train_epoch(validate=True)
+                    self.train_epoch(validate=True)
                     if self.logger.miou_improved:
-                        self.save_state(self.model_path, history)
+                        self.save_state(self.model_path, self.logger.history)
                     self.epoch += 1
             counter += 1
