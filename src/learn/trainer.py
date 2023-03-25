@@ -199,10 +199,10 @@ class ActiveTrainer(BaseTrainer):
             with wandb.init(project=self.project_name, group=self.group_name, name=f'{self.method}_{counter}'):
                 self.logger.log_dataset_statistics(class_distribution, class_progress, labeled_ratio)
 
-            # Train the model until convergence
-            while not self.logger.miou_converged:
-                history = self.train_epoch(validate=True)
-                if self.logger.miou_improved:
-                    self.save_state(self.model_path, history)
-                self.epoch += 1
+                # Train the model until convergence
+                while not self.logger.miou_converged:
+                    history = self.train_epoch(validate=True)
+                    if self.logger.miou_improved:
+                        self.save_state(self.model_path, history)
+                    self.epoch += 1
             counter += 1
