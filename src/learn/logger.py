@@ -83,18 +83,18 @@ class SemanticLogger(object):
         """ Check if IoU has converged. If the IoU has
         not improved for 10 epochs, the training is stopped.
         """
-        if len(self.history['miou']) == 0:
+        if len(self.history['miou_val']) == 0:
             return False
-        return len(self.history['miou']) - np.argmax(self.history['miou']) > 10
+        return len(self.history['miou_val']) - np.argmax(self.history['miou_val']) > 5
 
     @property
     def miou_improved(self):
         """ Check if IoU has improved. If the last IoU
         is the maximum, the model is saved.
         """
-        if len(self.history['miou']) < 5:
+        if len(self.history['miou_val']) < 5:
             return False
-        return len(self.history['miou']) - np.argmax(self.history['miou']) == 1
+        return len(self.history['miou_val']) - np.argmax(self.history['miou_val']) == 1
 
     def load_history(self, history: dict):
         assert set(history.keys()) == set(self.history.keys()), "History keys don't match"
