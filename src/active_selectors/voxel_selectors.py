@@ -138,9 +138,7 @@ class RandomVoxelSelector(BaseVoxelSelector):
         # Select the voxels with the highest values
         order = torch.argsort(values, descending=True)
         voxel_map, cloud_map = voxel_map[order], cloud_map[order]
-        print(f'Number of voxels: {len(voxel_map)}')
-        selected_voxels, cloud_map = voxel_map[:selection_size], cloud_map[:selection_size]
-        print(f'Number of selected voxels: {len(selected_voxels)}')
+        selected_voxels, cloud_map = voxel_map[:selection_size].cpu(), cloud_map[:selection_size].cpu()
 
         # Label the selected voxels
         for cloud in self.clouds:

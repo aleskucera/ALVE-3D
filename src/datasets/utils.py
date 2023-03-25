@@ -58,7 +58,7 @@ def initialize_dataset(dataset_path: str, sequences: list, active: bool = False)
 
 
 def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
-                          active: bool = False, resume: bool = False) -> tuple:
+                          active: bool = False, resume: bool = False, selection: bool = False) -> tuple:
     """ Load the semantic dataset for a given split and mode. The function loads the following information:
 
     - scans: Array of paths to the scans.
@@ -76,7 +76,7 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
     :return: Tuple containing the scans, labels, poses, sequence map, cloud map, and selection mask.
     """
 
-    if not resume and split == 'train':
+    if not resume and split == 'train' and not selection:
         initialize_dataset(dataset_path, sequences, active)
 
     scans = np.array([], dtype=np.str_)
@@ -96,8 +96,10 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
             split_samples = np.asarray(f[split]).astype(np.str_)
             seq_clouds = np.asarray(f[f'{split}_clouds']).astype(np.str_)
             seq_cloud_map = create_cloud_map(seq_clouds)
-            seq_selection_mask = np.asarray(f['selection_mask']).astype(bool) if split == 'train' else np.ones_like(
-                split_samples, dtype=bool)
+            if split == 'train' and not selection:
+                seq_selection_mask = np.asarray(f['selection_mask']).astype(bool)
+            else:
+                seq_selection_mask = np.ones_like(split_samples, dtype=bool)
 
         seq_scans = np.array([os.path.join(scans_dir, t) for t in split_samples], dtype=np.str_)
         seq_labels = np.array([os.path.join(labels_dir, t) for t in split_samples], dtype=np.str_)
