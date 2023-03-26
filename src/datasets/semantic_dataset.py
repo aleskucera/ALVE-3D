@@ -346,45 +346,6 @@ class SemanticDataset(Dataset):
 
         return voxel_mask
 
-    def get_statistics_2(self, ignore: int = 0) -> np.ndarray:
-        """ Calculates the class ratios in the dataset. (The number of labeled points / the number of
-        points in for each class)
-
-        :return: Class ratios
-        """
-        counter = 0
-        labeled_counter = 0
-
-        class_counts = np.zeros(self.num_classes, dtype=np.long)
-        labeled_class_counts = np.zeros(self.num_classes, dtype=np.long)
-
-        for label in tqdm(self.labels, desc='Calculating class counts'):
-            with h5py.File(label, 'r') as f:
-                labels = np.asarray(f['labels']).flatten()
-                label_mask = np.asarray(f['label_mask']).flatten()
-                labels = map_labels(labels, self.label_map)
-
-                # Add counts to the class counts
-                all_labels = labels[labels != ignore]
-                unique_labels, counts = np.unique(all_labels, return_counts=True)
-                class_counts[unique_labels] += counts
-                counter += np.sum(counts)
-
-                if label in self.label_files:
-                    selected_labels = labels * label_mask
-                    selected_labels = selected_labels[selected_labels != ignore]
-                    unique_labels, counts = np.unique(selected_labels, return_counts=True)
-                    labeled_class_counts[unique_labels] += counts
-                    labeled_counter += np.sum(counts)
-
-        class_counts[class_counts == 0] = 1
-
-        class_distribution = class_counts / counter
-        class_progress = labeled_class_counts / class_counts
-        labeled_ratio = labeled_counter / counter
-
-        return class_distribution, class_progress, labeled_ratio
-
     def __str__(self):
         return f'\nSemanticDataset: {self.split}\n' \
                f'\t - Dataset size: {len(self)} / {self.get_full_length()}\n' \

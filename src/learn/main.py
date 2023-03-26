@@ -8,6 +8,7 @@ from omegaconf import DictConfig
 
 from src.datasets import SemanticDataset, SelectionDataset
 from .trainer import Trainer, ActiveTrainer
+from src.active_selectors import get_selector
 
 log = logging.getLogger(__name__)
 
@@ -60,3 +61,18 @@ def train_semantic_model_active(cfg: DictConfig, device: torch.device):
 
     trainer = ActiveTrainer(cfg, train_ds, val_ds, sel_ds, device, model_path, method, resume)
     trainer.train()
+
+
+def select_next_voxels(cfg: DictConfig, device: torch.device):
+    # If necessary, load the model state, dataset state
+
+    # Create the selection dataset
+    dataset = SelectionDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size)
+
+    method = 'entropy_voxels'
+
+    cloud_paths = dataset.get_dataset_clouds()
+    selector = get_selector(method, dataset.path, cloud_paths, device)
+
+    # Select the next voxels
+

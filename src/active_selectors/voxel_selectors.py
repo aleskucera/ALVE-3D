@@ -39,27 +39,12 @@ class BaseVoxelSelector:
         The function also computes the total number of voxels in the dataset to determine the number of
         voxels to be labeled each iteration and if the dataset is fully labeled.
         """
-        print(f'Cloud paths: {self.cloud_paths}')
         for cloud_id, cloud_path in zip(self.cloud_ids, self.cloud_paths):
             with h5py.File(cloud_path, 'r') as f:
                 num_voxels = f['points'].shape[0]
                 label_mask = torch.tensor(f['label_mask'][...]).type(torch.bool)
-                # voxel_mask = torch.tensor(f['voxel_mask'][...]).type(torch.bool)
                 self.num_voxels += num_voxels
                 self.clouds.append(VoxelCloud(cloud_path, num_voxels, label_mask, cloud_id))
-                # print(f'Voxel mask percentage: {voxel_mask.sum() / len(voxel_mask)}')
-
-        # # Iterate over each cloud id given and determine the file path, then create a VoxelCloud object
-        # for cloud_id, seq_cloud_id, sequence in zip(self.cloud_ids, self.seq_cloud_ids, self.sequence_map):
-        #     clouds_dir = os.path.join(self.dataset_path, 'sequences', f'{sequence:02d}', 'global_clouds')
-        #     seq_cloud_files = sorted([os.path.join(clouds_dir, cloud) for cloud in os.listdir(clouds_dir)])
-        #
-        #     cloud_file = seq_cloud_files[seq_cloud_id]
-        #     with h5py.File(cloud_file, 'r') as f:
-        #         num_voxels = f['points'].shape[0]
-        #         label_mask = torch.tensor(f['label_mask'][...]).type(torch.bool)
-        #         self.num_voxels += num_voxels
-        #         self.clouds.append(VoxelCloud(cloud_file, num_voxels, label_mask, cloud_id, sequence, seq_cloud_id))
 
     def select(self, dataset: Dataset, model: nn.Module):
         """ Select the voxels to be labeled """
@@ -169,11 +154,12 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
         :param dataset: Dataset object
         :param model: Model based on which the voxels will be selected
         """
+        num_voxels = 0
+        for cloud in self.clouds:
+            voxel_mask = dataset.get_voxel_mask(cloud.path)
+            num_voxels += np.sum(voxel_mask)
+        selection_size = int(num_voxels * self.dataset_percentage / 100)
 
-        # Calculate, how many voxels should be labeled
-        selection_size = int(self.num_voxels * self.dataset_percentage / 100)
-
-        clouds = np.unique(dataset.cloud_map)
         all_viewpoint_entropies = torch.tensor([], dtype=torch.float32)
         all_voxel_map = torch.tensor([], dtype=torch.long)
         all_cloud_map = torch.tensor([], dtype=torch.long)
