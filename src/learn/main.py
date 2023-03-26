@@ -63,8 +63,8 @@ def train_semantic_model(cfg: DictConfig, device: torch.device):
 #     trainer.train()
 
 def train_model(cfg: DictConfig, device: torch.device):
-    load_model = True
-    load_voxels = True
+    load_model = False
+    load_voxels = False
     state_artifact = 'state:latest'
     selected_voxels_artifact = 'selected_voxels:latest'
 
