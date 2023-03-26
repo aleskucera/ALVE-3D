@@ -106,14 +106,16 @@ class RandomVoxelSelector(BaseVoxelSelector):
         cloud_map = torch.tensor([], dtype=torch.long, device=self.device)
         for cloud in self.clouds:
             cloud_voxels = torch.unique(voxels[cloud.id]).to(self.device)
+            labeled_cloud_voxels = torch.nonzero(cloud.label_mask).squeeze(1)
+            mask = torch.isin(cloud_voxels, labeled_cloud_voxels, invert=True)
+            cloud_voxels = cloud_voxels[mask]
             cloud_cloud_map = torch.full((cloud_voxels.shape[0],), cloud.id, dtype=torch.long, device=self.device)
 
             voxel_map = torch.cat((voxel_map, cloud_voxels))
             cloud_map = torch.cat((cloud_map, cloud_cloud_map))
 
         # Shuffle randomly the voxel map and the cloud map
-        order = torch.randperm(voxel_map.shape[0], device=self.device,
-                               generator=torch.Generator(device=self.device))
+        order = torch.randperm(voxel_map.shape[0], device=self.device)
         voxel_map = voxel_map[order]
         cloud_map = cloud_map[order]
         selected_voxels = voxel_map[:selection_size].cpu()
@@ -158,17 +160,16 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
             num_voxels += np.sum(voxel_mask)
         selection_size = int(num_voxels * self.dataset_percentage / 100)
 
-        clouds = np.unique(dataset.cloud_map)
-        all_viewpoint_entropies = torch.tensor([], dtype=torch.float32)
         all_voxel_map = torch.tensor([], dtype=torch.long)
         all_cloud_map = torch.tensor([], dtype=torch.long)
+        all_viewpoint_entropies = torch.tensor([], dtype=torch.float32)
 
         model.eval()
         model.to(self.device)
         with torch.no_grad():
-            for cloud in clouds:
-                indices = np.where(dataset.cloud_map == cloud)[0]
-                cloud_obj = self.get_cloud(cloud)
+            for cloud in self.clouds:
+                indices = np.where(dataset.cloud_map == cloud.id)[0]
+                # cloud_obj = self.get_cloud(cloud)
                 for i in tqdm(indices, desc='Mapping model output values to voxels'):
                     proj_image, proj_distances, proj_voxel_map, cloud_path = dataset.get_item(i)
                     proj_image = torch.from_numpy(proj_image).type(torch.float32).unsqueeze(0).to(self.device)
@@ -187,21 +188,29 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
                     valid = (voxel_map != -1)
                     model_output, distances, voxel_map = model_output[valid], distances[valid], voxel_map[valid]
 
-                    cloud_obj.add_predictions(model_output.cpu(), distances, voxel_map)
+                    cloud.add_predictions(model_output.cpu(), distances, voxel_map)
 
-                entropies, cloud_voxel_map, cloud_cloud_map = cloud_obj.get_viewpoint_entropies()
+                entropies, cloud_voxel_map, cloud_cloud_map = cloud.get_viewpoint_entropies()
                 all_viewpoint_entropies = torch.cat((all_viewpoint_entropies, entropies))
                 all_voxel_map = torch.cat((all_voxel_map, cloud_voxel_map))
                 all_cloud_map = torch.cat((all_cloud_map, cloud_cloud_map))
 
-                cloud_obj.reset()
+                cloud.reset()
 
             # Select the samples with the highest viewpoint entropy
             order = torch.argsort(all_viewpoint_entropies, descending=True)
             all_voxel_map, all_cloud_map = all_voxel_map[order], all_cloud_map[order]
-            selected_voxels = voxel_map[:selection_size].cpu()
+            selected_voxels = all_voxel_map[:selection_size].cpu()
             selected_clouds = all_cloud_map[:selection_size].cpu()
 
-            # Label the selected voxels
+            ret = {}
             for cloud in self.clouds:
-                cloud.label_voxels(selected_voxels[selected_clouds == cloud.id.cpu()], dataset)
+                cloud.label_voxels(selected_voxels[selected_clouds == cloud.id], dataset)
+                split = cloud.path.split('/')
+                name = '/'.join(split[-3:])
+                ret[name] = cloud.label_mask
+            return ret
+
+            # # Label the selected voxels
+            # for cloud in self.clouds:
+            #     cloud.label_voxels(selected_voxels[selected_clouds == cloud.id.cpu()], dataset)

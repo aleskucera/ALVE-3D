@@ -100,7 +100,7 @@ def select_voxels(cfg: DictConfig, device: torch.device):
                     name=f'Entropy Voxel Selection - {percentage}'):
         dataset = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
         cloud_paths = dataset.get_dataset_clouds()
-        selector = get_selector('entropy_voxels', dataset.path, cloud_paths, device)
+        selector = get_selector('random_voxels', dataset.path, cloud_paths, device)
 
         # Load the already selected voxels from W&B
         artifact = wandb.use_artifact(selected_voxels_artifact)
@@ -109,7 +109,7 @@ def select_voxels(cfg: DictConfig, device: torch.device):
         selected_voxels = torch.load(path)
 
         # Set the already selected voxels
-        selector.set_selected_voxels(selected_voxels)
+        selector.load_voxel_selection(selected_voxels)
 
         # Load the model from W&B
         artifact = wandb.use_artifact(state_artifact)
@@ -122,10 +122,10 @@ def select_voxels(cfg: DictConfig, device: torch.device):
         selected_voxels = selector.select(dataset, model, select_percent)
 
         # Save the selected voxels to W&B
-        torch.save(selected_voxels, 'selected_voxels.pt')
-        artifact = wandb.Artifact('selected_voxels', type='dataset',
+        torch.save(selected_voxels, 'test.pt')
+        artifact = wandb.Artifact('test', type='dataset',
                                   description='The selected voxels for the next active learning iteration.')
-        artifact.add_file('selected_voxels.pt')
+        artifact.add_file('test.pt')
         wandb.run.log_artifact(artifact)
 
 
