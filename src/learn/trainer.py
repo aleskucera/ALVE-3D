@@ -136,6 +136,8 @@ class Trainer(BaseTrainer):
         super().__init__(cfg, train_ds, val_ds, device, state)
 
     def train(self):
+        self.epoch = 0
+        self.logger.reset()
         class_distribution, class_progress, labeled_ratio = self.train_ds.get_statistics()
         self.logger.log_dataset_statistics(class_distribution, class_progress, labeled_ratio)
         while not self.logger.miou_converged:
