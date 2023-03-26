@@ -138,8 +138,8 @@ class Trainer(BaseTrainer):
     def train(self):
         class_distribution, class_progress, labeled_ratio = self.train_ds.get_statistics()
         self.logger.log_dataset_statistics(class_distribution, class_progress, labeled_ratio)
-        # while not self.logger.miou_converged:
-        #     self.train_epoch(validate=True)
-        #     if self.logger.miou_improved():
-        #         self.save_state(self.logger.history)
-        #     self.epoch += 1
+        while not self.logger.miou_converged:
+            self.train_epoch(validate=True)
+            if self.logger.miou_improved():
+                self.save_state(self.logger.history)
+            self.epoch += 1
