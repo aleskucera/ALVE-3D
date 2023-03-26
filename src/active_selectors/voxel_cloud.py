@@ -74,7 +74,7 @@ class VoxelCloud(object):
         """ Label the given voxels in the dataset. The voxels are labeled by updating the `labeled_voxels` attribute,
         changing `label_map` of each sample on the disk and `selected_mask` of the sequence the cloud belongs to.
 
-        :param voxel_mask: The mask of voxels to label with shape (N,), where N is the number of voxels in the cloud.
+        :param voxels: The indices of the voxels to label
         :param dataset: The dataset object to label the voxels in
         """
 

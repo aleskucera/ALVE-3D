@@ -91,10 +91,6 @@ class SemanticLogger(object):
         """ Check if IoU has improved. If the last IoU
         is the maximum, the model is saved.
         """
-        print(f'MIoU Val History: {self.history["miou_val"]}')
-        print(f'Argument of maximum: {np.argmax(self.history["miou_val"])}')
-        print(f'Length of history: {len(self.history["miou_val"])}')
-        print(f'Length - argmax: {len(self.history["miou_val"]) - np.argmax(self.history["miou_val"])}')
         if len(self.history['miou_val']) < 10:
             return False
         return len(self.history['miou_val']) - np.argmax(self.history['miou_val']) == 1

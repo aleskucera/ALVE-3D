@@ -106,7 +106,7 @@ class RandomVoxelSelector(BaseVoxelSelector):
         cloud_map = torch.tensor([], dtype=torch.long, device=self.device)
         for cloud in self.clouds:
             cloud_voxels = torch.unique(voxels[cloud.id]).to(self.device)
-            labeled_cloud_voxels = torch.nonzero(cloud.label_mask).squeeze(1)
+            labeled_cloud_voxels = torch.nonzero(cloud.label_mask).squeeze(1).to(self.device)
             mask = torch.isin(cloud_voxels, labeled_cloud_voxels, invert=True)
             cloud_voxels = cloud_voxels[mask]
             cloud_cloud_map = torch.full((cloud_voxels.shape[0],), cloud.id, dtype=torch.long, device=self.device)
@@ -123,7 +123,7 @@ class RandomVoxelSelector(BaseVoxelSelector):
 
         ret = {}
         for cloud in self.clouds:
-            cloud.label_voxels(selected_voxels[selected_clouds == cloud.id], dataset)
+            cloud.label_voxels(selected_voxels[selected_clouds == cloud.id])
             split = cloud.path.split('/')
             name = '/'.join(split[-3:])
             ret[name] = cloud.label_mask

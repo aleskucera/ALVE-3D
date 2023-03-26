@@ -118,7 +118,7 @@ class BaseTrainer(object):
             metadata[key] = value
 
         # Create W&B artifact and log it
-        artifact = wandb.Artifact('state.pt', type='model', metadata=metadata,
+        artifact = wandb.Artifact('state', type='model', metadata=metadata,
                                   description='Model state with optimizer state and metric history for each epoch.')
         artifact.add_file('state.pt')
         wandb.run.log_artifact(artifact)
@@ -138,8 +138,8 @@ class Trainer(BaseTrainer):
     def train(self):
         class_distribution, class_progress, labeled_ratio = self.train_ds.get_statistics()
         self.logger.log_dataset_statistics(class_distribution, class_progress, labeled_ratio)
-        while not self.logger.miou_converged:
-            self.train_epoch(validate=True)
-            if self.logger.miou_improved():
-                self.save_state(self.logger.history)
-            self.epoch += 1
+        # while not self.logger.miou_converged:
+        #     self.train_epoch(validate=True)
+        #     if self.logger.miou_improved():
+        #         self.save_state(self.logger.history)
+        #     self.epoch += 1
