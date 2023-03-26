@@ -135,7 +135,7 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
                  dataset_percentage: float = 10):
         super().__init__(dataset_path, cloud_paths, device, dataset_percentage)
 
-    def select(self, dataset: Dataset, model: nn.Module):
+    def select(self, dataset: Dataset, model: nn.Module, percentage: float = 1):
         """ Select the voxels to be labeled by calculating the Viewpoint Entropy for each voxel and
         selecting the voxels with the highest Viewpoint Entropy. The function executes following steps:
 
@@ -151,14 +151,15 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
 
         :param dataset: Dataset object
         :param model: Model based on which the voxels will be selected
+        :param percentage: Percentage of the dataset to be labeled (default: 1)
         """
 
         # Calculate, how many voxels should be labeled
         num_voxels = 0
         for cloud in self.clouds:
-            voxel_mask = dataset.get_voxel_mask(cloud.path)
+            voxel_mask = dataset.get_voxel_mask(cloud.path, cloud.size)
             num_voxels += np.sum(voxel_mask)
-        selection_size = int(num_voxels * self.dataset_percentage / 100)
+        selection_size = int(num_voxels * percentage / 100)
 
         all_voxel_map = torch.tensor([], dtype=torch.long)
         all_cloud_map = torch.tensor([], dtype=torch.long)
@@ -168,7 +169,7 @@ class ViewpointEntropyVoxelSelector(BaseVoxelSelector):
         model.to(self.device)
         with torch.no_grad():
             for cloud in self.clouds:
-                indices = np.where(dataset.cloud_map == cloud.id)[0]
+                indices = np.where(dataset.cloud_map == cloud.path)[0]
                 # cloud_obj = self.get_cloud(cloud)
                 for i in tqdm(indices, desc='Mapping model output values to voxels'):
                     proj_image, proj_distances, proj_voxel_map, cloud_path = dataset.get_item(i)
