@@ -63,11 +63,11 @@ def train_semantic_model(cfg: DictConfig, device: torch.device):
 #     trainer.train()
 
 def train_model(cfg: DictConfig, device: torch.device):
-    resume = False
+    resume = True
     state_artifact = 'state:latest'
     selected_voxels_artifact = 'selected_voxels:latest'
 
-    with wandb.init(project='Viewpoint Entropy Active Learning', group='Training', name='Model training - 1%'):
+    with wandb.init(project='Viewpoint Entropy Active Learning', group='Training', name='Model training - 2%'):
         train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
         val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=True)
         selector = get_selector('entropy_voxels', train_ds.path, train_ds.get_dataset_clouds(), device)
@@ -126,7 +126,7 @@ def select_voxels(cfg: DictConfig, device: torch.device):
 
         # Save the selected voxels to W&B
         torch.save(selected_voxels, 'selected_voxels.pt')
-        artifact = wandb.Artifact(selected_voxels_artifact, type='dataset',
+        artifact = wandb.Artifact('selected_voxels', type='dataset',
                                   description='The selected voxels for the next active learning iteration.')
         artifact.add_file('selected_voxels.pt')
         wandb.run.log_artifact(artifact)
