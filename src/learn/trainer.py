@@ -140,6 +140,6 @@ class Trainer(BaseTrainer):
         self.logger.log_dataset_statistics(class_distribution, class_progress, labeled_ratio)
         while not self.logger.miou_converged:
             self.train_epoch(validate=True)
-            if self.logger.miou_improved:
+            if self.logger.miou_improved():
                 self.save_state(self.logger.history)
             self.epoch += 1

@@ -87,7 +87,6 @@ class SemanticLogger(object):
             return False
         return len(self.history['miou_val']) - np.argmax(self.history['miou_val']) > 10
 
-    @property
     def miou_improved(self):
         """ Check if IoU has improved. If the last IoU
         is the maximum, the model is saved.
