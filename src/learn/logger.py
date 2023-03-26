@@ -83,16 +83,16 @@ class SemanticLogger(object):
         """ Check if IoU has converged. If the IoU has
         not improved for 10 epochs, the training is stopped.
         """
-        if len(self.history['miou_val']) == 0:
+        if len(self.history['miou_val']) < 30:
             return False
-        return len(self.history['miou_val']) - np.argmax(self.history['miou_val']) > 5
+        return len(self.history['miou_val']) - np.argmax(self.history['miou_val']) > 10
 
     @property
     def miou_improved(self):
         """ Check if IoU has improved. If the last IoU
         is the maximum, the model is saved.
         """
-        if len(self.history['miou_val']) < 5:
+        if len(self.history['miou_val']) < 10:
             return False
         return len(self.history['miou_val']) - np.argmax(self.history['miou_val']) == 1
 
@@ -211,6 +211,7 @@ class SemanticLogger(object):
                                percentage: float):
         self._log_class_distribution(class_distribution, percentage)
         self._log_class_labeling_progress(class_labeling_progress, percentage)
+        wandb.log({f'Dataset Labeling Progress': percentage})
 
     def _log_class_distribution(self, class_distribution: np.ndarray, percentage: float):
         class_distribution = np.delete(class_distribution, self.ignore_index)

@@ -18,15 +18,13 @@ class VoxelCloud(object):
 
     :param size: The number of voxels in the cloud
     :param cloud_id: The id of the cloud (used to identify the cloud in the dataset, unique for each cloud in dataset)
-    :param sequence: The sequence of the cloud
-    :param seq_cloud_id: The id of the cloud in the sequence (unique for each cloud in sequence)
     """
 
     def __init__(self, path: str, size: int, label_mask: torch.Tensor, cloud_id: int):
         self.eps = 1e-6  # Small value to avoid division by zero
         self.path = path
         self.size = size
-        self.labeled_voxels = label_mask
+        self.label_mask = label_mask
 
         self.id = cloud_id
         # self.sequence = sequence
@@ -54,11 +52,8 @@ class VoxelCloud(object):
                           The voxel map maps each prediction to a voxel in the cloud.
         """
 
-        # Get the indices of the unlabeled voxels
-        unlabeled_voxels = torch.nonzero(~self.labeled_voxels).squeeze(1)
-
         # Remove the values of the voxels that are already labeled
-        indices = torch.where(torch.isin(voxel_map, unlabeled_voxels))
+        indices = torch.where(torch.isin(voxel_map, torch.nonzero(~self.label_mask).squeeze(1)))
         unlabeled_predictions = predictions[indices]
         unlabeled_distances = distances[indices]
         unlabeled_voxel_map = voxel_map[indices]
@@ -75,19 +70,22 @@ class VoxelCloud(object):
         self.distances = torch.zeros((0,), dtype=torch.float32)
         self.predictions = torch.zeros((0,), dtype=torch.float32)
 
-    def label_voxels(self, voxels: torch.Tensor, dataset: Dataset) -> None:
+    def label_voxels(self, voxels: torch.Tensor, dataset: Dataset = None) -> None:
         """ Label the given voxels in the dataset. The voxels are labeled by updating the `labeled_voxels` attribute,
         changing `label_map` of each sample on the disk and `selected_mask` of the sequence the cloud belongs to.
 
-        :param voxels: The indices of the voxels to label
+        :param voxel_mask: The mask of voxels to label with shape (N,), where N is the number of voxels in the cloud.
         :param dataset: The dataset object to label the voxels in
         """
 
-        voxels = voxels.cpu()
-        self.labeled_voxels[voxels] = True
-        with h5py.File(self.path, 'r+') as f:
-            f['label_mask'][...] = self.labeled_voxels.numpy()
-        dataset.label_voxels(voxels.numpy(), self.path)
+        # voxels = voxels.cpu()
+
+        # Get indices where the voxels mask is True
+        self.label_mask[voxels] = True
+        if dataset is not None:
+            with h5py.File(self.path, 'r+') as f:
+                f['label_mask'][...] = self.label_mask.numpy()
+            dataset.label_voxels(voxels.numpy(), self.path)
 
     def get_viewpoint_entropies(self):
         """ Calculate the viewpoint entropy for each voxel in the cloud. This is done by executing the following steps:
@@ -254,7 +252,7 @@ class VoxelCloud(object):
               f'\t - Number of model predictions = {self.predictions.shape[0]}\n'
         if self.num_classes > 0:
             ret += f'\t - Number of semantic classes = {self.num_classes}\n'
-        ret += f'\t - Number of already labeled voxels = {torch.sum(self.labeled_voxels)}\n'
+        ret += f'\t - Number of already labeled voxels = {torch.sum(self.label_mask)}\n'
         return ret
 
 
