@@ -63,23 +63,28 @@ def train_semantic_model(cfg: DictConfig, device: torch.device):
 #     trainer.train()
 
 def train_model(cfg: DictConfig, device: torch.device):
-    resume = True
+    load_model = True
+    load_voxels = True
     state_artifact = 'state:latest'
     selected_voxels_artifact = 'selected_voxels:latest'
 
-    with wandb.init(project='Viewpoint Entropy Active Learning', group='Training', name='Model training - 2%'):
+    # with wandb.init(project='Viewpoint Entropy Active Learning', group='Training', name='Model training - 2%'):
+    #     train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
+    #     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=True)
+    #     selector = get_selector('entropy_voxels', train_ds.path, train_ds.get_dataset_clouds(), device)
+    with wandb.init(project='Viewpoint Entropy Active Learning', group='Fully Labeled Training', name='Base'):
         train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
         val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=True)
         selector = get_selector('entropy_voxels', train_ds.path, train_ds.get_dataset_clouds(), device)
 
-        # Load the already selected voxels from W&B
-        artifact = wandb.use_artifact(selected_voxels_artifact)
-        artifact_dir = artifact.download()
-        path = os.path.join(artifact_dir, f'selected_voxels.pt')
-        selected_voxels = torch.load(path)
-        selector.load_voxel_selection(selected_voxels, train_ds)
+        if load_voxels:
+            artifact = wandb.use_artifact(selected_voxels_artifact)
+            artifact_dir = artifact.download()
+            path = os.path.join(artifact_dir, f'selected_voxels.pt')
+            selected_voxels = torch.load(path)
+            selector.load_voxel_selection(selected_voxels, train_ds)
 
-        if resume:
+        if load_model:
             artifact = wandb.use_artifact(state_artifact)
             artifact_dir = artifact.download()
             path = os.path.join(artifact_dir, f'state.pt')
