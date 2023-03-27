@@ -63,19 +63,19 @@ def train_semantic_model(cfg: DictConfig, device: torch.device):
 #     trainer.train()
 
 def train_model(cfg: DictConfig, device: torch.device):
-    load_model = False
-    load_voxels = False
+    load_model = True
+    load_voxels = True
     state_artifact = 'state:latest'
     selected_voxels_artifact = 'selected_voxels:latest'
 
-    # with wandb.init(project='Viewpoint Entropy Active Learning', group='Training', name='Model training - 2%'):
-    #     train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
-    #     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=True)
-    #     selector = get_selector('entropy_voxels', train_ds.path, train_ds.get_dataset_clouds(), device)
-    with wandb.init(project='Viewpoint Entropy Active Learning', group='Fully Labeled Training', name='Base'):
-        train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=False)
-        val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=False)
+    with wandb.init(project='Viewpoint Entropy Active Learning', group='Training', name='Model training - 2%'):
+        train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
+        val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=True)
         selector = get_selector('entropy_voxels', train_ds.path, train_ds.get_dataset_clouds(), device)
+        # with wandb.init(project='Viewpoint Entropy Active Learning', group='Fully Labeled Training', name='Base'):
+        #     train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=False)
+        #     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=False)
+        #     selector = get_selector('entropy_voxels', train_ds.path, train_ds.get_dataset_clouds(), device)
 
         if load_voxels:
             artifact = wandb.use_artifact(selected_voxels_artifact)
@@ -97,7 +97,7 @@ def train_model(cfg: DictConfig, device: torch.device):
 
 
 def select_voxels(cfg: DictConfig, device: torch.device):
-    percentage = '2%'
+    percentage = '3%'
     select_percent = 1
     state_artifact = 'state:latest'
     selected_voxels_artifact = 'selected_voxels:latest'
