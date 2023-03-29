@@ -100,7 +100,8 @@ class RandomVoxelSelector(BaseVoxelSelector):
             voxel_map = torch.from_numpy(proj_voxel_map).type(torch.long).flatten()
 
             voxel_map = voxel_map[voxel_map != -1]
-            voxels[self.get_cloud(cloud_path).id] = torch.cat((voxels[self.get_cloud(cloud_path).id], voxel_map))
+            vox = torch.unique(voxel_map)
+            voxels[self.get_cloud(cloud_path).id] = torch.cat((voxels[self.get_cloud(cloud_path).id], vox))
 
         voxel_map = torch.tensor([], dtype=torch.long, device=self.device)
         cloud_map = torch.tensor([], dtype=torch.long, device=self.device)
