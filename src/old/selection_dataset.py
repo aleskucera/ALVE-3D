@@ -7,7 +7,7 @@ from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
 from src.utils import project_points, map_labels, augment_points
-from .utils import load_semantic_dataset
+from datasets.utils import load_semantic_dataset
 
 
 class SelectionDataset(Dataset):

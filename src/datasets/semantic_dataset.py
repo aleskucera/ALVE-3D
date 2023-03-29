@@ -131,12 +131,6 @@ class SemanticDataset(Dataset):
         :param cloud_path: Path to the cloud that contains the selected voxels.
         """
 
-        # if cloud_path not in self.cloud_map:
-        #     for cloud in np.unique(self.cloud_map):
-        #         if cloud_path in cloud:
-        #             cloud_path = cloud
-        #             break
-
         labels = self.labels[np.where(self.cloud_map == cloud_path)[0]]
         sample_map = self.sample_map[np.where(self.cloud_map == cloud_path)[0]]
 
@@ -300,11 +294,17 @@ class SemanticDataset(Dataset):
         return np.unique(self.cloud_map)
 
     def get_statistics(self, ignore: int = 0) -> tuple[np.ndarray, np.ndarray, float]:
+        """ Returns the statistics of the dataset. The statistics are the class distribution, the labeling
+        progress for each class and the labeling progress for the dataset.
+
+        :param ignore: The label to ignore when calculating the statistics
+        :return: The class distribution, the labeling progress for each class and the labeling progress for the dataset
+        """
+
         cloud_paths = self.get_dataset_clouds()
 
         counter = 0
         labeled_counter = 0
-        voxel_mask_sum = 0
 
         class_counts = np.zeros(self.num_classes, dtype=np.long)
         labeled_class_counts = np.zeros(self.num_classes, dtype=np.long)
@@ -314,7 +314,6 @@ class SemanticDataset(Dataset):
                 labels = np.asarray(f['labels']).flatten()
                 label_mask = np.asarray(f['label_mask']).flatten()
                 voxel_mask = self.get_voxel_mask(path, len(labels))
-                voxel_mask_sum += np.sum(voxel_mask)
                 labels = map_labels(labels, self.label_map)
                 labels *= voxel_mask
 

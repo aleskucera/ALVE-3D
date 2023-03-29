@@ -64,18 +64,18 @@ def train_semantic_model(cfg: DictConfig, device: torch.device):
 
 def train_model(cfg: DictConfig, device: torch.device):
     load_model = False
-    load_voxels = False
+    load_voxels = True
     state_artifact = 'state:latest'
     selected_voxels_artifact = 'selected_voxels:latest'
 
-    # with wandb.init(project='Viewpoint Entropy Active Learning', group='Training', name='Model training - 3%'):
-    #     train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
-    #     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=True)
-    #     selector = get_selector('entropy_voxels', train_ds.path, train_ds.get_dataset_clouds(), device)
-    with wandb.init(project='Main Active Learning', group='Fully Labeled Training', name='Base'):
-        train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=False)
-        val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=False)
+    with wandb.init(project='Viewpoint Entropy Active Learning', group='Training', name='Model training - 1%'):
+        train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
+        val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=True)
         selector = get_selector('entropy_voxels', train_ds.path, train_ds.get_dataset_clouds(), device)
+        # with wandb.init(project='Main Active Learning', group='Fully Labeled Training', name='Base'):
+        #     train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=False)
+        #     val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=False)
+        #     selector = get_selector('entropy_voxels', train_ds.path, train_ds.get_dataset_clouds(), device)
 
         if load_voxels:
             artifact = wandb.use_artifact(selected_voxels_artifact)

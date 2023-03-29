@@ -1,8 +1,10 @@
 import os
+import logging
 
 import h5py
 import numpy as np
-from tqdm import tqdm
+
+log = logging.getLogger(__name__)
 
 
 def initialize_dataset(dataset_path: str, sequences: list, active: bool = False) -> None:
@@ -21,6 +23,8 @@ def initialize_dataset(dataset_path: str, sequences: list, active: bool = False)
     :param sequences: List of sequences to initialize.
     :param active: If True, the samples are initialized as not selected and the labels are not available.
     """
+
+    log.info(f'Initializing dataset: {dataset_path} with mode {"active" if active else "normal"}')
 
     sequence_dirs = [os.path.join(dataset_path, 'sequences', f'{s:02d}') for s in sequences]
     for sequence_dir in sequence_dirs:
@@ -41,7 +45,7 @@ def initialize_dataset(dataset_path: str, sequences: list, active: bool = False)
             # selection_mask = np.zeros_like(f['selection_mask']) if active else np.ones_like(f['selection_mask'])
 
         # Open the label files and set the label mask to 0 or 1
-        for label_path in tqdm(train_labels):
+        for label_path in train_labels:
             with h5py.File(label_path, 'r+') as f:
                 if active:
                     f['label_mask'][...] = np.zeros_like(f['label_mask'], dtype=bool)
@@ -58,7 +62,7 @@ def initialize_dataset(dataset_path: str, sequences: list, active: bool = False)
 
 
 def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
-                          active: bool = False, resume: bool = False, selection: bool = False) -> tuple:
+                          active: bool = False, resume: bool = False) -> tuple:
     """ Load the semantic dataset for a given split and mode. The function loads the following information:
 
     - scans: Array of paths to the scans.
@@ -76,8 +80,10 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
     :return: Tuple containing the scans, labels, poses, sequence map, cloud map, and selection mask.
     """
 
-    if not resume and split == 'train' and not selection:
+    if not resume and split == 'train':
         initialize_dataset(dataset_path, sequences, active)
+
+    log.info(f'Loading dataset: {dataset_path} split: {split} with mode {"active" if active else "normal"}')
 
     scans = np.array([], dtype=np.str_)
     labels = np.array([], dtype=np.str_)
@@ -96,7 +102,7 @@ def load_semantic_dataset(dataset_path: str, sequences: list, split: str,
             split_samples = np.asarray(f[split]).astype(np.str_)
             seq_clouds = np.asarray(f[f'{split}_clouds']).astype(np.str_)
             seq_cloud_map = create_cloud_map(seq_clouds)
-            if split == 'train' and not selection:
+            if split == 'train':
                 seq_selection_mask = np.asarray(f['selection_mask']).astype(bool)
             else:
                 seq_selection_mask = np.ones_like(split_samples, dtype=bool)
@@ -123,53 +129,3 @@ def create_cloud_map(clouds: np.ndarray) -> np.ndarray:
         cloud_size = int(split_cloud_name[1]) - int(split_cloud_name[0]) + 1
         cloud_map = np.concatenate((cloud_map, np.tile(cloud_file, cloud_size)), axis=0).astype(np.str_)
     return cloud_map
-
-
-def create_cloud_map_2(clouds: np.ndarray) -> np.ndarray:
-    """ Create a cloud map which maps every sample to the specific cloud it belongs to. The index of the
-    cloud is relative to the sequence. The cloud map is created by executing a following steps:
-
-    1. For each cloud name in the clouds array, the cloud range is extracted. The cloud range is the
-       first and last sample index of the cloud.
-    2. For every cloud create a full array of the cloud index with the same length as the cloud range.
-    3. Concatenate all the cloud index arrays and return the result.
-
-    Example cloud file: 000023_002452.h5
-
-    :param clouds: Array of cloud names.
-    :return: Array of cloud indices.
-    """
-
-    cloud_map = np.array([], dtype=np.int32)
-    for cloud_id, cloud_file in enumerate(sorted(clouds)):
-        cloud_name = os.path.splitext(cloud_file)[0]
-        split_cloud_name = cloud_name.split('_')
-        cloud_size = int(split_cloud_name[1]) - int(split_cloud_name[0]) + 1
-        cloud_map = np.concatenate((cloud_map, np.full(cloud_size, fill_value=cloud_id, dtype=np.int32)), axis=0)
-
-    return cloud_map
-
-# def load_sample_selection_mask(dataset_path: str, sequences: list, split: str) -> np.ndarray:
-#     """ Load the sample selection mask for a given split.
-#
-#     :param dataset_path: Path to the dataset.
-#     :param sequences: List of sequences to load.
-#     :param split: Split to load.
-#     :return: Array of selection mask.
-#     """
-#
-#     assert split in ['train', 'val']
-#
-#     selection_mask = np.array([], dtype=bool)
-#
-#     sequence_dirs = [os.path.join(dataset_path, 'sequences', f'{s:02d}') for s in sequences]
-#
-#     for sequence_dir in sequence_dirs:
-#         info_path = os.path.join(sequence_dir, 'info.h5')
-#         with h5py.File(info_path, 'r') as f:
-#             if split == 'train':
-#                 seq_selection_mask = np.asarray(f['selection_mask'])
-#                 selection_mask = np.concatenate((selection_mask, seq_selection_mask), axis=0)
-#             elif split == 'val':
-#                 selection_mask = np.concatenate((selection_mask, np.ones_like(f[split])), axis=0)
-#     return selection_mask
