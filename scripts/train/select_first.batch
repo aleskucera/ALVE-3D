@@ -2,11 +2,10 @@
 
 #SBATCH --nodes=1                         # 1 node
 #SBATCH --ntasks-per-node=4               # 8 CPUs per node
-#SBATCH --time=2-00:00:00                 # time limits: 2 days
+#SBATCH --time=10:00:00                 # time limits: 2 days
 #SBATCH --error=select.err                # standard error file
 #SBATCH --output=select.out               # standard output file
 #SBATCH --partition=amd                   # partition name
-#SBATCH --gres=gpu:1                      # number of GPUs per node
 #SBATCH --mail-user=kuceral4@fel.cvut.cz  # where send info about job
 #SBATCH --mail-type=ALL                   # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
