@@ -97,7 +97,7 @@ def train_model(cfg: DictConfig, device: torch.device):
 
 
 def select_voxels(cfg: DictConfig, device: torch.device):
-    percentage = '3%'
+    percentage = '2%'
     select_percent = 1
     state_artifact = 'state:latest'
     selected_voxels_artifact = 'selected_voxels:latest'
