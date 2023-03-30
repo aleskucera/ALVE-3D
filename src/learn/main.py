@@ -5,9 +5,9 @@ import torch
 import wandb
 from omegaconf import DictConfig
 
-from src.datasets import SemanticDataset
 from .trainer import Trainer
 from src.models import get_model
+from src.datasets import SemanticDataset
 from src.active_selectors import get_selector
 
 log = logging.getLogger(__name__)

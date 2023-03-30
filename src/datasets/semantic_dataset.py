@@ -309,7 +309,7 @@ class SemanticDataset(Dataset):
         class_counts = np.zeros(self.num_classes, dtype=np.long)
         labeled_class_counts = np.zeros(self.num_classes, dtype=np.long)
 
-        for path in cloud_paths:
+        for path in tqdm(cloud_paths, desc='Calculating dataset statistics'):
             with h5py.File(path, 'r') as f:
                 labels = np.asarray(f['labels']).flatten()
                 label_mask = np.asarray(f['label_mask']).flatten()
