@@ -63,12 +63,12 @@ def train_semantic_model(cfg: DictConfig, device: torch.device):
 #     trainer.train()
 
 def train_model(cfg: DictConfig, device: torch.device):
-    load_model = False
+    load_model = True
     load_voxels = True
     state_artifact = 'state:latest'
     selected_voxels_artifact = 'selected_voxels:latest'
 
-    with wandb.init(project='Active Learning', group='Training', name='Model training - 1%'):
+    with wandb.init(project='Active Learning', group='Training', name='Model training - 2%'):
         train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
         val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=True)
         selector = get_selector('entropy_voxels', train_ds.path, train_ds.get_dataset_clouds(), device)
