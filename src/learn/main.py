@@ -68,7 +68,7 @@ def train_model(cfg: DictConfig, device: torch.device):
     state_artifact = 'state:latest'
     selected_voxels_artifact = 'selected_voxels:latest'
 
-    with wandb.init(project='Main Entropy Active Learning', group='Training', name='Model training - 1%'):
+    with wandb.init(project='Active Learning', group='Training', name='Model training - 1%'):
         train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
         val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=True)
         selector = get_selector('entropy_voxels', train_ds.path, train_ds.get_dataset_clouds(), device)
@@ -102,7 +102,7 @@ def select_voxels(cfg: DictConfig, device: torch.device):
     state_artifact = 'state:latest'
     selected_voxels_artifact = 'selected_voxels:latest'
 
-    with wandb.init(project='Main Entropy Active Learning', group='Selection',
+    with wandb.init(project='Active Learning', group='Selection',
                     name=f'Entropy Voxel Selection - {percentage}'):
         dataset = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
         cloud_paths = dataset.get_dataset_clouds()
@@ -138,7 +138,7 @@ def select_voxels(cfg: DictConfig, device: torch.device):
 
 
 def select_first_voxels(cfg: DictConfig, device: torch.device):
-    with wandb.init(project='Main Entropy Active Learning', group='Selection', name='First 1% random selection'):
+    with wandb.init(project='Active Learning', group='Selection', name='First 1% random selection'):
         # Create the selection dataset
         dataset = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
 
