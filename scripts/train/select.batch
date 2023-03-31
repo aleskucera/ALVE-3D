@@ -2,7 +2,7 @@
 
 #SBATCH --nodes=1                         # 1 node
 #SBATCH --ntasks-per-node=4               # 8 CPUs per node
-#SBATCH --time=2-00:00:00                 # time limits: 2 days
+#SBATCH --time=23:00:00                 # time limits: 2 days
 #SBATCH --error=train.err                 # standard error file
 #SBATCH --output=train.out                # standard output file
 #SBATCH --partition=amdgpu                # partition name
