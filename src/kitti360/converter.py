@@ -296,22 +296,22 @@ class KITTI360Converter:
                 model.cuda()
             return model
 
-        use_rgb = 1
-        ptn_n_group = 2
-        stn_as_global = 1
-        ptn_nfeat_stn = 2
-        ptn_prelast_do = 0
-        ptn_norm = 'batch'
-        global_feat = 'eXYrgb'
-        n_feat = 3 + 3 * use_rgb
-        ptn_widths_stn = [[16, 64], [32, 16]]
-        ptn_widths = [[32, 128], [34, 32, 32, 4]]
-        nfeats_global = len(global_feat) + 4 * stn_as_global + 1
-
-        model = torch.nn.Module()
-        model.stn = STNkD(ptn_nfeat_stn, ptn_widths_stn[0], ptn_widths_stn[1], norm=ptn_norm, n_group=ptn_n_group)
-        model.ptn = PointNet(ptn_widths[0], ptn_widths[1], [], [], n_feat, 0, prelast_do=ptn_prelast_do,
-                             nfeat_global=nfeats_global, norm=ptn_norm, is_res=False, last_bn=True)
+        # use_rgb = 1
+        # ptn_n_group = 2
+        # stn_as_global = 1
+        # ptn_nfeat_stn = 2
+        # ptn_prelast_do = 0
+        # ptn_norm = 'batch'
+        # global_feat = 'eXYrgb'
+        # n_feat = 3 + 3 * use_rgb
+        # ptn_widths_stn = [[16, 64], [32, 16]]
+        # ptn_widths = [[32, 128], [34, 32, 32, 4]]
+        # nfeats_global = len(global_feat) + 4 * stn_as_global + 1
+        #
+        # model = torch.nn.Module()
+        # model.stn = STNkD(ptn_nfeat_stn, ptn_widths_stn[0], ptn_widths_stn[1], norm=ptn_norm, n_group=ptn_n_group)
+        # model.ptn = PointNet(ptn_widths[0], ptn_widths[1], [], [], n_feat, 0, prelast_do=ptn_prelast_do,
+        #                      nfeat_global=nfeats_global, norm=ptn_norm, is_res=False, last_bn=True)
 
         model = create_model(checkpoint['args'])
         model.load_state_dict(checkpoint['state_dict'])
@@ -377,7 +377,7 @@ class KITTI360Converter:
 
             # Compute embeddings
             embeddings = ptn_cloud_embedder.run_batch(model, clouds, clouds_global)
-            diff = compute_dist(embeddings, edge_sources, edge_targets, 'euclidian')
+            diff = compute_dist(embeddings, edge_sources.astype(np.int64), edge_targets.astype(np.int64), 'euclidian')
             pred_comp, in_comp = compute_partition(embeddings, edge_sources, edge_targets, diff,
                                                    points[selected_ver,])
 

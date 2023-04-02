@@ -35,7 +35,7 @@ def main(cfg: DictConfig):
         # converter.create_superpoints()
     elif cfg.action == 'create_kitti360_superpoints':
         converter = KITTI360Converter(cfg)
-        converter.create_global_clouds()
+        # converter.create_global_clouds()
         converter.create_superpoints()
     elif cfg.action == 'select_first_voxels':
         select_first_voxels(cfg, device)
