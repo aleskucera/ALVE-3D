@@ -2,6 +2,8 @@ import os
 import logging
 
 import h5py
+import torch
+import wandb
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm
@@ -9,12 +11,18 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from omegaconf import DictConfig
 from mpl_toolkits.axes_grid1 import ImageGrid
+from sklearn.linear_model import RANSACRegressor
 
+from src.ply_c import libply_c
 from .ply import read_kitti360_ply
-from src.utils import project_points
+from src.utils import project_points, colorize_instances
 from src.utils import map_labels, map_colors
+from src.losses.crosspartition import compute_partition, compute_dist
+from src.models.pointnet_sp import LocalCloudEmbedder, STNkD, PointNet
 from src.utils import transform_points, downsample_cloud, nearest_neighbors, \
     nearest_neighbors_2, connected_label_components, nn_graph
+
+from src.old.kitti360_dataset import KITTI360Dataset
 
 log = logging.getLogger(__name__)
 
@@ -99,63 +107,6 @@ class KITTI360Converter:
 
         self.k_nn_adj = 5
         self.k_nn_local = 20
-
-    def convert_2(self):
-        # Create output directories
-        sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
-
-        # Labels directory
-        labels_dir = os.path.join(sequence_path, 'labels')
-        os.makedirs(labels_dir, exist_ok=True)
-
-        # Velodyne directory
-        velodyne_dir = os.path.join(sequence_path, 'velodyne')
-        os.makedirs(velodyne_dir, exist_ok=True)
-
-        # Clouds directory
-        voxel_clouds_dir = os.path.join(sequence_path, 'voxel_clouds')
-        assert os.path.exists(voxel_clouds_dir), f'Global clouds directory {voxel_clouds_dir} does not exist'
-
-        voxel_clouds = sorted([os.path.join(voxel_clouds_dir, f) for f in os.listdir(voxel_clouds_dir)])
-
-        val_samples, train_samples = self.val_samples.astype('S'), self.train_samples.astype('S')
-        val_clouds, train_clouds = self.val_clouds.astype('S'), self.train_clouds.astype('S')
-
-        # Write the sequence info to a file
-        with h5py.File(os.path.join(sequence_path, 'info.h5'), 'w') as f:
-            f.create_dataset('val', data=val_samples)
-            f.create_dataset('train', data=train_samples)
-            f.create_dataset('val_clouds', data=val_clouds)
-            f.create_dataset('train_clouds', data=train_clouds)
-            f.create_dataset('selection_mask', data=np.ones(len(train_samples), dtype=np.bool))
-
-        for i, files in enumerate(zip(self.static_windows, self.dynamic_windows, voxel_clouds)):
-            log.info(f'Converting window {i + 1}/{self.num_windows}')
-
-            # Load the static and dynamic windows
-            _, _, voxel_cloud_file = files
-
-            # Load the voxel cloud
-            with h5py.File(voxel_cloud_file, 'r') as f:
-                voxel_points = np.asarray(f['points'])
-                voxel_labels = np.asarray(f['labels'])
-
-            voxel_mask = np.zeros_like(voxel_labels, dtype=np.bool)
-
-            # For each scan in the window, find the points that belong to it and write them to a files
-            log.info(f'Window range: {self.window_ranges[i]}')
-            start, end = self.window_ranges[i]
-            for j in tqdm(range(start, end + 1), desc=f'Creating samples {start} - {end}'):
-                with h5py.File(os.path.join(labels_dir, f'{j:06d}.h5'), 'r') as f:
-                    voxel_indices = np.asarray(f['voxel_map'])
-                    voxel_mask[voxel_indices] = True
-
-            # Save the voxel mask
-            print(f'Voxel cloud file: {voxel_cloud_file}')
-            with h5py.File(voxel_cloud_file, 'r+') as f:
-                if 'voxel_mask' in f:
-                    del f['voxel_mask']
-                f.create_dataset('voxel_mask', data=voxel_mask, dtype=np.bool)
 
     def convert(self):
         """Convert KITTI-360 dataset to SemanticKITTI format. That is done by following these steps:
@@ -285,7 +236,7 @@ class KITTI360Converter:
             edge_sources, edge_targets, distances = nn_graph(points, self.k_nn_adj)
 
             # Compute local neighbors
-            local_neighbors = nearest_neighbors(points, self.k_nn_local)
+            local_neighbors, _ = nearest_neighbors(points, self.k_nn_local)
 
             # Computes object in point cloud and transition edges
             objects = connected_label_components(labels, edge_sources, edge_targets)
@@ -304,6 +255,135 @@ class KITTI360Converter:
             output_file.create_dataset('edge_targets', data=edge_targets, dtype='uint32')
             output_file.create_dataset('edge_transitions', data=edge_transitions, dtype='uint8')
             output_file.create_dataset('local_neighbors', data=local_neighbors, dtype='uint32')
+
+    def create_superpoints(self):
+        # self.create_global_clouds()
+        sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
+        global_cloud_dir = os.path.join(sequence_path, 'voxel_clouds')
+        checkpoint = torch.load('/home/ales/Thesis/ALVE-3D/models/pretrained/cv3/model.pth.tar')
+
+        # dataset = KITTI360Dataset(self.cfg, self.cfg.ds.path, 'val')
+        # print(dataset[0])
+
+        def create_model(args):
+            """ Creates model """
+            model = torch.nn.Module()
+            if args.learned_embeddings and 'ptn' in args.ptn_embedding and args.ptn_nfeat_stn > 0:
+                model.stn = STNkD(args.ptn_nfeat_stn, args.ptn_widths_stn[0], args.ptn_widths_stn[1],
+                                  norm=args.ptn_norm,
+                                  n_group=args.ptn_n_group)
+
+            if args.learned_embeddings and 'ptn' in args.ptn_embedding:
+                n_embed = args.ptn_widths[1][-1]
+                n_feat = 3 + 3 * args.use_rgb
+                nfeats_global = len(args.global_feat) + 4 * args.stn_as_global + 1  # we always add the diameter
+                model.ptn = PointNet(args.ptn_widths[0], args.ptn_widths[1], [], [], n_feat, 0,
+                                     prelast_do=args.ptn_prelast_do,
+                                     nfeat_global=nfeats_global, norm=args.ptn_norm, is_res=False,
+                                     last_bn=True)  # = args.normalize_intermediary==0)
+
+            if args.ver_value == 'geofrgb':
+                n_embed = 7
+                model.placeholder = torch.nn.Parameter(torch.tensor(0.0))
+            if args.ver_value == 'geof':
+                n_embed = 4
+                model.placeholder = torch.nn.Parameter(torch.tensor(0.0))
+
+            print('Total number of parameters: {}'.format(sum([p.numel() for p in model.parameters()])))
+            print(model)
+            if args.cuda:
+                model.cuda()
+            return model
+
+        use_rgb = 1
+        ptn_n_group = 2
+        stn_as_global = 1
+        ptn_nfeat_stn = 2
+        ptn_prelast_do = 0
+        ptn_norm = 'batch'
+        global_feat = 'eXYrgb'
+        n_feat = 3 + 3 * use_rgb
+        ptn_widths_stn = [[16, 64], [32, 16]]
+        ptn_widths = [[32, 128], [34, 32, 32, 4]]
+        nfeats_global = len(global_feat) + 4 * stn_as_global + 1
+
+        model = torch.nn.Module()
+        model.stn = STNkD(ptn_nfeat_stn, ptn_widths_stn[0], ptn_widths_stn[1], norm=ptn_norm, n_group=ptn_n_group)
+        model.ptn = PointNet(ptn_widths[0], ptn_widths[1], [], [], n_feat, 0, prelast_do=ptn_prelast_do,
+                             nfeat_global=nfeats_global, norm=ptn_norm, is_res=False, last_bn=True)
+
+        model = create_model(checkpoint['args'])
+        model.load_state_dict(checkpoint['state_dict'])
+        model.eval()
+        model.cpu()
+
+        ptn_cloud_embedder = LocalCloudEmbedder(checkpoint['args'])
+
+        cloud_names = np.sort(np.concatenate([self.train_clouds, self.val_clouds]))
+        for cloud_name in tqdm(cloud_names, desc='Creating superpoints'):
+            with h5py.File(os.path.join(global_cloud_dir, cloud_name), 'r') as cloud:
+                points = np.asarray(cloud['points'])
+                objects = np.asarray(cloud['objects'])
+
+                edge_sources = np.asarray(cloud['edge_sources'])
+                edge_targets = np.asarray(cloud['edge_targets'])
+                local_neighbors = np.asarray(cloud['local_neighbors']).reshape((points.shape[0], self.k_nn_local))
+
+            selected_ver = np.ones((points.shape[0],), dtype=bool)
+            is_transition = objects[edge_sources] != objects[edge_targets]
+            if False:
+                # Randomly select a subgraph
+                selected_edg, selected_ver = libply_c.random_subgraph(points.shape[0], edge_sources.astype('uint32'),
+                                                                      edge_targets.astype('uint32'),
+                                                                      20000)
+                # Change the type to bool
+                selected_edg = selected_edg.astype(bool)
+                selected_ver = selected_ver.astype(bool)
+
+                new_ver_index = -np.ones((points.shape[0],), dtype=int)
+                new_ver_index[selected_ver.nonzero()] = range(selected_ver.sum())
+
+                edge_sources = new_ver_index[edge_sources[selected_edg]]
+                edge_targets = new_ver_index[edge_targets[selected_edg]]
+
+                is_transition = is_transition[selected_edg]
+                local_neighbors = local_neighbors[selected_ver,]
+
+            # Compute elevation
+            low_points = (points[:, 2] - points[:, 2].min() < 5).nonzero()[0]
+            if low_points.shape[0] > 100:
+                reg = RANSACRegressor(random_state=0).fit(points[low_points, :2], points[low_points, 2])
+                elevation = points[:, 2] - reg.predict(points[:, :2])
+            else:
+                elevation = np.zeros((points.shape[0],), dtype=np.float32)
+
+            # Compute the xyn (normalized x and y)
+            ma, mi = np.max(points[:, :2], axis=0, keepdims=True), np.min(points[:, :2], axis=0, keepdims=True)
+            xyn = (points[:, :2] - mi) / (ma - mi)
+            xyn = xyn[selected_ver,]
+
+            # Compute the local geometry
+            clouds = points[local_neighbors,]
+            diameters = np.sqrt(clouds.var(1).sum(1))
+            clouds = (clouds - points[selected_ver, np.newaxis, :]) / (diameters[:, np.newaxis, np.newaxis] + 1e-10)
+            clouds = np.concatenate([clouds, points[local_neighbors,]], axis=2)
+            clouds = clouds.transpose([0, 2, 1])
+
+            clouds_global = np.hstack(
+                [diameters[:, np.newaxis], elevation[selected_ver, np.newaxis], points[selected_ver,], xyn])
+            clouds = torch.from_numpy(clouds).float()
+            clouds_global = torch.from_numpy(clouds_global).float()
+
+            # Compute embeddings
+            embeddings = ptn_cloud_embedder.run_batch(model, clouds, clouds_global)
+            diff = compute_dist(embeddings, edge_sources, edge_targets, 'euclidian')
+            pred_comp, in_comp = compute_partition(embeddings, edge_sources, edge_targets, diff,
+                                                   points[selected_ver,])
+
+            with wandb.init(project='Visualize superpoints'):
+                color = colorize_instances(np.asarray(in_comp)) * 255
+                point_cloud = np.concatenate([points[selected_ver,], color], axis=1)
+                wandb.log({"point_cloud": [wandb.Object3D(point_cloud)]})
 
     def get_splits(self, window_ranges: list[tuple[int, int]], train_file: str, val_file: str) -> tuple:
         """ Get the train and validation splits for the dataset. Also returns the cloud names.

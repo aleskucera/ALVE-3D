@@ -97,3 +97,23 @@ def compute_loss(diff, is_transition, weights_loss):
     loss2 = (zhang(torch.sqrt(diff[inter_edg] + 1e-10), weights_loss[inter_edg])).sum()
 
     return loss1, loss2
+
+
+def compute_dist(embeddings, edg_source, edg_target, dist_type):
+    """ Compute distance between embeddings.
+    :param embeddings: embeddings
+    :param edg_source: source edges
+    :param edg_target: target edges
+    :param dist_type: distance type
+    """
+    if dist_type == 'euclidian':
+        dist = ((embeddings[edg_source, :] - embeddings[edg_target, :]) ** 2).sum(1)
+    elif dist_type == 'intrinsic':
+        smoothness = 0.999
+        dist = (torch.acos((embeddings[edg_source, :] * embeddings[edg_target, :]).sum(1) * smoothness) - torch.arccos(
+            smoothness)) / (torch.arccos(-smoothness) - torch.arccos(smoothness)) * 3.141592
+    elif dist_type == 'scalar':
+        dist = (embeddings[edg_source, :] * embeddings[edg_target, :]).sum(1) - 1
+    else:
+        raise ValueError(f'{dist_type} is an unknown distance type')
+    return dist

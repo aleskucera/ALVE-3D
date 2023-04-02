@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from .voxel_selectors import RandomVoxelSelector, ViewpointEntropyVoxelSelector
+from .voxel_selectors import RandomVoxelSelector
 from .sample_selectors import RandomSampleSelector, EntropySampleSelector
 
 

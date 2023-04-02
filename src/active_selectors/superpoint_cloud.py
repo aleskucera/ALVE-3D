@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import Dataset
 
 
-class VoxelCloud(object):
+class SuperpointCloud(object):
     """ An object that represents a global cloud in a dataset sequence. The voxels are areas of space that can contain
     multiple points from different frames. The cloud is a collection of these voxels.
     This class is used to store model predictions and other information for each voxel in the cloud. These predictions
@@ -20,11 +20,12 @@ class VoxelCloud(object):
     :param cloud_id: The id of the cloud (used to identify the cloud in the dataset, unique for each cloud in dataset)
     """
 
-    def __init__(self, path: str, size: int, label_mask: torch.Tensor, cloud_id: int):
+    def __init__(self, path: str, size: int, superpoint_map: torch.Tensor, cloud_id: int):
         self.eps = 1e-6  # Small value to avoid division by zero
         self.path = path
         self.size = size
-        self.label_mask = label_mask
+        self.superpoint_map = superpoint_map
+        self.label_mask = torch.zeros((size,), dtype=torch.bool)
 
         self.id = cloud_id
 
@@ -37,10 +38,14 @@ class VoxelCloud(object):
         """ Get the number of classes based on the given predictions.
         If no predictions are available, return None.
         """
-        if len(self.predictions.shape) > 0:
+        if self.predictions.shape != torch.Size([0]):
             return self.predictions.shape[1]
         else:
             return -1
+
+    @property
+    def num_superpoints(self) -> int:
+        return self.superpoint_map.max().item() + 1
 
     def add_predictions(self, predictions: torch.Tensor, voxel_map: torch.Tensor, mc_dropout: bool = False) -> None:
         """ Add model predictions to the cloud.
@@ -93,6 +98,12 @@ class VoxelCloud(object):
                 f['label_mask'][...] = self.label_mask.numpy()
             dataset.label_voxels(voxels.numpy(), self.path)
 
+    def label_superpoints(self, superpoints: torch.Tensor, dataset: Dataset = None) -> None:
+        voxels = torch.tensor([])
+        for superpoint in superpoints:
+            voxels = torch.cat((voxels, torch.nonzero(self.superpoint_map == superpoint).squeeze(1)), dim=0)
+        self.label_voxels(voxels, dataset)
+
     def get_average_entropies(self):
 
         # Initialize the output
@@ -107,8 +118,12 @@ class VoxelCloud(object):
             entropy = self.calculate_average_entropy(prediction_set).unsqueeze(0)
             entropies = torch.cat((entropies, entropy), dim=0)
 
+        # Map the entropies to the voxels
         average_entropies[voxel_map] = entropies
-        return self._append_mapping(average_entropies)
+
+        # Average the entropies by superpoint
+        superpoint_average_entropies, superpoint_sizes = self.average_by_superpoint(average_entropies)
+        return self._append_mapping(superpoint_average_entropies, superpoint_sizes)
 
     def get_viewpoint_variance(self):
 
@@ -122,10 +137,15 @@ class VoxelCloud(object):
         variances = torch.tensor([])
         for prediction_set in prediction_sets:
             var = self.calculate_variance(prediction_set).unsqueeze(0)
+            var = var if not torch.isnan(var) else torch.zeros(1)
             variances = torch.cat((variances, var), dim=0)
 
+        # Map the variances to the voxels
         viewpoint_variances[voxel_map] = variances
-        return self._append_mapping(viewpoint_variances)
+
+        # Average the variances by superpoint
+        superpoint_viewpoint_variances, superpoint_sizes = self.average_by_superpoint(viewpoint_variances)
+        return self._append_mapping(superpoint_viewpoint_variances, superpoint_sizes)
 
     def get_epistemic_uncertainty(self):
 
@@ -141,8 +161,29 @@ class VoxelCloud(object):
             var = torch.mean(variance_set).unsqueeze(0)
             variances = torch.cat((variances, var), dim=0)
 
+        # Map the variances to the voxels
         mean_variances[voxel_map] = variances
-        return self._append_mapping(mean_variances)
+
+        # Average the variances by superpoint
+        superpoint_mean_variances, superpoint_sizes = self.average_by_superpoint(mean_variances)
+        return self._append_mapping(superpoint_mean_variances, superpoint_sizes)
+
+    def average_by_superpoint(self, values: torch.Tensor):
+
+        # Initialize the output
+        average_superpoint_values = torch.full((self.num_superpoints,), float('nan'), dtype=torch.float32)
+        superpoint_sizes = torch.zeros((self.num_superpoints,), dtype=torch.long)
+        superpoints, sizes = torch.unique(self.superpoint_map, return_counts=True)
+        superpoint_sizes[superpoints] = sizes
+
+        # Average the values by superpoint
+        for superpoint in torch.unique(self.superpoint_map):
+            indices = torch.where(self.superpoint_map == superpoint)
+            superpoint_values = values[indices]
+            valid_superpoint_values = superpoint_values[~torch.isnan(superpoint_values)]
+            if len(valid_superpoint_values) > 0:
+                average_superpoint_values[superpoint] = torch.mean(valid_superpoint_values)
+        return average_superpoint_values, superpoint_sizes
 
     @staticmethod
     def cluster_by_voxels(voxel_map: torch.Tensor, predictions: torch.Tensor, variances: torch.Tensor = None):
@@ -190,20 +231,22 @@ class VoxelCloud(object):
         var = torch.var(predictions, dim=0)
         return torch.mean(var)
 
-    def _append_mapping(self, values: torch.Tensor):
+    def _append_mapping(self, superpoint_values: torch.Tensor, superpoint_sizes: torch.Tensor):
         """ Append the voxel indices and cloud ids to the values and return the result.
 
-        :param values: The values to append the mapping to
+        :param superpoint_values: The values to append the mapping to
+        :param superpoint_sizes: The sizes of the superpoints
         :return: A tuple containing the values, voxel indices and cloud ids
         """
 
-        valid_indices = ~torch.isnan(values)
+        valid_indices = ~torch.isnan(superpoint_values)
 
-        filtered_values = values[valid_indices]
-        filtered_voxel_indices = torch.arange(self.size, dtype=torch.long)[valid_indices]
-        filtered_cloud_ids = torch.full((self.size,), self.id, dtype=torch.long)[valid_indices]
+        filtered_values = superpoint_values[valid_indices]
+        filtered_superpoint_sizes = superpoint_sizes[valid_indices]
+        filtered_superpoint_indices = torch.arange(self.num_superpoints, dtype=torch.long)[valid_indices]
+        filtered_cloud_ids = torch.full((self.num_superpoints,), self.id, dtype=torch.long)[valid_indices]
 
-        return filtered_values, filtered_voxel_indices, filtered_cloud_ids
+        return filtered_values, filtered_superpoint_sizes, filtered_superpoint_indices, filtered_cloud_ids
 
     def __len__(self):
         return self.size
@@ -213,6 +256,7 @@ class VoxelCloud(object):
               f'\t - Cloud ID = {self.id}, \n' \
               f'\t - Cloud path = {self.path}, \n' \
               f'\t - Number of voxels in cloud = {self.size}\n' \
+              f'\t - Number of superpoints in cloud = {self.num_superpoints}\n' \
               f'\t - Number of model predictions = {self.predictions.shape[0]}\n'
         if self.num_classes > 0:
             ret += f'\t - Number of semantic classes = {self.num_classes}\n'
@@ -230,30 +274,35 @@ if __name__ == '__main__':
                                     [4, 2, 3, 4],
                                     [9, 1, 3, 5],
                                     [1, 3, 2, 8],
+                                    [3, 5, 2, 9],
                                     [3, 5, 2, 9]], dtype=torch.float32)
 
-    model_outputs_2 = torch.tensor([[8, 1, 4, 2],
-                                    [4, 2, 3, 4],
-                                    [9, 1, 3, 5],
-                                    [1, 3, 2, 8],
+    model_outputs_2 = torch.tensor([[7, 2, 1, 2],
+                                    [4, 2, 2, 3],
+                                    [12, 1, 4, 5],
+                                    [2, 2, 2, 9],
+                                    [4, 1, 2, 8],
                                     [3, 5, 2, 9]], dtype=torch.float32)
 
-    model_outputs_3 = torch.tensor([[8, 1, 4, 2],
-                                    [4, 2, 3, 4],
-                                    [9, 1, 3, 5],
-                                    [1, 3, 2, 8],
+    model_outputs_3 = torch.tensor([[8, 1, 3, 1],
+                                    [4, 3, 1, 3],
+                                    [10, 1, 3, 6],
+                                    [2, 3, 1, 9],
+                                    [3, 5, 2, 9],
                                     [3, 5, 2, 9]], dtype=torch.float32)
 
     # ------------------ WITHOUT MC DROPOUT ------------------
 
     model_outputs = torch.softmax(model_outputs_1, dim=1)
-    voxel_mapping = torch.tensor([0, 0, 0, 1, 1], dtype=torch.long)
+    voxel_mapping = torch.tensor([0, 0, 0, 1, 1, 2], dtype=torch.long)
+    superpoint_mapping = torch.tensor([0, 0, 1], dtype=torch.long)
 
     # Create a voxel cloud with 3 voxels
-    cloud = VoxelCloud(path='/path/to/cloud', size=3, label_mask=torch.zeros(3, dtype=torch.bool), cloud_id=0)
+    cloud = SuperpointCloud(path='/path/to/cloud', size=3, superpoint_map=superpoint_mapping, cloud_id=0)
 
     print(f'\nCreating cloud with 3 voxels and adding 5 predictions:\n')
     cloud.add_predictions(model_outputs, voxel_mapping)
+    print(cloud)
 
     calculated_viewpoint_entropies = cloud.get_average_entropies()
     print(f'\nViewpoint entropies:\n{calculated_viewpoint_entropies[0]}\n')
@@ -267,10 +316,11 @@ if __name__ == '__main__':
     model_outputs_2 = torch.softmax(model_outputs_2, dim=1).unsqueeze(0)
     model_outputs_3 = torch.softmax(model_outputs_3, dim=1).unsqueeze(0)
     model_outputs = torch.cat((model_outputs_1, model_outputs_2, model_outputs_3), dim=0)
-    voxel_mapping = torch.tensor([0, 0, 0, 1, 1], dtype=torch.long)
+    voxel_mapping = torch.tensor([0, 0, 0, 1, 1, 2], dtype=torch.long)
+    superpoint_mapping = torch.tensor([0, 0, 1], dtype=torch.long)
 
     # Create a voxel cloud with 3 voxels
-    cloud = VoxelCloud(path='/path/to/cloud', size=3, label_mask=torch.zeros(3, dtype=torch.bool), cloud_id=0)
+    cloud = SuperpointCloud(path='/path/to/cloud', size=3, superpoint_map=superpoint_mapping, cloud_id=0)
 
     cloud.add_predictions(model_outputs, voxel_mapping, mc_dropout=True)
 

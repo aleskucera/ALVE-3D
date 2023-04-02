@@ -10,7 +10,7 @@ from numpy.lib.recfunctions import structured_to_unstructured
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../cut-pursuit/build/src'))
 
-from .ply import read_ply
+from src.kitti360.ply import read_ply
 from src.superpoints.graph import compute_graph_nn_2
 from src.utils.map import map_labels
 from sklearn.linear_model import RANSACRegressor

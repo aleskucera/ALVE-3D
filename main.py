@@ -7,7 +7,7 @@ import hydra
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src.learn import train_semantic_model, select_first_voxels, select_voxels, train_model
+from src.learn import train_model_full, select_first_voxels, select_voxels, train_model
 from src.utils import set_paths
 from src.kitti360 import KITTI360Converter
 
@@ -27,13 +27,16 @@ def main(cfg: DictConfig):
     log.info(f'Starting action: {cfg.action} using device {device}')
 
     if cfg.action == 'train':
-        train_semantic_model(cfg, device)
-    # elif cfg.action == 'train_active':
-    #     train_semantic_model_active(cfg, device)
+        train_model_full(cfg, device)
     elif cfg.action == 'convert_kitti360':
         converter = KITTI360Converter(cfg)
+        # converter.create_global_clouds()
+        # converter.convert()
+        # converter.create_superpoints()
+    elif cfg.action == 'create_kitti360_superpoints':
+        converter = KITTI360Converter(cfg)
         converter.create_global_clouds()
-        converter.convert()
+        converter.create_superpoints()
     elif cfg.action == 'select_first_voxels':
         select_first_voxels(cfg, device)
     elif cfg.action == 'select_voxels':
