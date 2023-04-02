@@ -3,8 +3,8 @@
 #SBATCH --nodes=1                         # 1 node
 #SBATCH --ntasks-per-node=8               # 8 CPUs per node
 #SBATCH --time=10:00:00                 # time limits: 2 days
-#SBATCH --error=train.err                 # standard error file
-#SBATCH --output=train.out                # standard output file
+#SBATCH --error=process.err                 # standard error file
+#SBATCH --output=process.out                # standard output file
 #SBATCH --partition=amdgpu            # partition name
 #SBATCH --gres=gpu:1                      # number of GPUs per node
 #SBATCH --mail-user=kuceral4@fel.cvut.cz  # where send info about job
