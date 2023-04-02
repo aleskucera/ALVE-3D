@@ -376,10 +376,12 @@ class KITTI360Converter:
             clouds_global = torch.from_numpy(clouds_global).float()
 
             # Compute embeddings
-            embeddings = ptn_cloud_embedder.run_batch(model, clouds, clouds_global)
-            diff = compute_dist(embeddings, edge_sources.astype(np.int64), edge_targets.astype(np.int64), 'euclidian')
-            pred_comp, in_comp = compute_partition(embeddings, edge_sources, edge_targets, diff,
-                                                   points[selected_ver,])
+            with torch.no_grad():
+                embeddings = ptn_cloud_embedder.run_batch(model, clouds, clouds_global)
+                diff = compute_dist(embeddings, edge_sources.astype(np.int64), edge_targets.astype(np.int64),
+                                    'euclidian')
+                pred_comp, in_comp = compute_partition(embeddings, edge_sources, edge_targets, diff,
+                                                       points[selected_ver,])
 
             with wandb.init(project='Visualize superpoints'):
                 color = colorize_instances(np.asarray(in_comp)) * 255
