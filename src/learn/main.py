@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 
 def train_model_full(cfg: DictConfig, device: torch.device):
-    with wandb.init(project='Gradient Test', group='Fully Labeled Training', name='Base'):
+    with wandb.init(project='Train Semantic Model', name='Base'):
         train_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=False)
         val_ds = SemanticDataset(cfg.ds.path, cfg.ds, split='val', size=cfg.train.dataset_size, active_mode=False)
 

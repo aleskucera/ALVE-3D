@@ -15,7 +15,7 @@ from sklearn.linear_model import RANSACRegressor
 
 from src.ply_c import libply_c
 from .ply import read_kitti360_ply
-from src.utils import project_points, colorize_instances
+from src.utils import project_points, colorize_instances, visualize_cloud, visualize_cloud_values
 from src.utils import map_labels, map_colors
 from src.losses.crosspartition import compute_partition, compute_dist
 from src.models.pointnet_sp import LocalCloudEmbedder, STNkD, PointNet
@@ -296,23 +296,6 @@ class KITTI360Converter:
                 model.cuda()
             return model
 
-        # use_rgb = 1
-        # ptn_n_group = 2
-        # stn_as_global = 1
-        # ptn_nfeat_stn = 2
-        # ptn_prelast_do = 0
-        # ptn_norm = 'batch'
-        # global_feat = 'eXYrgb'
-        # n_feat = 3 + 3 * use_rgb
-        # ptn_widths_stn = [[16, 64], [32, 16]]
-        # ptn_widths = [[32, 128], [34, 32, 32, 4]]
-        # nfeats_global = len(global_feat) + 4 * stn_as_global + 1
-        #
-        # model = torch.nn.Module()
-        # model.stn = STNkD(ptn_nfeat_stn, ptn_widths_stn[0], ptn_widths_stn[1], norm=ptn_norm, n_group=ptn_n_group)
-        # model.ptn = PointNet(ptn_widths[0], ptn_widths[1], [], [], n_feat, 0, prelast_do=ptn_prelast_do,
-        #                      nfeat_global=nfeats_global, norm=ptn_norm, is_res=False, last_bn=True)
-
         model = create_model(checkpoint['args'])
         model.load_state_dict(checkpoint['state_dict'])
         model.eval()
@@ -336,7 +319,7 @@ class KITTI360Converter:
                 # Randomly select a subgraph
                 selected_edg, selected_ver = libply_c.random_subgraph(points.shape[0], edge_sources.astype('uint32'),
                                                                       edge_targets.astype('uint32'),
-                                                                      20000)
+                                                                      30000)
                 # Change the type to bool
                 selected_edg = selected_edg.astype(bool)
                 selected_ver = selected_ver.astype(bool)
@@ -383,10 +366,10 @@ class KITTI360Converter:
                 pred_comp, in_comp = compute_partition(embeddings, edge_sources, edge_targets, diff,
                                                        points[selected_ver,])
 
-            with wandb.init(project='Visualize superpoints'):
-                color = colorize_instances(np.asarray(in_comp)) * 255
-                point_cloud = np.concatenate([points[selected_ver,], color], axis=1)
-                wandb.log({"point_cloud": [wandb.Object3D(point_cloud)]})
+            with h5py.File(os.path.join(superpoint_dir, cloud_name), 'r+') as superpoint:
+                superpoint.create_dataset('superpoints', data=in_comp)
+
+            # visualize_cloud_values(points[selected_ver,], in_comp, random_colors=True)
 
     def get_splits(self, window_ranges: list[tuple[int, int]], train_file: str, val_file: str) -> tuple:
         """ Get the train and validation splits for the dataset. Also returns the cloud names.
