@@ -117,9 +117,9 @@ class BaseTrainer(object):
             metadata[key] = value
 
         # Create W&B artifact and log it
-        artifact = wandb.Artifact('state', type='model', metadata=metadata,
+        artifact = wandb.Artifact('base_state', type='model', metadata=metadata,
                                   description='Model state with optimizer state and metric history for each epoch.')
-        artifact.add_file('base_state.pt')
+        artifact.add_file('state.pt')
         wandb.run.log_artifact(artifact)
 
     def load_state(self, state: dict):
