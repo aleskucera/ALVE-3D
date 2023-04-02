@@ -260,7 +260,8 @@ class KITTI360Converter:
         # self.create_global_clouds()
         sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
         global_cloud_dir = os.path.join(sequence_path, 'voxel_clouds')
-        checkpoint = torch.load('/home/ales/Thesis/ALVE-3D/models/pretrained/cv3/model.pth.tar')
+        model_path = os.path.join(self.cfg.path.models, 'pretrained', 'cv3', 'model.pth.tar')
+        checkpoint = torch.load(model_path)
 
         # dataset = KITTI360Dataset(self.cfg, self.cfg.ds.path, 'val')
         # print(dataset[0])
