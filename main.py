@@ -32,7 +32,6 @@ def main(cfg: DictConfig):
         converter = KITTI360Converter(cfg)
         # converter.create_global_clouds()
         # converter.convert()
-        # converter.create_superpoints()
     elif cfg.action == 'create_kitti360_superpoints':
         converter = KITTI360Converter(cfg)
         # converter.create_global_clouds()

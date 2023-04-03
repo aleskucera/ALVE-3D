@@ -257,7 +257,8 @@ class KITTI360Converter:
             output_file.create_dataset('local_neighbors', data=local_neighbors, dtype='uint32')
 
     def create_superpoints(self):
-        # self.create_global_clouds()
+        subgraph = False
+
         sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
         global_cloud_dir = os.path.join(sequence_path, 'voxel_clouds')
         model_path = os.path.join(self.cfg.path.models, 'pretrained', 'cv3', 'model.pth.tar')
@@ -266,45 +267,17 @@ class KITTI360Converter:
         # dataset = KITTI360Dataset(self.cfg, self.cfg.ds.path, 'val')
         # print(dataset[0])
 
-        def create_model(args):
-            """ Creates model """
-            model = torch.nn.Module()
-            if args.learned_embeddings and 'ptn' in args.ptn_embedding and args.ptn_nfeat_stn > 0:
-                model.stn = STNkD(args.ptn_nfeat_stn, args.ptn_widths_stn[0], args.ptn_widths_stn[1],
-                                  norm=args.ptn_norm,
-                                  n_group=args.ptn_n_group)
-
-            if args.learned_embeddings and 'ptn' in args.ptn_embedding:
-                n_embed = args.ptn_widths[1][-1]
-                n_feat = 3 + 3 * args.use_rgb
-                nfeats_global = len(args.global_feat) + 4 * args.stn_as_global + 1  # we always add the diameter
-                model.ptn = PointNet(args.ptn_widths[0], args.ptn_widths[1], [], [], n_feat, 0,
-                                     prelast_do=args.ptn_prelast_do,
-                                     nfeat_global=nfeats_global, norm=args.ptn_norm, is_res=False,
-                                     last_bn=True)  # = args.normalize_intermediary==0)
-
-            if args.ver_value == 'geofrgb':
-                n_embed = 7
-                model.placeholder = torch.nn.Parameter(torch.tensor(0.0))
-            if args.ver_value == 'geof':
-                n_embed = 4
-                model.placeholder = torch.nn.Parameter(torch.tensor(0.0))
-
-            print('Total number of parameters: {}'.format(sum([p.numel() for p in model.parameters()])))
-            print(model)
-            if args.cuda:
-                model.cuda()
-            return model
-
         model = create_model(checkpoint['args'])
         model.load_state_dict(checkpoint['state_dict'])
-        model.eval()
-        model.cpu()
-
         ptn_cloud_embedder = LocalCloudEmbedder(checkpoint['args'])
+
+        model.eval()
+        # model.cpu()
 
         cloud_names = np.sort(np.concatenate([self.train_clouds, self.val_clouds]))
         for cloud_name in tqdm(cloud_names, desc='Creating superpoints'):
+
+            # Load the voxel cloud
             with h5py.File(os.path.join(global_cloud_dir, cloud_name), 'r') as cloud:
                 points = np.asarray(cloud['points'])
                 objects = np.asarray(cloud['objects'])
@@ -315,7 +288,9 @@ class KITTI360Converter:
 
             selected_ver = np.ones((points.shape[0],), dtype=bool)
             is_transition = objects[edge_sources] != objects[edge_targets]
-            if False:
+
+            # If the subgraph is enabled select a random subgraph
+            if subgraph:
                 # Randomly select a subgraph
                 selected_edg, selected_ver = libply_c.random_subgraph(points.shape[0], edge_sources.astype('uint32'),
                                                                       edge_targets.astype('uint32'),
@@ -353,8 +328,11 @@ class KITTI360Converter:
             clouds = np.concatenate([clouds, points[local_neighbors,]], axis=2)
             clouds = clouds.transpose([0, 2, 1])
 
+            # Compute the global geometry
             clouds_global = np.hstack(
                 [diameters[:, np.newaxis], elevation[selected_ver, np.newaxis], points[selected_ver,], xyn])
+
+            # Convert to torch
             clouds = torch.from_numpy(clouds).float()
             clouds_global = torch.from_numpy(clouds_global).float()
 
@@ -366,7 +344,7 @@ class KITTI360Converter:
                 pred_comp, in_comp = compute_partition(embeddings, edge_sources, edge_targets, diff,
                                                        points[selected_ver,])
 
-            with h5py.File(os.path.join(superpoint_dir, cloud_name), 'r+') as superpoint:
+            with h5py.File(os.path.join(global_cloud_dir, cloud_name), 'r+') as superpoint:
                 superpoint.create_dataset('superpoints', data=in_comp)
 
             # visualize_cloud_values(points[selected_ver,], in_comp, random_colors=True)
@@ -528,6 +506,37 @@ class KITTI360Converter:
         o3d.visualization.draw_geometries_with_key_callbacks(
             [self.static_window, self.scan],
             self.key_callbacks)
+
+
+def create_model(args):
+    """ Creates model """
+    model = torch.nn.Module()
+    if args.learned_embeddings and 'ptn' in args.ptn_embedding and args.ptn_nfeat_stn > 0:
+        model.stn = STNkD(args.ptn_nfeat_stn, args.ptn_widths_stn[0], args.ptn_widths_stn[1],
+                          norm=args.ptn_norm,
+                          n_group=args.ptn_n_group)
+
+    if args.learned_embeddings and 'ptn' in args.ptn_embedding:
+        n_embed = args.ptn_widths[1][-1]
+        n_feat = 3 + 3 * args.use_rgb
+        nfeats_global = len(args.global_feat) + 4 * args.stn_as_global + 1  # we always add the diameter
+        model.ptn = PointNet(args.ptn_widths[0], args.ptn_widths[1], [], [], n_feat, 0,
+                             prelast_do=args.ptn_prelast_do,
+                             nfeat_global=nfeats_global, norm=args.ptn_norm, is_res=False,
+                             last_bn=True)  # = args.normalize_intermediary==0)
+
+    if args.ver_value == 'geofrgb':
+        n_embed = 7
+        model.placeholder = torch.nn.Parameter(torch.tensor(0.0))
+    if args.ver_value == 'geof':
+        n_embed = 4
+        model.placeholder = torch.nn.Parameter(torch.tensor(0.0))
+
+    print('Total number of parameters: {}'.format(sum([p.numel() for p in model.parameters()])))
+    print(model)
+    if args.cuda:
+        model.cuda()
+    return model
 
 
 def read_poses(poses_path: str, T_velo2cam: np.ndarray) -> np.ndarray:
