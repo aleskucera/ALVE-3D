@@ -39,7 +39,7 @@ class BaseSuperpointSelector:
         for cloud_id, cloud_path in zip(self.cloud_ids, self.cloud_paths):
             with h5py.File(cloud_path, 'r') as f:
                 num_voxels = f['points'].shape[0]
-                superpoint_map = torch.tensor(f['superpoint_map'][:], dtype=torch.long)
+                superpoint_map = torch.tensor(f['superpoints'][:], dtype=torch.long)
                 self.num_voxels += num_voxels
                 self.clouds.append(SuperpointCloud(cloud_path, num_voxels, superpoint_map, cloud_id))
 

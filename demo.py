@@ -68,10 +68,11 @@ def visualize_dataset(cfg: DictConfig):
 
     size = cfg.size if 'size' in cfg else None
     split = cfg.split if 'split' in cfg else 'train'
-    sequences = cfg.sequences if 'sequences' in cfg else None
+    sequences = [cfg.sequence] if 'sequence' in cfg else None
 
     # Create dataset
-    dataset = SemanticDataset(dataset_path=cfg.ds.path, cfg=cfg.ds, split=split, size=size, sequences=sequences)
+    dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
+                              cfg=cfg.ds, split=split, size=size, sequences=sequences)
 
     # Create scan object
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
@@ -87,12 +88,13 @@ def visualize_sequence(cfg: DictConfig) -> None:
     """
 
     size = cfg.size if 'size' in cfg else None
-    split = cfg.split if 'split' in cfg else 'train'
     sequence = cfg.sequence if 'sequence' in cfg else 3
 
     # Create dataset
-    train_ds = SemanticDataset(dataset_path=cfg.ds.path, cfg=cfg.ds, split='train', size=size, sequences=[sequence])
-    val_ds = SemanticDataset(dataset_path=cfg.ds.path, cfg=cfg.ds, split='val', size=size, sequences=[sequence])
+    train_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
+                               cfg=cfg.ds, split='train', size=size, sequences=[sequence])
+    val_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
+                             cfg=cfg.ds, split='val', size=size, sequences=[sequence])
 
     # Create scan object
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
@@ -115,7 +117,7 @@ def visualize_sequence(cfg: DictConfig) -> None:
         colors.append(scan.sem_label_color)
         poses.append(scan.pose)
 
-    with wandb.init(project='Sequence Visualization 2', group=cfg.ds.name, name=f'Sequence {sequence}'):
+    with wandb.init(project='Sequence Cloud Visualization', group=cfg.ds.name, name=f'Sequence {sequence}'):
         visualize_global_cloud(points, colors, poses, voxel_size=2, log=True)
 
 
@@ -124,9 +126,6 @@ def visualize_superpoints(cfg: DictConfig) -> None:
 
     cloud_dir = os.path.join(cfg.ds.path, 'sequences', f'{sequence:02d}', 'voxel_clouds')
     cloud_files = sorted([os.path.join(cloud_dir, f) for f in os.listdir(cloud_dir) if f.endswith('.h5')])
-
-    print(f'Found {len(cloud_files)} clouds.')
-    print(f'Loading cloud {cloud_files}')
 
     for cloud in cloud_files:
         with h5py.File(cloud, 'r') as f:
@@ -144,20 +143,22 @@ def log_sequence(cfg: DictConfig) -> None:
 
     sequence = cfg.sequence if 'sequence' in cfg else 3
 
-    train_ds = SemanticDataset(dataset_path=cfg.ds.path, split='train', sequences=[sequence], cfg=cfg.ds,
-                               active_mode=False)
-    val_ds = SemanticDataset(dataset_path=cfg.ds.path, split='val', sequences=[sequence], cfg=cfg.ds, active_mode=False)
+    train_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo', split='train',
+                               sequences=[sequence], cfg=cfg.ds, active_mode=False)
+    val_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo', split='val',
+                             sequences=[sequence], cfg=cfg.ds, active_mode=False)
 
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
 
     if len(train_ds) > 0:
-        with wandb.init(project='Sequence Visualization', group=cfg.ds.name, name=f'Sequence {sequence} - train'):
+        with wandb.init(project='Sequence Sample Visualization', group=cfg.ds.name,
+                        name=f'Sequence {sequence} - train'):
             _log_sequence(train_ds, scan)
     else:
         log.info(f'Train dataset for sequence {sequence} is empty.')
 
     if len(val_ds) > 0:
-        with wandb.init(project='Sequence Visualization', group=cfg.ds.name, name=f'Sequence {sequence} - val'):
+        with wandb.init(project='Sequence Sample Visualization', group=cfg.ds.name, name=f'Sequence {sequence} - val'):
             _log_sequence(val_ds, scan)
     else:
         log.info(f'Validation dataset for sequence {sequence} is empty.')

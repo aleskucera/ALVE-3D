@@ -32,7 +32,7 @@ class KITTI360Converter:
 
         # ----------------- KITTI-360 structure attributes -----------------
         self.cfg = cfg
-        self.sequence = cfg.conversion.sequence
+        self.sequence = cfg.sequence if 'sequence' in cfg else 3
         self.seq_name = f'2013_05_28_drive_{self.sequence:04d}_sync'
 
         self.velodyne_path = os.path.join(cfg.ds.path, 'data_3d_raw', self.seq_name, 'velodyne_points', 'data')

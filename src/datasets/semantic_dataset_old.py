@@ -24,7 +24,7 @@ class SemanticDataset(Dataset):
                       for a given split are loaded. (default: None)
     """
 
-    def __init__(self, dataset_path: str, project_name: str, cfg: DictConfig, split: str, size: int = None,
+    def __init__(self, dataset_path: str, cfg: DictConfig, split: str, size: int = None,
                  active_mode: bool = False, sequences: iter = None, resume: bool = False):
 
         assert split in ['train', 'val']
@@ -35,7 +35,6 @@ class SemanticDataset(Dataset):
         self.split = split
         self.path = dataset_path
         self.active = active_mode
-        self.project_name = project_name
         self.label_map = cfg.learning_map
         self.num_classes = cfg.num_classes
         self.ignore_index = cfg.ignore_index
@@ -93,7 +92,7 @@ class SemanticDataset(Dataset):
         the samples to the original dataset.
         """
 
-        data = load_semantic_dataset(self.path, self.project_name, self.sequences, self.split, self.active, self.resume)
+        data = load_semantic_dataset(self.path, self.sequences, self.split, self.active, self.resume)
         self.scans, self.labels, self.sequence_map, self.cloud_map, self.selection_mask = data
 
         self.scans = self.scans[:self.size]
@@ -119,7 +118,7 @@ class SemanticDataset(Dataset):
 
         # Update selection masks for each sequence
         for sequence, mask in zip(sequences, selection_masks):
-            info_file = os.path.join(self.path, self.project_name, f'{sequence:02d}', 'info.h5')
+            info_file = os.path.join(self.path, 'sequences', f'{sequence:02d}', 'info.h5')
             with h5py.File(info_file, 'r+') as f:
                 f['selection_mask'][:mask.shape[0]] = mask
 
@@ -139,9 +138,8 @@ class SemanticDataset(Dataset):
         for label_file, sample_idx in tqdm(zip(labels, sample_map), total=len(labels), desc='Labeling voxels'):
 
             # Update the label mask on places where the points are inside the selected voxels
-            with h5py.File(label_file, 'r') as f:
-                voxel_map = np.asarray(f['voxel_map'])
-            with h5py.File(label_file.replace('sequences', self.project_name), 'r+') as f:
+            with h5py.File(label_file, 'r+') as f:
+                voxel_map = f['voxel_map']
                 label_mask = f['label_mask']
                 label_mask[np.isin(voxel_map, voxels)] = 1
 
@@ -165,9 +163,9 @@ class SemanticDataset(Dataset):
 
         # Update the label masks
         for idx in tqdm(sample_indices, desc='Updating label masks'):
-            with h5py.File(self.labels[idx].replace('sequences', self.project_name), 'r+') as f:
+            with h5py.File(self.labels[idx], 'r+') as f:
                 label_mask = f['label_mask']
-                label_mask[...] = np.ones_like(f['label_mask'])
+                label_mask[...] = np.ones_like(f['selection_mask'])
 
         # Update the selection masks also on the disk
         self.update_sequence_selection_masks()
@@ -251,8 +249,6 @@ class SemanticDataset(Dataset):
         with h5py.File(self.label_files[idx], 'r') as f:
             labels = np.asarray(f['labels']).flatten()
             labels = map_labels(labels, self.label_map)
-
-        with h5py.File(self.label_files[idx].replace('sequences', self.project_name), 'r') as f:
             label_mask = np.asarray(f['label_mask']).flatten()
 
         if self.split == 'train':
@@ -316,11 +312,9 @@ class SemanticDataset(Dataset):
         for path in tqdm(cloud_paths, desc='Calculating dataset statistics'):
             with h5py.File(path, 'r') as f:
                 labels = np.asarray(f['labels']).flatten()
-                labels = map_labels(labels, self.label_map)
-
-            with h5py.File(path.replace('sequences', self.project_name), 'r') as f:
                 label_mask = np.asarray(f['label_mask']).flatten()
                 voxel_mask = self.get_voxel_mask(path, len(labels))
+                labels = map_labels(labels, self.label_map)
                 labels *= voxel_mask
 
                 # Add counts to the class counts
@@ -361,5 +355,5 @@ class SemanticDataset(Dataset):
 
     def __str__(self):
         return f'\nSemanticDataset: {self.split}\n' \
-               f'\t - Dataset size: {self.__len__()} / {self.get_full_length()}\n' \
+               f'\t - Dataset size: {len(self)} / {self.get_full_length()}\n' \
                f'\t - Sequences: {self.sequences}\n'

@@ -1,0 +1,9 @@
+selector_type: 'entropy_voxels'
+random_selector_type: 'random_voxels'
+
+select_percent: 1 # percentage of voxels to select
+percent_labeled: 1 # expected number of voxels already selected
+
+state_artifact: 'state'
+selected_voxels_artifact: 'selected_voxels'
+

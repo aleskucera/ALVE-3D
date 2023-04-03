@@ -1,4 +1,3 @@
-sequence: 3
 static_threshold: 0.2
 dynamic_threshold: 0.25
 
