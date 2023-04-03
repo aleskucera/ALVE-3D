@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+import os
 import logging
 
+import h5py
 import wandb
 import hydra
 import numpy as np
@@ -8,7 +10,7 @@ from tqdm import tqdm
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src.utils import set_paths, visualize_global_cloud
+from src.utils import set_paths, visualize_global_cloud, visualize_cloud_values
 from src.datasets import SemanticDataset
 from src.kitti360 import KITTI360Converter, create_kitti360_config
 from src.laserscan import LaserScan, ScanVis
@@ -28,6 +30,8 @@ def main(cfg: DictConfig):
         visualize_dataset(cfg)
     elif cfg.action == 'visualize_sequence':
         visualize_sequence(cfg)
+    elif cfg.action == 'visualize_superpoints':
+        visualize_superpoints(cfg)
     elif cfg.action == 'log_sequence':
         log_sequence(cfg)
     elif cfg.action == 'create_kitti360_config':
@@ -113,6 +117,23 @@ def visualize_sequence(cfg: DictConfig) -> None:
 
     with wandb.init(project='Sequence Visualization 2', group=cfg.ds.name, name=f'Sequence {sequence}'):
         visualize_global_cloud(points, colors, poses, voxel_size=2, log=True)
+
+
+def visualize_superpoints(cfg: DictConfig) -> None:
+    sequence = cfg.sequence if 'sequence' in cfg else 3
+
+    cloud_dir = os.path.join(cfg.ds.path, 'sequences', f'{sequence:02d}', 'voxel_clouds')
+    cloud_files = sorted([os.path.join(cloud_dir, f) for f in os.listdir(cloud_dir) if f.endswith('.h5')])
+
+    print(f'Found {len(cloud_files)} clouds.')
+    print(f'Loading cloud {cloud_files}')
+
+    for cloud in cloud_files:
+        with h5py.File(cloud, 'r') as f:
+            points = np.asarray(f['points'])
+            superpoints = np.asarray(f['superpoints'])
+
+            visualize_cloud_values(points, superpoints, random_colors=True)
 
 
 def log_sequence(cfg: DictConfig) -> None:
