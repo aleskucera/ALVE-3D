@@ -256,7 +256,7 @@ class KITTI360Converter:
             output_file.create_dataset('edge_transitions', data=edge_transitions, dtype='uint8')
             output_file.create_dataset('local_neighbors', data=local_neighbors, dtype='uint32')
 
-    def create_superpoints(self):
+    def create_superpoints(self, device: torch.device):
         subgraph = False
 
         sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
@@ -272,7 +272,7 @@ class KITTI360Converter:
         ptn_cloud_embedder = LocalCloudEmbedder(checkpoint['args'])
 
         model.eval()
-        # model.cpu()
+        model.to(device)
 
         cloud_names = np.sort(np.concatenate([self.train_clouds, self.val_clouds]))
         for cloud_name in tqdm(cloud_names, desc='Creating superpoints'):
@@ -333,8 +333,8 @@ class KITTI360Converter:
                 [diameters[:, np.newaxis], elevation[selected_ver, np.newaxis], points[selected_ver,], xyn])
 
             # Convert to torch
-            clouds = torch.from_numpy(clouds).float()
-            clouds_global = torch.from_numpy(clouds_global).float()
+            clouds = torch.from_numpy(clouds).float().to(device)
+            clouds_global = torch.from_numpy(clouds_global).float().to(device)
 
             # Compute embeddings
             with torch.no_grad():
