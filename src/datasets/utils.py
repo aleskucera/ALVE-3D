@@ -7,7 +7,7 @@ import numpy as np
 log = logging.getLogger(__name__)
 
 
-def initialize_dataset(dataset_path: str, project_name: str, sequences: list, active: bool = False) -> None:
+def initialize_dataset(dataset_path: str, project_name: str, sequences: list, split: str, active: bool) -> None:
     """ Initialize semantic samples for a given split and mode. The initialization is done by setting
     the selection mask and the label mask to 0 or 1 depending on the mode.
 
@@ -32,35 +32,38 @@ def initialize_dataset(dataset_path: str, project_name: str, sequences: list, ac
         labels_dir = os.path.join(sequence_dir, 'labels')
         clouds_dir = os.path.join(sequence_dir, 'voxel_clouds')
 
-        # Update the selection mask in the info file and load the train samples
         with h5py.File(info_path, 'r') as f:
-            train_samples = np.asarray(f['train']).astype(np.str_)
-            train_clouds = np.asarray(f['train_clouds']).astype(np.str_)
-            train_labels = np.array([os.path.join(labels_dir, t) for t in train_samples], dtype=np.str_)
-            train_clouds = np.array([os.path.join(clouds_dir, t) for t in train_clouds], dtype=np.str_)
+            if split == 'train':
+                samples = np.asarray(f['train']).astype(np.str_)
+                clouds = np.asarray(f['train_clouds']).astype(np.str_)
+            elif split == 'val':
+                samples = np.asarray(f['val']).astype(np.str_)
+                clouds = np.asarray(f['val_clouds']).astype(np.str_)
 
-        with h5py.File(info_path.replace('sequences', project_name), 'w') as f:
-            if active:
-                f.create_dataset('selection_mask', data=np.zeros_like(train_samples, dtype=bool))
-            else:
-                f.create_dataset('selection_mask', data=np.ones_like(train_samples, dtype=bool))
+            labels = np.array([os.path.join(labels_dir, t) for t in samples], dtype=np.str_)
+            clouds = np.array([os.path.join(clouds_dir, t) for t in clouds], dtype=np.str_)
 
-        # Open the label files and set the label mask to 0 or 1
-        for label_path in train_labels:
-            with h5py.File(label_path, 'r') as f:
-                label_mask = np.asarray(f['label_mask'], dtype=bool)
-            with h5py.File(label_path.replace('sequences', project_name), 'w') as f:
+        if split == 'train':
+            with h5py.File(info_path.replace('sequences', project_name), 'w') as f:
                 if active:
+                    f.create_dataset('selection_mask', data=np.zeros_like(samples, dtype=bool))
+                else:
+                    f.create_dataset('selection_mask', data=np.ones_like(samples, dtype=bool))
+
+        for label in labels:
+            with h5py.File(label, 'r') as f:
+                label_mask = np.asarray(f['label_mask'], dtype=bool)
+            with h5py.File(label.replace('sequences', project_name), 'w') as f:
+                if active and split == 'train':
                     f.create_dataset('label_mask', data=np.zeros_like(label_mask, dtype=bool))
                 else:
                     f.create_dataset('label_mask', data=np.ones_like(label_mask, dtype=bool))
 
-        # Open the cloud files and set the label mask to 0 or 1
-        for cloud in train_clouds:
+        for cloud in clouds:
             with h5py.File(cloud, 'r') as f:
                 label_mask = np.asarray(f['label_mask'], dtype=bool)
             with h5py.File(cloud.replace('sequences', project_name), 'w') as f:
-                if active:
+                if active and split == 'train':
                     f.create_dataset('label_mask', data=np.zeros_like(label_mask, dtype=bool))
                 else:
                     f.create_dataset('label_mask', data=np.ones_like(label_mask, dtype=bool))
@@ -90,8 +93,8 @@ def load_semantic_dataset(dataset_path: str, project_name: str, sequences: list,
         os.makedirs(os.path.join(dataset_path, project_name, f'{s:02d}', 'labels'), exist_ok=True)
         os.makedirs(os.path.join(dataset_path, project_name, f'{s:02d}', 'voxel_clouds'), exist_ok=True)
 
-    if not resume and split == 'train':
-        initialize_dataset(dataset_path, project_name, sequences, active)
+    if not resume:
+        initialize_dataset(dataset_path, project_name, sequences, split, active)
 
     log.info(f'Loading dataset: {dataset_path} split: {split} with mode {"active" if active else "normal"}')
 

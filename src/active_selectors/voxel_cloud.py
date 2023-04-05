@@ -42,6 +42,11 @@ class VoxelCloud(object):
         else:
             return -1
 
+    @staticmethod
+    def percentage_labeled(self) -> float:
+        """ Get the percentage of voxels that are labeled in the cloud. """
+        return torch.sum(self.label_mask).item() / self.size
+
     def add_predictions(self, predictions: torch.Tensor, voxel_map: torch.Tensor, mc_dropout: bool = False) -> None:
         """ Add model predictions to the cloud.
 

@@ -25,7 +25,7 @@ def train_model(cfg: DictConfig, device: torch.device):
 
 
 def train_active(cfg: DictConfig, device: torch.device):
-    percentage = f'{cfg.active.percent_labeled}%'
+    percentage = f'{cfg.active.percentage_labeled}%'
     selector_type = cfg.active.selector_type
     project_name = f'active_learning_{selector_type}'
 
@@ -61,8 +61,8 @@ def train_active(cfg: DictConfig, device: torch.device):
 
 
 def select_voxels(cfg: DictConfig, device: torch.device):
-    percentage = f'{cfg.active.percent_labeled}%'
-    select_percent = cfg.active.select_percent
+    percentage = f'{cfg.active.percentage_labeled}%'
+    select_percentage = cfg.active.select_percentage
     selector_type = cfg.active.selector_type
     project_name = f'active_learning_{selector_type}'
 
@@ -94,7 +94,7 @@ def select_voxels(cfg: DictConfig, device: torch.device):
         model.load_state_dict(model_state_dict)
 
         # Select the next voxels
-        selected_voxels = selector.select(dataset, model, select_percent)
+        selected_voxels = selector.select(dataset, model, select_percentage)
 
         # Save the selected voxels to W&B
         torch.save(selected_voxels, f'{selected_voxels_artifact}.pt')
@@ -116,7 +116,7 @@ def select_first_voxels(cfg: DictConfig, device: torch.device):
         cloud_paths = dataset.get_dataset_clouds()
         selector = get_selector(random_selector_type, dataset.path, cloud_paths, device)
 
-        selected_voxels = selector.select(dataset, cfg.select_percent)
+        selected_voxels = selector.select(dataset, cfg.active.select_percentage)
 
         torch.save(selected_voxels, f'{selected_voxels_artifact}.pt')
         artifact = wandb.Artifact(selected_voxels_artifact, type='dataset',
