@@ -83,7 +83,7 @@ class SemanticLogger(object):
         """ Check if IoU has converged. If the IoU has
         not improved for 10 epochs, the training is stopped.
         """
-        if len(self.history['miou_val']) < 30:
+        if len(self.history['miou_val']) < 50:
             return False
         return len(self.history['miou_val']) - np.argmax(self.history['miou_val']) > 10
 
