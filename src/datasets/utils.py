@@ -3,6 +3,7 @@ import logging
 
 import h5py
 import numpy as np
+from tqdm import tqdm
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ def initialize_dataset(dataset_path: str, project_name: str, sequences: list, sp
                 else:
                     f.create_dataset('selection_mask', data=np.ones_like(samples, dtype=bool))
 
-        for label in labels:
+        for label in tqdm(labels, desc=f'Initializing labels for sequence {sequence_dir}'):
             with h5py.File(label, 'r') as f:
                 label_mask = np.asarray(f['label_mask'], dtype=bool)
             with h5py.File(label.replace('sequences', project_name), 'w') as f:
@@ -59,7 +60,7 @@ def initialize_dataset(dataset_path: str, project_name: str, sequences: list, sp
                 else:
                     f.create_dataset('label_mask', data=np.ones_like(label_mask, dtype=bool))
 
-        for cloud in clouds:
+        for cloud in tqdm(clouds, desc=f'Initializing clouds for sequence {sequence_dir}'):
             with h5py.File(cloud, 'r') as f:
                 label_mask = np.asarray(f['label_mask'], dtype=bool)
             with h5py.File(cloud.replace('sequences', project_name), 'w') as f:
@@ -105,7 +106,7 @@ def load_semantic_dataset(dataset_path: str, project_name: str, sequences: list,
     selection_mask = np.array([], dtype=bool)
 
     sequence_dirs = [os.path.join(dataset_path, 'sequences', f'{s:02d}') for s in sequences]
-    for sequence, sequence_dir in zip(sequences, sequence_dirs):
+    for sequence, sequence_dir in tqdm(zip(sequences, sequence_dirs), desc='Loading dataset sequences'):
         info_path = os.path.join(sequence_dir, 'info.h5')
         labels_dir = os.path.join(sequence_dir, 'labels')
         scans_dir = os.path.join(sequence_dir, 'velodyne')
