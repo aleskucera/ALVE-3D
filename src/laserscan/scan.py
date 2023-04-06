@@ -253,7 +253,7 @@ class LaserScan:
     # ===============================================================================
 
     @arg_check
-    def open_label(self, filename: str) -> None:
+    def open_label(self, filename: str, label_mask: np.ndarray = None) -> None:
         """ Open labels from a file. The file can be either a .label file or a .npy file.
         Expected format is int32, where the lower 16 bits are the semantic label and the upper 16 bits
         are the instance id.
@@ -262,6 +262,7 @@ class LaserScan:
         the drop mask.
 
         :param filename: Path to the label file.
+        :param label_mask: Numpy array with shape (N,) containing a mask for the labels.
         """
 
         # Read label from file
@@ -276,9 +277,7 @@ class LaserScan:
             instances = instances.flatten()
         elif filename.endswith('.h5'):
             with h5py.File(filename, 'r') as f:
-                semantics = np.array(f['labels']).flatten()
-                # label_mask = np.array(f['label_mask']).flatten()
-                # voxel_map = np.array(f['voxel_map']).flatten()
+                semantics = np.asarray(f['labels']).flatten()
                 instances = None
         else:
             raise ValueError('Invalid file extension')
@@ -287,10 +286,10 @@ class LaserScan:
         semantics = map_labels(semantics, self.label_map)
 
         # Set attributes
-        self.set_label(semantics, instances)
+        self.set_label(semantics, instances, label_mask)
 
     @arg_check
-    def set_label(self, semantics: np.ndarray, instances: np.ndarray = None) -> None:
+    def set_label(self, semantics: np.ndarray, instances: np.ndarray = None, label_mask: np.ndarray = None) -> None:
         """ Set the semantic and instance labels from numpy arrays.
 
         It is necessary to load the corresponding scan first
@@ -298,9 +297,15 @@ class LaserScan:
 
         :param semantics: Numpy array with shape (N,) containing the semantic labels.
         :param instances: Numpy array with shape (N,) containing the instance ids.
+        :param label_mask: Numpy array with shape (N,) containing the mask for the labels.
         """
 
         assert self.sem_label is None and self.inst_label is None, 'Labels already set'
+
+        if label_mask is not None and np.sum(label_mask) != 0:
+            semantics *= label_mask.astype(np.uint8)
+            if instances is not None:
+                instances *= label_mask.astype(np.uint8)
 
         # Set attributes, so they correspond to the points in the scan
         self.sem_label = semantics[self.drop_mask]

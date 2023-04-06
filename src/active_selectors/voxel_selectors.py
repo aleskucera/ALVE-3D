@@ -1,11 +1,14 @@
 import h5py
 import torch
+import wandb
 import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
+from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
 from .voxel_cloud import VoxelCloud
+from src.laserscan import LaserScan
 
 
 class BaseVoxelSelector:
@@ -70,6 +73,64 @@ class BaseVoxelSelector:
             cloud = self.get_cloud(cloud_name)
             voxels = torch.nonzero(label_mask).squeeze(1)
             cloud.label_voxels(voxels, dataset)
+
+    @staticmethod
+    def log_selection(cfg: DictConfig, dataset: Dataset):
+
+        # --------------------------------------------------------
+        # ================== DATASET STATISTICS ==================
+        # --------------------------------------------------------
+
+        ignore_index = cfg.ds.ignore_index
+        label_names = [v for k, v in cfg.ds.labels_train.items() if k != ignore_index]
+        class_distribution, class_labeling_progress, labeled_ratio = dataset.get_statistics()
+
+        # Log the dataset labeling progress
+        wandb.log({f'Dataset Labeling Progress': labeled_ratio})
+
+        # Filter and log the dataset class distribution
+        class_distribution = np.delete(class_distribution, ignore_index)
+        data = [[name, value] for name, value in zip(label_names, class_distribution)]
+        table = wandb.Table(data=data, columns=["Class", "Distribution"])
+        wandb.log({f"Class Distribution - {labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Distribution")})
+
+        # Filter and log the class labeling progress
+        class_labeling_progress = np.delete(class_labeling_progress, ignore_index)
+        data = [[name, value] for name, value in zip(label_names, class_labeling_progress)]
+        table = wandb.Table(data=data, columns=["Class", "Labeling Progress"])
+        wandb.log(
+            {f"Class Labeling Progress - {labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Labeling Progress")})
+
+        # ---------------------------------------------------------
+        # ================== MOST LABELED SAMPLE ==================
+        # ---------------------------------------------------------
+
+        most_labeled_sample, labeled_ratio, label_mask = dataset.get_most_labeled_sample()
+        scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
+
+        # Open the scan and the label
+        scan.open_scan(dataset.scan_files[most_labeled_sample])
+        scan.open_label(dataset.label_files[most_labeled_sample])
+
+        # Create the point cloud and the projection with fully labeled points
+        cloud = np.concatenate([scan.points, scan.color * 255], axis=1)
+        cloud_label_full = np.concatenate([scan.points, scan.sem_label_color * 255], axis=1)
+        projection_label_full = scan.proj_sem_color
+
+        # Open the label with the label mask
+        scan.open_scan(dataset.scan_files[most_labeled_sample])
+        scan.open_label(dataset.label_files[most_labeled_sample], label_mask)
+
+        # Create the point cloud and the projection with the most labeled points
+        cloud_label = np.concatenate([scan.points, scan.sem_label_color * 255], axis=1)
+        projection_label = scan.proj_sem_color
+
+        wandb.log({'Point Cloud': wandb.Object3D(cloud),
+                   'Point Cloud Label - Full': wandb.Object3D(cloud_label_full),
+                   f'Point Cloud Label ({labeled_ratio:.2f})': wandb.Object3D(cloud_label),
+                   'Projection': wandb.Image(scan.proj_color),
+                   'Projection Label - Full': wandb.Image(projection_label_full),
+                   f'Projection Label - ({labeled_ratio:.2f})': wandb.Image(projection_label)})
 
 
 class RandomVoxelSelector(BaseVoxelSelector):
@@ -154,9 +215,8 @@ class AverageEntropyVoxelSelector(BaseVoxelSelector):
             for cloud in self.clouds:
                 indices = np.where(dataset.cloud_map == cloud.path)[0]
                 for i in tqdm(indices, desc='Mapping model output values to voxels'):
-                    proj_image, proj_distances, proj_voxel_map, cloud_path = dataset.get_item(i)
+                    proj_image, _, proj_voxel_map, cloud_path = dataset.get_item(i)
                     proj_image = torch.from_numpy(proj_image).type(torch.float32).unsqueeze(0).to(self.device)
-                    proj_distances = torch.from_numpy(proj_distances).type(torch.float32)
                     proj_voxel_map = torch.from_numpy(proj_voxel_map).type(torch.long)
 
                     # Forward pass
@@ -164,16 +224,14 @@ class AverageEntropyVoxelSelector(BaseVoxelSelector):
 
                     # Change the shape of the model output to (num_voxels, num_classes)
                     model_output = model_output.squeeze(0).flatten(start_dim=1).permute(1, 0)
-                    sample_distances = proj_distances.flatten()
                     sample_voxel_map = proj_voxel_map.flatten()
 
                     # Remove the voxels where voxel map is -1 (empty pixel or ignore class)
                     valid = (sample_voxel_map != -1)
                     model_output = model_output[valid]
-                    sample_distances = sample_distances[valid]
                     sample_voxel_map = sample_voxel_map[valid]
 
-                    cloud.add_predictions(model_output.cpu(), sample_distances, sample_voxel_map)
+                    cloud.add_predictions(model_output.cpu(), sample_voxel_map, mc_dropout=False)
 
                 entropies, cloud_voxel_map, cloud_cloud_map = cloud.get_average_entropies()
                 average_entropies = torch.cat((average_entropies, entropies))

@@ -56,12 +56,14 @@ def train_active(cfg: DictConfig, device: torch.device):
         else:
             state = None
 
+        selector.log_selection(cfg, train_ds)
+
         trainer = Trainer(cfg, train_ds, val_ds, device, state)
         trainer.train()
 
 
 def select_voxels(cfg: DictConfig, device: torch.device):
-    percentage = f'{cfg.active.percentage_labeled}%'
+    percentage = f'{cfg.active.percentage_labeled + cfg.active.select_percentage}%'
     select_percentage = cfg.active.select_percentage
     selector_type = cfg.active.selector_type
     project_name = f'active_learning_{selector_type}'
@@ -103,6 +105,10 @@ def select_voxels(cfg: DictConfig, device: torch.device):
         artifact.add_file(f'{selected_voxels_artifact}.pt')
         wandb.run.log_artifact(artifact)
 
+        # Log the results of the selection
+        selector.load_voxel_selection(selected_voxels, dataset)
+        selector.log_selection(cfg, dataset)
+
 
 def select_first_voxels(cfg: DictConfig, device: torch.device):
     selector_type = cfg.active.selector_type
@@ -110,7 +116,7 @@ def select_first_voxels(cfg: DictConfig, device: torch.device):
     project_name = f'active_learning_{selector_type}'
 
     selected_voxels_artifact = cfg.active.selected_voxels_artifact
-    with wandb.init(project=project_name, group='selection', name='first_random_selection_1%'):
+    with wandb.init(project=project_name, group='selection', name='first_random_selection_0.5%'):
         dataset = SemanticDataset(cfg.ds.path, project_name=project_name, cfg=cfg.ds,
                                   split='train', size=cfg.train.dataset_size, active_mode=True)
         cloud_paths = dataset.get_dataset_clouds()
@@ -123,3 +129,7 @@ def select_first_voxels(cfg: DictConfig, device: torch.device):
                                   description='The selected voxels for the first active learning iteration.')
         artifact.add_file(f'{selected_voxels_artifact}.pt')
         wandb.run.log_artifact(artifact)
+
+        # Log the results of the first selection
+        selector.load_voxel_selection(selected_voxels, dataset)
+        selector.log_selection(cfg, dataset)

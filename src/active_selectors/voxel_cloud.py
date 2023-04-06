@@ -94,8 +94,8 @@ class VoxelCloud(object):
         # Get indices where the voxels mask is True
         self.label_mask[voxels] = True
         if dataset is not None:
-            with h5py.File(self.path, 'r+') as f:
-                f['label_mask'][...] = self.label_mask.numpy()
+            with h5py.File(self.path.replace('sequences', dataset.project_name), 'w') as f:
+                f.create_dataset('label_mask', data=self.label_mask.numpy())
             dataset.label_voxels(voxels.numpy(), self.path)
 
     def get_average_entropies(self):

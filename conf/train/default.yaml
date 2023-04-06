@@ -2,3 +2,6 @@ learning_rate: 0.001    # 1e-3
 epochs: 150
 batch_size: 32
 dataset_size: null      # null means all
+
+patience: 10
+min_epochs: 30

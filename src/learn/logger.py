@@ -1,3 +1,5 @@
+import logging
+
 import wandb
 import torch
 import numpy as np
@@ -5,6 +7,8 @@ import seaborn as sn
 import matplotlib.pyplot as plt
 from torchmetrics.classification import MulticlassAccuracy, \
     MulticlassJaccardIndex, MulticlassConfusionMatrix
+
+log = logging.getLogger(__name__)
 
 
 def get_logger(logger_type: str, num_classes: int, labels: dict, device: torch.device, ignore_index: int):
@@ -71,29 +75,39 @@ class SemanticLogger(object):
 
             # Confusion matrix
             'confusion_matrix': [],
-
-            # Dataset statistics
-            'class_distribution': [],
-            'class_labeling_progress': [],
-            'labeled_ratio': []
         }
 
-    @property
-    def miou_converged(self):
+    def miou_converged(self, min_epochs: int = 30, patience: int = 10):
         """ Check if IoU has converged. If the IoU has
         not improved for 10 epochs, the training is stopped.
         """
-        if len(self.history['miou_val']) < 50:
+        if len(self.history['miou_val']) < min_epochs:
+            log.info(f'Skipping convergence check, not enough epochs: {len(self.history["miou_val"])}')
             return False
-        return len(self.history['miou_val']) - np.argmax(self.history['miou_val']) > 10
 
-    def miou_improved(self):
+        if len(self.history['miou_val']) - np.argmax(self.history['miou_val']) > patience:
+            log.info(f'MIoU converged, number of epochs without improvement: '
+                     f'{len(self.history["miou_val"]) - np.argmax(self.history["miou_val"])}')
+            return True
+        else:
+            log.info(f'MIoU not converged, number of epochs without improvement: '
+                     f'{len(self.history["miou_val"]) - np.argmax(self.history["miou_val"])}')
+            return False
+
+    def miou_improved(self, min_epochs: int = 15):
         """ Check if IoU has improved. If the last IoU
         is the maximum, the model is saved.
         """
-        if len(self.history['miou_val']) < 10:
+        if len(self.history['miou_val']) < min_epochs:
+            log.info(f'Skipping improvement check, not enough epochs: {len(self.history["miou_val"])}')
             return False
-        return len(self.history['miou_val']) - np.argmax(self.history['miou_val']) == 1
+
+        if len(self.history['miou_val']) - np.argmax(self.history['miou_val']) == 1:
+            log.info(f'MIoU improved: {self.history["miou_val"][-1]}')
+            return True
+        else:
+            log.info(f'MIoU not improved: {self.history["miou_val"][-1]}')
+            return False
 
     def load_history(self, history: dict):
         assert set(history.keys()) == set(self.history.keys()), "History keys don't match"
@@ -206,24 +220,6 @@ class SemanticLogger(object):
         self.conf_matrix.reset()
         self.batch_loss_history = []
 
-    def log_dataset_statistics(self, class_distribution: np.ndarray, class_labeling_progress: np.ndarray,
-                               percentage: float):
-        self._log_class_distribution(class_distribution, percentage)
-        self._log_class_labeling_progress(class_labeling_progress, percentage)
-        wandb.log({f'Dataset Labeling Progress': percentage})
-
-    def _log_class_distribution(self, class_distribution: np.ndarray, percentage: float):
-        class_distribution = np.delete(class_distribution, self.ignore_index)
-        data = [[name, value] for name, value in zip(self.label_names, class_distribution)]
-        table = wandb.Table(data=data, columns=["Class", "Distribution"])
-        wandb.log({f"Class Distribution - {percentage:.2f}%": wandb.plot.bar(table, "Class", "Distribution")})
-
-    def _log_class_labeling_progress(self, class_labeling_progress: np.ndarray, percentage: float):
-        class_labeling_progress = np.delete(class_labeling_progress, self.ignore_index)
-        data = [[name, value] for name, value in zip(self.label_names, class_labeling_progress)]
-        table = wandb.Table(data=data, columns=["Class", "Labeling Progress"])
-        wandb.log({f"Class Labeling Progress - {percentage:.2f}%": wandb.plot.bar(table, "Class", "Labeling Progress")})
-
     def _log_class_accuracy(self, class_acc: torch.Tensor, epoch: int):
         class_acc = class_acc.tolist()
         del class_acc[self.ignore_index]
@@ -259,8 +255,3 @@ class SemanticLogger(object):
         wandb.log({"Confusion Matrix": wandb.Image(plt)}, step=epoch)
 
         plt.close()
-
-
-class PartitionLogger(object):
-    def __init__(self):
-        super().__init__()

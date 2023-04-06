@@ -297,6 +297,23 @@ class SemanticDataset(Dataset):
     def get_dataset_clouds(self) -> np.ndarray:
         return np.unique(self.cloud_map)
 
+    def get_most_labeled_sample(self) -> tuple[int, float, np.ndarray]:
+
+        max_label_ratio = 0
+        most_labeled_sample = 0
+        sample_label_mask = np.zeros(self.__len__(), dtype=np.float32)
+
+        for i in range(self.__len__()):
+            with h5py.File(self.label_files[i].replace('sequences', self.project_name), 'r') as f:
+                label_mask = np.asarray(f['label_mask']).flatten()
+                label_ratio = np.sum(label_mask) / len(label_mask)
+                if label_ratio > max_label_ratio:
+                    max_label_ratio = label_ratio
+                    most_labeled_sample = i
+                    sample_label_mask = label_mask
+
+        return most_labeled_sample, max_label_ratio, sample_label_mask
+
     def get_statistics(self, ignore: int = 0) -> tuple[np.ndarray, np.ndarray, float]:
         """ Returns the statistics of the dataset. The statistics are the class distribution, the labeling
         progress for each class and the labeling progress for the dataset.
@@ -341,9 +358,9 @@ class SemanticDataset(Dataset):
 
         class_distribution = class_counts / counter
         class_progress = labeled_class_counts / class_counts
-        labeled_ratio = labeled_counter / counter
+        dataset_labeled_ratio = labeled_counter / counter
 
-        return class_distribution, class_progress, labeled_ratio
+        return class_distribution, class_progress, dataset_labeled_ratio
 
     def get_voxel_mask(self, cloud_path: str, cloud_size: int) -> np.ndarray:
         voxel_mask = np.zeros(cloud_size, dtype=np.bool)

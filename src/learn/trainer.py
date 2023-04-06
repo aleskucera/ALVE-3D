@@ -33,6 +33,8 @@ class BaseTrainer(object):
         self.optimizer = optim.Adam(self.model.parameters(), lr=cfg.train.learning_rate)
 
         self.epoch = 0
+        self.min_epochs = cfg.train.min_epochs
+        self.patience = cfg.train.patience
 
         if state is not None:
             self.load_state(state)
@@ -117,7 +119,7 @@ class BaseTrainer(object):
             metadata[key] = value
 
         # Create W&B artifact and log it
-        artifact = wandb.Artifact('base_state', type='model', metadata=metadata,
+        artifact = wandb.Artifact('state', type='model', metadata=metadata,
                                   description='Model state with optimizer state and metric history for each epoch.')
         artifact.add_file('state.pt')
         wandb.run.log_artifact(artifact)
@@ -135,12 +137,14 @@ class Trainer(BaseTrainer):
         super().__init__(cfg, train_ds, val_ds, device, state)
 
     def train(self):
+
+        # Reset the logger and the epoch counter
         self.epoch = 0
         self.logger.reset()
-        class_distribution, class_progress, labeled_ratio = self.train_ds.get_statistics()
-        self.logger.log_dataset_statistics(class_distribution, class_progress, labeled_ratio)
-        while not self.logger.miou_converged:
+
+        # Train the model until the mIoU converges
+        while not self.logger.miou_converged(self.min_epochs, self.patience):
             self.train_epoch(validate=True)
-            if self.logger.miou_improved():
+            if self.logger.miou_improved(self.min_epochs // 2):
                 self.save_state(self.logger.history)
             self.epoch += 1
