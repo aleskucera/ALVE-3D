@@ -20,18 +20,25 @@ def train_model(cfg: DictConfig, device: torch.device):
         val_ds = SemanticDataset(cfg.ds.path, project_name='train_full', cfg=cfg.ds,
                                  split='val', size=cfg.train.dataset_size, active_mode=False)
 
-        trainer = Trainer(cfg, train_ds, val_ds, device, state=None)
+        _, _, labeled_class_distribution, label_ratio = train_ds.get_statistics()
+        weights = 1 / (labeled_class_distribution + 1e-6)
+
+        if abs(label_ratio - 1) > 1e-6:
+            log.error(f'Label ratio is not 1: {label_ratio}')
+            raise ValueError
+
+        trainer = Trainer(cfg, train_ds, val_ds, device, weights=weights, state=None)
         trainer.train()
 
 
 def train_active(cfg: DictConfig, device: torch.device):
-    percentage = f'{cfg.active.percentage_labeled}%'
+    percentage = f'{cfg.active.expected_percentage_labeled}%'
     selector_type = cfg.active.selector_type
     project_name = f'active_learning_{selector_type}'
 
     load_model = cfg.load_model if 'load_model' in cfg else False
     load_voxels = cfg.load_voxels if 'load_voxels' in cfg else False
-    state_artifact = cfg.active.state_artifact
+    model_artifact = cfg.active.model_artifact
     selected_voxels_artifact = cfg.active.selected_voxels_artifact
 
     with wandb.init(project=project_name, group='training', name=f'model_training_{percentage}'):
@@ -49,26 +56,30 @@ def train_active(cfg: DictConfig, device: torch.device):
             selector.load_voxel_selection(selected_voxels, train_ds)
 
         if load_model:
-            artifact = wandb.use_artifact(f'{state_artifact}:latest')
+            artifact = wandb.use_artifact(f'{model_artifact}:latest')
             artifact_dir = artifact.download()
-            path = os.path.join(artifact_dir, f'{state_artifact}.pt')
+            path = os.path.join(artifact_dir, f'{model_artifact}.pt')
             state = torch.load(path, map_location=device)
         else:
             state = None
 
-        selector.log_selection(cfg, train_ds)
+        labeled_class_distribution, label_ratio = selector.log_selection(cfg, train_ds, save=True)
+        if abs(label_ratio * 100 - float(cfg.active.expected_percentage_labeled)) > 0.5:
+            log.error(f'Label ratio is not {percentage}: {label_ratio * 100}')
+            raise ValueError
+        weights = 1 / (labeled_class_distribution + 1e-6)
 
-        trainer = Trainer(cfg, train_ds, val_ds, device, state)
+        trainer = Trainer(cfg, train_ds, val_ds, device, weights, state)
         trainer.train()
 
 
 def select_voxels(cfg: DictConfig, device: torch.device):
-    percentage = f'{cfg.active.percentage_labeled + cfg.active.select_percentage}%'
+    percentage = f'{cfg.active.expected_percentage_labeled + cfg.active.select_percentage}%'
     select_percentage = cfg.active.select_percentage
     selector_type = cfg.active.selector_type
     project_name = f'active_learning_{selector_type}'
 
-    state_artifact = cfg.active.state_artifact
+    model_artifact = cfg.active.model_artifact
     selected_voxels_artifact = cfg.active.selected_voxels_artifact
 
     with wandb.init(project=project_name, group='selection', name=f'selection_{percentage}'):
@@ -87,9 +98,9 @@ def select_voxels(cfg: DictConfig, device: torch.device):
         selector.load_voxel_selection(selected_voxels)
 
         # Load the model from W&B
-        artifact = wandb.use_artifact(f'{state_artifact}:latest')
+        artifact = wandb.use_artifact(f'{model_artifact}:latest')
         artifact_dir = artifact.download()
-        path = os.path.join(artifact_dir, f'{state_artifact}.pt')
+        path = os.path.join(artifact_dir, f'{model_artifact}.pt')
         state = torch.load(path)
         model_state_dict = state['model_state_dict']
         model = get_model(cfg, device)
@@ -99,10 +110,10 @@ def select_voxels(cfg: DictConfig, device: torch.device):
         selected_voxels = selector.select(dataset, model, select_percentage)
 
         # Save the selected voxels to W&B
-        torch.save(selected_voxels, f'{selected_voxels_artifact}.pt')
+        torch.save(selected_voxels, f'data/{selected_voxels_artifact}.pt')
         artifact = wandb.Artifact(selected_voxels_artifact, type='dataset',
                                   description='The selected voxels for the next active learning iteration.')
-        artifact.add_file(f'{selected_voxels_artifact}.pt')
+        artifact.add_file(f'data/{selected_voxels_artifact}.pt')
         wandb.run.log_artifact(artifact)
 
         # Log the results of the selection
@@ -111,12 +122,14 @@ def select_voxels(cfg: DictConfig, device: torch.device):
 
 
 def select_first_voxels(cfg: DictConfig, device: torch.device):
+    percentage = f'{cfg.active.expected_percentage_labeled + cfg.active.select_percentage}%'
+
     selector_type = cfg.active.selector_type
     random_selector_type = cfg.active.random_selector_type
     project_name = f'active_learning_{selector_type}'
 
     selected_voxels_artifact = cfg.active.selected_voxels_artifact
-    with wandb.init(project=project_name, group='selection', name='first_random_selection_0.5%'):
+    with wandb.init(project=project_name, group='selection', name=f'first_random_selection_{percentage}'):
         dataset = SemanticDataset(cfg.ds.path, project_name=project_name, cfg=cfg.ds,
                                   split='train', size=cfg.train.dataset_size, active_mode=True)
         cloud_paths = dataset.get_dataset_clouds()
@@ -124,10 +137,10 @@ def select_first_voxels(cfg: DictConfig, device: torch.device):
 
         selected_voxels = selector.select(dataset, cfg.active.select_percentage)
 
-        torch.save(selected_voxels, f'{selected_voxels_artifact}.pt')
+        torch.save(selected_voxels, f'data/{selected_voxels_artifact}.pt')
         artifact = wandb.Artifact(selected_voxels_artifact, type='dataset',
                                   description='The selected voxels for the first active learning iteration.')
-        artifact.add_file(f'{selected_voxels_artifact}.pt')
+        artifact.add_file(f'data/{selected_voxels_artifact}.pt')
         wandb.run.log_artifact(artifact)
 
         # Log the results of the first selection

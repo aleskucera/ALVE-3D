@@ -3,5 +3,5 @@ epochs: 50
 batch_size: 1
 dataset_size: 128
 
-patience: 5
+patience: 3
 min_epochs: 10

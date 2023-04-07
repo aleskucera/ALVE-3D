@@ -314,7 +314,7 @@ class SemanticDataset(Dataset):
 
         return most_labeled_sample, max_label_ratio, sample_label_mask
 
-    def get_statistics(self, ignore: int = 0) -> tuple[np.ndarray, np.ndarray, float]:
+    def get_statistics(self, ignore: int = 0) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
         """ Returns the statistics of the dataset. The statistics are the class distribution, the labeling
         progress for each class and the labeling progress for the dataset.
 
@@ -353,14 +353,19 @@ class SemanticDataset(Dataset):
                 labeled_class_counts[unique_labels] += counts
                 labeled_counter += np.sum(counts)
 
-        # Check if there are zeros because of the division
-        class_counts[class_counts == 0] = 1
+        # Calculate the class distribution in the whole dataset
+        class_distribution = class_counts / (counter + 1e-6)
 
-        class_distribution = class_counts / counter
-        class_progress = labeled_class_counts / class_counts
-        dataset_labeled_ratio = labeled_counter / counter
+        # Calculate the class distribution in the labeled dataset
+        labeled_class_distribution = labeled_class_counts / (labeled_counter + 1e-6)
 
-        return class_distribution, class_progress, dataset_labeled_ratio
+        # Calculate the labeling progress for each class
+        class_progress = labeled_class_counts / (class_counts + 1e-6)
+
+        # Calculate the labeling progress for the whole dataset
+        dataset_labeled_ratio = labeled_counter / (counter + 1e-6)
+
+        return class_distribution, labeled_class_distribution, class_progress, dataset_labeled_ratio
 
     def get_voxel_mask(self, cloud_path: str, cloud_size: int) -> np.ndarray:
         voxel_mask = np.zeros(cloud_size, dtype=np.bool)

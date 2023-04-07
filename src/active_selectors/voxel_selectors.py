@@ -75,7 +75,7 @@ class BaseVoxelSelector:
             cloud.label_voxels(voxels, dataset)
 
     @staticmethod
-    def log_selection(cfg: DictConfig, dataset: Dataset):
+    def log_selection(cfg: DictConfig, dataset: Dataset, save: bool = False) -> tuple[np.ndarray, float]:
 
         # --------------------------------------------------------
         # ================== DATASET STATISTICS ==================
@@ -83,29 +83,51 @@ class BaseVoxelSelector:
 
         ignore_index = cfg.ds.ignore_index
         label_names = [v for k, v in cfg.ds.labels_train.items() if k != ignore_index]
-        class_distribution, class_labeling_progress, labeled_ratio = dataset.get_statistics()
+        class_dist, labeled_class_distribution, class_labeling_progress, labeled_ratio = dataset.get_statistics()
 
         # Log the dataset labeling progress
-        wandb.log({f'Dataset Labeling Progress': labeled_ratio})
+        wandb.log({f'Dataset Labeling Progress': labeled_ratio}, step=0)
 
         # Filter and log the dataset class distribution
-        class_distribution = np.delete(class_distribution, ignore_index)
-        data = [[name, value] for name, value in zip(label_names, class_distribution)]
+        class_dist = np.delete(class_dist, ignore_index)
+        data = [[name, value] for name, value in zip(label_names, class_dist)]
         table = wandb.Table(data=data, columns=["Class", "Distribution"])
-        wandb.log({f"Class Distribution - {labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Distribution")})
+        wandb.log({f"Class Distribution - "
+                   f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
+
+        # Log the labeled class distribution
+        labeled_class_dist = np.delete(labeled_class_distribution, ignore_index)
+        data = [[name, value] for name, value in zip(label_names, labeled_class_dist)]
+        table = wandb.Table(data=data, columns=["Class", "Distribution"])
+        wandb.log({f"Labeled Class Distribution - "
+                   f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
 
         # Filter and log the class labeling progress
         class_labeling_progress = np.delete(class_labeling_progress, ignore_index)
         data = [[name, value] for name, value in zip(label_names, class_labeling_progress)]
         table = wandb.Table(data=data, columns=["Class", "Labeling Progress"])
         wandb.log(
-            {f"Class Labeling Progress - {labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Labeling Progress")})
+            {f"Class Labeling Progress - "
+             f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Labeling Progress")}, step=0)
+
+        if save:
+            metadata = {'labeled_ratio': labeled_ratio}
+            dataset_statistics = {'class_distribution': class_dist,
+                                  'labeled_class_distribution': labeled_class_dist,
+                                  'class_labeling_progress': class_labeling_progress,
+                                  'labeled_ratio': labeled_ratio}
+
+            torch.save(dataset_statistics, 'data/dataset_statistics.pt')
+            artifact = wandb.Artifact('dataset_statistics', type='statistics', metadata=metadata,
+                                      description='Dataset statistics')
+            artifact.add_file('data/dataset_statistics.pt')
+            wandb.run.log_artifact(artifact)
 
         # ---------------------------------------------------------
         # ================== MOST LABELED SAMPLE ==================
         # ---------------------------------------------------------
 
-        most_labeled_sample, labeled_ratio, label_mask = dataset.get_most_labeled_sample()
+        most_labeled_sample, sample_labeled_ratio, label_mask = dataset.get_most_labeled_sample()
         scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
 
         # Open the scan and the label
@@ -127,10 +149,12 @@ class BaseVoxelSelector:
 
         wandb.log({'Point Cloud': wandb.Object3D(cloud),
                    'Point Cloud Label - Full': wandb.Object3D(cloud_label_full),
-                   f'Point Cloud Label ({labeled_ratio:.2f})': wandb.Object3D(cloud_label),
+                   f'Point Cloud Label ({sample_labeled_ratio:.2f})': wandb.Object3D(cloud_label),
                    'Projection': wandb.Image(scan.proj_color),
                    'Projection Label - Full': wandb.Image(projection_label_full),
-                   f'Projection Label - ({labeled_ratio:.2f})': wandb.Image(projection_label)})
+                   f'Projection Label - ({sample_labeled_ratio:.2f})': wandb.Image(projection_label)}, step=0)
+
+        return labeled_class_distribution, labeled_ratio
 
 
 class RandomVoxelSelector(BaseVoxelSelector):

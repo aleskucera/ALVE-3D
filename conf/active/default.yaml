@@ -2,8 +2,8 @@ selector_type: 'average_entropy_voxels'
 random_selector_type: 'random_voxels'
 
 select_percentage: 0.5 # percentage of voxels to select
-percentage_labeled: 0.5 # expected number of voxels already selected
+expected_percentage_labeled: 0.5 # expected number of voxels already selected
 
-state_artifact: 'state'
+model_artifact: 'model'
 selected_voxels_artifact: 'selected_voxels'
 

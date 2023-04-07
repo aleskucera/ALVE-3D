@@ -3,14 +3,18 @@ import os
 import logging
 
 import h5py
+import torch
 import wandb
 import hydra
 import numpy as np
+import seaborn as sn
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
 from src.utils import set_paths, visualize_global_cloud, visualize_cloud_values
+from src.utils import plot, bar_chart, grouped_bar_chart, plot_confusion_matrix
 from src.datasets import SemanticDataset
 from src.kitti360 import KITTI360Converter, create_kitti360_config
 from src.laserscan import LaserScan, ScanVis
@@ -32,6 +36,8 @@ def main(cfg: DictConfig):
         visualize_sequence(cfg)
     elif cfg.action == 'visualize_superpoints':
         visualize_superpoints(cfg)
+    elif cfg.action == 'visualize_experiment':
+        visualize_experiment(cfg)
     elif cfg.action == 'log_sequence':
         log_sequence(cfg)
     elif cfg.action == 'create_kitti360_config':
@@ -133,6 +139,57 @@ def visualize_superpoints(cfg: DictConfig) -> None:
             superpoints = np.asarray(f['superpoints'])
 
             visualize_cloud_values(points, superpoints, random_colors=True)
+
+
+def visualize_experiment(cfg: DictConfig) -> None:
+    project_name = 'active_learning_average_entropy_voxels (test)'
+
+    percentages = ['5%', '10%', '15%']
+    history_versions = ['v0', 'v1', 'v2']
+    dataset_statistics_versions = ['v0', 'v1', 'v2']
+
+    ignore_index = cfg.ds.ignore_index
+    label_names = [v for k, v in cfg.ds.labels_train.items() if k != ignore_index]
+
+    data = dict()
+
+    with wandb.init(project='demo'):
+        for h_v, d_v, p in zip(history_versions, dataset_statistics_versions, percentages):
+            history_artifact = wandb.use_artifact(f'aleskucera/{project_name}/history:{h_v}')
+            dataset_statistics_artifact = wandb.use_artifact(f'aleskucera/{project_name}/dataset_statistics:{d_v}')
+
+            history_artifact_dir = history_artifact.download()
+            dataset_statistics_artifact_dir = dataset_statistics_artifact.download()
+
+            history_path = os.path.join(history_artifact_dir, f'history.pt')
+            dataset_statistics_path = os.path.join(dataset_statistics_artifact_dir, f'dataset_statistics.pt')
+
+            history = torch.load(history_path)
+            dataset_statistics = torch.load(dataset_statistics_path)
+
+            for key, value in history.items():
+                if key not in data:
+                    data[key] = dict()
+                data[key][p] = value
+
+            for key, value in dataset_statistics.items():
+                if key not in data:
+                    data[key] = dict()
+                data[key][p] = value
+
+        # Visualize the full dataset class distribution
+        dataset_distributions = data['class_distribution']
+        distributions_matrix = np.vstack(list(dataset_distributions.values()))
+        assert np.all(distributions_matrix == distributions_matrix[0]), 'Distributions are not equal.'
+        bar_chart(distributions_matrix[0], label_names, 'Mass [%]')
+        grouped_bar_chart(data['labeled_class_distribution'], label_names, 'Mass [%]')
+        grouped_bar_chart(data['class_labeling_progress'], label_names, 'Percentage labeled [%]')
+
+        max_mious = [np.max(m) for m in data['miou_val'].values()]
+        plot({'max': max_mious}, 'percentages', 'Maximum mIoU [%]')
+
+        confusion_matrix = data['confusion_matrix']['15%'][-1].numpy()
+        plot_confusion_matrix(confusion_matrix, label_names)
 
 
 def log_sequence(cfg: DictConfig) -> None:

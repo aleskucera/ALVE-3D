@@ -1,6 +1,6 @@
 name: KITTI-360
 path: data/KITTI-360
-num_classes: 18
+num_classes: 16
 num_semantic_channels: 5
 num_partition_channels:
   local: 6
@@ -77,10 +77,10 @@ labels_train:
   11: person
   12: car
   13: truck
-  14: bus
-  15: train
-  16: motorcycle
-  17: bicycle
+  #  14: bus
+  #  15: train
+  14: motorcycle
+  15: bicycle
 color_map:
   0: [ 0, 0, 0 ]
   1: [ 0, 0, 0 ]
@@ -143,10 +143,10 @@ color_map_train:
   11: [ 220, 20, 60 ]
   12: [ 0, 0, 142 ]
   13: [ 0, 0, 70 ]
-  14: [ 0, 60, 100 ]
-  15: [ 0, 80, 100 ]
-  16: [ 0, 0, 230 ]
-  17: [ 119, 11, 32 ]
+  #  14: [ 0, 60, 100 ]
+  #  15: [ 0, 80, 100 ]
+  14: [ 0, 0, 230 ]
+  15: [ 119, 11, 32 ]
 learning_map:
   0: 0
   1: 0
@@ -176,12 +176,12 @@ learning_map:
   25: 0
   26: 12
   27: 13
-  28: 14
+  28: 0
   29: 0
   30: 0
-  31: 15
-  32: 16
-  33: 17
+  31: 0
+  32: 14
+  33: 15
   34: 0
   35: 0
   36: 0
