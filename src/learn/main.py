@@ -101,7 +101,7 @@ def select_voxels(cfg: DictConfig, device: torch.device):
         artifact = wandb.use_artifact(f'{model_artifact}:latest')
         artifact_dir = artifact.download()
         path = os.path.join(artifact_dir, f'{model_artifact}.pt')
-        state = torch.load(path)
+        state = torch.load(path, map_location=device)
         model_state_dict = state['model_state_dict']
         model = get_model(cfg, device)
         model.load_state_dict(model_state_dict)
