@@ -14,5 +14,5 @@ singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf960162
             +device=cpu \
             action=select_voxels \
             active.select_percentage=0.5 \
-            active.expected_percentage_labeled=1 \
+            active.expected_percentage_labeled=1.5 \
             active.selector_type=average_entropy_voxels
