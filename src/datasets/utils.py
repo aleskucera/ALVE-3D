@@ -112,7 +112,7 @@ def load_semantic_dataset(dataset_path: str, project_name: str, sequences: list,
         scans_dir = os.path.join(sequence_dir, 'velodyne')
         clouds_dir = os.path.join(sequence_dir, 'voxel_clouds')
 
-        with h5py.File(info_path, 'r+') as f:
+        with h5py.File(info_path, 'r') as f:
             split_samples = np.asarray(f[split]).astype(np.str_)
             seq_clouds = np.asarray(f[f'{split}_clouds']).astype(np.str_)
             seq_cloud_map = create_cloud_map(seq_clouds)
