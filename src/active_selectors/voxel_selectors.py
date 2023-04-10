@@ -162,7 +162,7 @@ class RandomVoxelSelector(BaseVoxelSelector):
                  dataset_percentage: float = 10):
         super().__init__(dataset_path, cloud_paths, device, dataset_percentage)
 
-    def select(self, dataset: Dataset, percentage: float = 1):
+    def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 1):
 
         selection_size = self.get_selection_size(dataset, percentage)
 
