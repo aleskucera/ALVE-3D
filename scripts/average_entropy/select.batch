@@ -15,7 +15,7 @@ singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf960162
             # Modifiable parameters
             active.model.version=latest \
             active.selected_voxels.version=latest \
-            active.expected_percentage_labeled=2 \
+            active.expected_percentage_labeled=0.5 \
 
             # Fixed parameters
             action=select_voxels \
