@@ -12,17 +12,12 @@
 
 singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf96016298e59b1e030ae \
             singularity/alve-3d.sif python main.py \
-
-            # Modifiable parameters
+            train.dataset_size=128 \
             active.model.version=latest \
             active.selected_voxels.version=latest \
             active.expected_percentage_labeled=0.5 \
-
-            # Fixed parameters
             action=select_voxels \
             active.select_percentage=0.5 \
             active.selector_type=epistemic_uncertainty_voxels \
-
-            # Project artifacts
             active.model.name=model_epistemic_uncertainty \
             active.selected_voxels.name=selected_voxels_epistemic_uncertainty
