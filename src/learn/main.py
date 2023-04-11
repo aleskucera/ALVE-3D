@@ -53,6 +53,7 @@ def train_active(cfg: DictConfig, device: torch.device):
     selector_type = cfg.active.selector_type
     project_name = f'AL - {selector_type}'
     percentage = f'{cfg.active.expected_percentage_labeled}%'
+    history_name = f'history_{selector_type}'
 
     # -----------------------------------------------------------------------------------------------
     # ========================================= Train Model =========================================
@@ -95,7 +96,8 @@ def train_active(cfg: DictConfig, device: torch.device):
         weights = 1 / (labeled_class_distribution + 1e-6)
 
         # Train model
-        trainer = Trainer(cfg, train_ds, val_ds, device, weights, model)
+        trainer = Trainer(cfg, train_ds, val_ds, device, weights, model, model_name=model_artifact.name,
+                          history_name=history_name)
         trainer.train()
 
 
