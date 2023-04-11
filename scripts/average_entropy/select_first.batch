@@ -11,15 +11,12 @@
 
 singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf96016298e59b1e030ae \
             singularity/alve-3d.sif python main.py +device=cpu \
-
             train.dataset_size=128 \
-
             # Fixed parameters
             action=select_first_voxels \
             active.select_percentage=0.5 \
             active.expected_percentage_labeled=0 \
             active.selector_type=average_entropy_voxels \
             active.random_selector_type=random_voxels \
-
             # Project artifacts
             active.selected_voxels.name=selected_voxels_average_entropy
