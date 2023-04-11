@@ -109,7 +109,6 @@ def select_voxels(cfg: DictConfig, device: torch.device):
     # ================== Project Artifacts ==================
     model_artifact = cfg.active.model
     selected_voxels_artifact = cfg.active.selected_voxels
-    load_model = cfg.load_model if 'load_model' in cfg else False
 
     # ================== Project ==================
     selector_type = cfg.active.selector_type
@@ -132,16 +131,13 @@ def select_voxels(cfg: DictConfig, device: torch.device):
         selector.load_voxel_selection(selected_voxels)
 
         # Load model from W&B
-        if load_model:
-            artifact = wandb.use_artifact(f'{model_artifact.name}:{model_artifact.version}')
-            artifact_dir = artifact.download()
-            path = os.path.join(artifact_dir, f'{model_artifact.name}.pt')
-            model = torch.load(path, map_location=device)
-            model_state_dict = model['model_state_dict']
-            model = get_model(cfg, device)
-            model.load_state_dict(model_state_dict)
-        else:
-            model = None
+        artifact = wandb.use_artifact(f'{model_artifact.name}:{model_artifact.version}')
+        artifact_dir = artifact.download()
+        path = os.path.join(artifact_dir, f'{model_artifact.name}.pt')
+        model = torch.load(path, map_location=device)
+        model_state_dict = model['model_state_dict']
+        model = get_model(cfg, device)
+        model.load_state_dict(model_state_dict)
 
         # Select the next voxels
         selected_voxels = selector.select(dataset, model=model, percentage=select_percentage)
