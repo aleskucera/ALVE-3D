@@ -8,7 +8,7 @@ import torch.optim as optim
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader, Dataset
 
-from .logger import get_logger
+from learn.logger import get_logger
 from src.losses import get_loss
 from src.models import get_model
 from src.datasets import get_parser

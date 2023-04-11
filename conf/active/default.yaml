@@ -4,6 +4,14 @@ random_selector_type: 'random_voxels'
 select_percentage: 0.5 # percentage of voxels to select
 expected_percentage_labeled: 0.5 # expected number of voxels already selected
 
-model_artifact: 'model'
-selected_voxels_artifact: 'selected_voxels'
+# Artifacts from Weights & Biases
+model:
+  name: 'model'
+  version: 'latest'
+
+selected_voxels:
+  name: 'selected_voxels'
+  version: 'latest'
+
+
 
