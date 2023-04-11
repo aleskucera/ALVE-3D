@@ -12,6 +12,8 @@
 singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf96016298e59b1e030ae \
             singularity/alve-3d.sif python main.py +device=cpu \
 
+            train.dataset_size=128 \
+
             # Modifiable parameters
             active.model.version=latest \
             active.selected_voxels.version=latest \
