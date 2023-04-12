@@ -366,7 +366,7 @@ class EpistemicUncertaintyVoxelSelector(BaseVoxelSelector):
 
                     cloud.add_predictions(model_output.cpu(), sample_voxel_map, mc_dropout=True)
 
-                uncertainty, cloud_voxel_map, cloud_cloud_map = cloud.get_epistemic_uncertainty()
+                uncertainty, cloud_voxel_map, cloud_cloud_map = cloud.get_epistemic_uncertainties()
                 epistemic_uncertainty = torch.cat((epistemic_uncertainty, uncertainty))
                 voxel_map = torch.cat((voxel_map, cloud_voxel_map))
                 cloud_map = torch.cat((cloud_map, cloud_cloud_map))

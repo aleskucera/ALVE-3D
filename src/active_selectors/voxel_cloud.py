@@ -115,7 +115,7 @@ class VoxelCloud(object):
         average_entropies[voxel_map] = entropies
         return self._append_mapping(average_entropies)
 
-    def get_viewpoint_variance(self):
+    def get_viewpoint_variances(self):
 
         # Initialize the output
         viewpoint_variances = torch.full((self.size,), float('nan'), dtype=torch.float32)
@@ -132,7 +132,7 @@ class VoxelCloud(object):
         viewpoint_variances[voxel_map] = variances
         return self._append_mapping(viewpoint_variances)
 
-    def get_epistemic_uncertainty(self):
+    def get_epistemic_uncertainties(self):
 
         # Initialize the output
         mean_variances = torch.full((self.size,), float('nan'), dtype=torch.float32)
