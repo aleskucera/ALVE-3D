@@ -24,15 +24,15 @@ select_percentage: 0.5
 expected_percentage_labeled: 0.5
 
 model:
-  name: 'model_${active.criterion}'
+  name: 'model_${active.selector_type}'
   version: 'latest'
 
 selection:
-  name: 'selection_${active.criterion}'
+  name: 'selection_${active.selector_type}'
   version: 'latest'
 
 statistics:
-  name: 'statistics_${active.criterion}'
+  name: 'statistics_${active.selector_type}'
 
 history:
-  name: 'history_${active.criterion}'
+  name: 'history_${active.selector_type}'
