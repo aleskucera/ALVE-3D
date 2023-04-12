@@ -111,7 +111,7 @@ class BaseVoxelSelector:
              f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Labeling Progress")}, step=0)
 
         if save:
-            name = f'{cfg.active.selector_type}_statistics'
+            name = f'statistics_{cfg.active.selector_type}'
             metadata = {'labeled_ratio': labeled_ratio}
             dataset_statistics = {'class_distribution': class_dist,
                                   'labeled_class_distribution': labeled_class_dist,
