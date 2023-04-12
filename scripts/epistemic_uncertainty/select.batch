@@ -14,7 +14,7 @@ singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf960162
             singularity/alve-3d.sif python main.py \
             action=select_voxels \
             active.select_percentage=0.5 \
-            active.selection_object=voxels \
+            active.selection_objects=voxels \
             active.criterion=epistemic_uncertainty \
             active.model.version=latest \
             active.selection.version=latest \
