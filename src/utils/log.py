@@ -52,7 +52,7 @@ def log_confusion_matrix(confusion_matrix: torch.Tensor, labels: list[str],
 
 def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, save_artifact: bool) -> np.ndarray:
     ignore_index = cfg.ds.ignore_index
-    statistics_artifact = cfg.wandb.statistics_artifact.name
+    statistics_artifact = cfg.active.statistics
     label_names = [v for k, v in cfg.ds.labels_train.items() if k != ignore_index]
 
     class_dist, labeled_class_distribution, class_labeling_progress, labeled_ratio = dataset.get_statistics()
