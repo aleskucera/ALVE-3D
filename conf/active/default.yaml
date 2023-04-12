@@ -24,7 +24,7 @@ select_percentage: 0.5
 expected_percentage_labeled: 0.5
 
 model:
-  name: 'model_${criterion}
+  name: 'model_${criterion}'
   version: 'latest'
 
 selection:
