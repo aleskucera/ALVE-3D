@@ -17,7 +17,7 @@
 
 criterion: 'average_entropy'
 selection_object: 'voxels'
-selector_type: '${criterion}_${selection_object}'
+selector_type: '${active.criterion}_${selection_object}'
 random_selector_type: 'random_${selection_object}'
 
 select_percentage: 0.5
