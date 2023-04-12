@@ -2,24 +2,23 @@
 
 #SBATCH --nodes=1                                     # 1 node
 #SBATCH --ntasks-per-node=4                           # 4 CPUs per node
-#SBATCH --time=16:00:00                               # time limits: 12 hours
+#SBATCH --time=12:00:00                               # time limits: 12 hours
 #SBATCH --error=train_epistemic_uncertainty.err       # standard error file
 #SBATCH --output=train_epistemic_uncertainty.out      # standard output file
 #SBATCH --partition=amdgpu                            # partition name
 #SBATCH --gres=gpu:1                                  # number of GPUs per node
 #SBATCH --mail-user=kuceral4@fel.cvut.cz              # where send info about job
-#SBATCH --mail-type=BEGIN,END,FAIL              # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
+#SBATCH --mail-type=BEGIN,END,FAIL                    # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
 singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf96016298e59b1e030ae \
             singularity/alve-3d.sif python main.py \
-            train.dataset_size=128 \
-            +load_model=False \
-            active.model.version=latest \
-            active.selected_voxels.version=latest \
-            active.expected_percentage_labeled=0.5 \
             action=train_active \
             train.patience=10 \
             train.min_epochs=30 \
-            active.selector_type=epistemic_uncertainty_voxels \
-            active.model.name=model_epistemic_uncertainty \
-            active.selected_voxels.name=selected_voxels_epistemic_uncertainty
+            active.selection_objects=voxels \
+            active.criterion=epistemic_uncertainty \
+            +load_model=False \
+            active.model.version=latest \
+            active.selection.version=latest \
+            active.expected_percentage_labeled=0.5 \
+            train.dataset_size=128
