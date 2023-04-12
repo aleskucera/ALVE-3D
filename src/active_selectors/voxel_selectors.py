@@ -309,7 +309,7 @@ class ViewpointVarianceVoxelSelector(BaseVoxelSelector):
                     model_output = model_output[valid]
                     sample_voxel_map = sample_voxel_map[valid]
 
-                    cloud.add_predictions(model_output.cpu(), sample_voxel_map, gradient=False, uncertainty=False)
+                    cloud.add_predictions(model_output.cpu(), sample_voxel_map, mc_dropout=False)
 
                 variances, cloud_voxel_map, cloud_cloud_map = cloud.get_viewpoint_variances()
                 viewpoint_variances = torch.cat((viewpoint_variances, variances))
