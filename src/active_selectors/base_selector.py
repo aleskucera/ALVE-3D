@@ -60,10 +60,10 @@ class Selector(object):
 
                     if not mc_dropout:
                         model_output = model(proj_image)
-                    else:
-                        model_output = torch.zeros((0,), dtype=torch.float32, device=self.device)
                         model_output = model_output.squeeze(0).flatten(start_dim=1).permute(1, 0)
                         model_output = model_output[valid]
+                    else:
+                        model_output = torch.zeros((0,), dtype=torch.float32, device=self.device)
                         for j in range(5):
                             model_output_it = model(proj_image)
                             model_output_it = model_output_it.flatten(start_dim=2).permute(0, 2, 1)
