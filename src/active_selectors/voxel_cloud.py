@@ -7,7 +7,7 @@ class VoxelCloud(Cloud):
     def __init__(self, path: str, size: int, cloud_id: int):
         super().__init__(path, size, cloud_id)
 
-    def return_values(self, values: torch.Tensor):
+    def _return_values(self, values: torch.Tensor):
         valid_indices = ~torch.isnan(values)
 
         filtered_values = values[valid_indices]
