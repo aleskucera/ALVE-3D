@@ -37,7 +37,7 @@ class VoxelCloud(object):
         """ Get the number of classes based on the given predictions.
         If no predictions are available, return None.
         """
-        if len(self.predictions.shape) > 0:
+        if self.predictions.shape != torch.Size([0]):
             return self.predictions.shape[1]
         else:
             return -1

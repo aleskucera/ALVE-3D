@@ -4,22 +4,6 @@ from torch.utils.data import Dataset
 
 
 class SuperpointCloud(object):
-    """ An object that represents a global cloud in a dataset sequence. The voxels are areas of space that can contain
-    multiple points from different frames. The cloud is a collection of these voxels.
-    This class is used to store model predictions and other information for each voxel in the cloud. These predictions
-    can be used to select the most informative voxels for active learning.
-
-    We can calculate following metrics for each voxel:
-     - Viewpoint Entropy: The entropy of the model predictions for the voxel from all viewpoints.
-     - Weighted Viewpoint Entropy: The entropy of the model predictions for the voxel from all viewpoints weighted by
-                                   the distance of the viewpoint to the voxel.
-     - Viewpoint Cross Entropy: The cross entropy of the model predictions and distances for
-                                the voxel from all viewpoints.
-
-    :param size: The number of voxels in the cloud
-    :param cloud_id: The id of the cloud (used to identify the cloud in the dataset, unique for each cloud in dataset)
-    """
-
     def __init__(self, path: str, size: int, superpoint_map: torch.Tensor, cloud_id: int):
         self.eps = 1e-6  # Small value to avoid division by zero
         self.path = path
@@ -125,7 +109,7 @@ class SuperpointCloud(object):
         superpoint_average_entropies, superpoint_sizes = self.average_by_superpoint(average_entropies)
         return self._append_mapping(superpoint_average_entropies, superpoint_sizes)
 
-    def get_viewpoint_variance(self):
+    def get_viewpoint_variances(self):
 
         # Initialize the output
         viewpoint_variances = torch.full((self.size,), float('nan'), dtype=torch.float32)
@@ -147,7 +131,7 @@ class SuperpointCloud(object):
         superpoint_viewpoint_variances, superpoint_sizes = self.average_by_superpoint(viewpoint_variances)
         return self._append_mapping(superpoint_viewpoint_variances, superpoint_sizes)
 
-    def get_epistemic_uncertainty(self):
+    def get_epistemic_uncertainties(self):
 
         # Initialize the output
         mean_variances = torch.full((self.size,), float('nan'), dtype=torch.float32)
