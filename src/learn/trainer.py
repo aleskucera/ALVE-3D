@@ -155,7 +155,7 @@ class Trainer(BaseTrainer):
         self.logger.reset()
 
         # Train the model until the mIoU converges
-        while not self.logger.miou_converged(self.min_epochs, self.patience):
+        while not self.logger.miou_converged(self.min_epochs, 3):
             self.train_epoch(validate=True)
             if self.logger.miou_improved(0):
                 self.save_model(self.model_name, self.logger.history)
