@@ -111,17 +111,17 @@ class BaseVoxelSelector:
              f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Labeling Progress")}, step=0)
 
         if save:
-            name = f'statistics_{cfg.active.selector_type}'
+            statistics_artifact = cfg.active.statistics
             metadata = {'labeled_ratio': labeled_ratio}
             dataset_statistics = {'class_distribution': class_dist,
                                   'labeled_class_distribution': labeled_class_dist,
                                   'class_labeling_progress': class_labeling_progress,
                                   'labeled_ratio': labeled_ratio}
 
-            torch.save(dataset_statistics, f'data/{name}.pt')
-            artifact = wandb.Artifact(name, type='statistics', metadata=metadata,
+            torch.save(dataset_statistics, f'data/{statistics_artifact.name}.pt')
+            artifact = wandb.Artifact(statistics_artifact.name, type='statistics', metadata=metadata,
                                       description='Dataset statistics')
-            artifact.add_file(f'data/{name}.pt')
+            artifact.add_file(f'data/{statistics_artifact.name}.pt')
             wandb.run.log_artifact(artifact)
 
         # ---------------------------------------------------------

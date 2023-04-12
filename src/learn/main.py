@@ -46,14 +46,14 @@ def train_active(cfg: DictConfig, device: torch.device):
 
     # ================== Project Artifacts ==================
     model_artifact = cfg.active.model
-    selected_voxels = cfg.active.selected_voxels
+    history_artifact = cfg.active.history
+    selection_artifact = cfg.active.selection
     load_model = cfg.load_model if 'load_model' in cfg else False
 
     # ================== Project ==================
     selector_type = cfg.active.selector_type
     project_name = f'AL - {selector_type}'
     percentage = f'{cfg.active.expected_percentage_labeled}%'
-    history_name = f'history_{selector_type}'
 
     # -----------------------------------------------------------------------------------------------
     # ========================================= Train Model =========================================
@@ -71,9 +71,9 @@ def train_active(cfg: DictConfig, device: torch.device):
         selector = get_selector(selector_type, train_ds.path, train_ds.get_dataset_clouds(), device)
 
         # Load selected voxels from W&B
-        artifact = wandb.use_artifact(f'{selected_voxels.name}:{selected_voxels.version}')
+        artifact = wandb.use_artifact(f'{selection_artifact.name}:{selection_artifact.version}')
         artifact_dir = artifact.download()
-        path = os.path.join(artifact_dir, f'{selected_voxels.name}.pt')
+        path = os.path.join(artifact_dir, f'{selection_artifact.name}.pt')
         selected_voxels = torch.load(path)
 
         # Label train dataset
@@ -97,7 +97,7 @@ def train_active(cfg: DictConfig, device: torch.device):
 
         # Train model
         trainer = Trainer(cfg, train_ds, val_ds, device, weights, model, model_name=model_artifact.name,
-                          history_name=history_name)
+                          history_name=history_artifact.name)
         trainer.train()
 
 
@@ -110,7 +110,7 @@ def select_voxels(cfg: DictConfig, device: torch.device):
 
     # ================== Project Artifacts ==================
     model_artifact = cfg.active.model
-    selected_voxels_artifact = cfg.active.selected_voxels
+    selection_artifact = cfg.active.selection
 
     # ================== Project ==================
     selector_type = cfg.active.selector_type
@@ -124,9 +124,9 @@ def select_voxels(cfg: DictConfig, device: torch.device):
         selector = get_selector(selector_type, dataset.path, dataset.get_dataset_clouds(), device)
 
         # Load selected voxels from W&B
-        artifact = wandb.use_artifact(f'{selected_voxels_artifact.name}:{selected_voxels_artifact.version}')
+        artifact = wandb.use_artifact(f'{selection_artifact.name}:{selection_artifact.version}')
         artifact_dir = artifact.download()
-        path = os.path.join(artifact_dir, f'{selected_voxels_artifact.name}.pt')
+        path = os.path.join(artifact_dir, f'{selection_artifact.name}.pt')
         selected_voxels = torch.load(path)
 
         # Label voxel clouds
@@ -145,10 +145,10 @@ def select_voxels(cfg: DictConfig, device: torch.device):
         selected_voxels = selector.select(dataset, model=model, percentage=select_percentage)
 
         # Save the selected voxels to W&B
-        torch.save(selected_voxels, f'data/{selected_voxels_artifact.name}.pt')
-        artifact = wandb.Artifact(selected_voxels_artifact.name, type='selection',
+        torch.save(selected_voxels, f'data/{selection_artifact.name}.pt')
+        artifact = wandb.Artifact(selection_artifact.name, type='selection',
                                   description='The selected voxels for the next active learning iteration.')
-        artifact.add_file(f'data/{selected_voxels_artifact.name}.pt')
+        artifact.add_file(f'data/{selection_artifact.name}.pt')
         wandb.run.log_artifact(artifact)
 
         # Log the results of the selection to W&B
@@ -167,21 +167,22 @@ def select_first_voxels(cfg: DictConfig, device: torch.device):
     selector_type = cfg.active.selector_type
     random_selector_type = cfg.active.random_selector_type
     project_name = f'AL - {selector_type}'
+    select_percentage = cfg.active.select_percentage
     percentage = f'{cfg.active.expected_percentage_labeled + cfg.active.select_percentage}%'
 
-    selected_voxels_artifact = cfg.active.selected_voxels
+    selection_artifact = cfg.active.selection
     with wandb.init(project=project_name, group='selection', name=f'First Selection - {percentage}'):
         dataset = SemanticDataset(cfg.ds.path, project_name=selector_type, cfg=cfg.ds,
                                   split='train', size=cfg.train.dataset_size, active_mode=True)
         cloud_paths = dataset.get_dataset_clouds()
         selector = get_selector(random_selector_type, dataset.path, cloud_paths, device)
 
-        selected_voxels = selector.select(dataset, percentage=cfg.active.select_percentage)
+        selected_voxels = selector.select(dataset, percentage=select_percentage)
 
-        torch.save(selected_voxels, f'data/{selected_voxels_artifact.name}.pt')
-        artifact = wandb.Artifact(selected_voxels_artifact.name, type='selection',
+        torch.save(selected_voxels, f'data/{selection_artifact.name}.pt')
+        artifact = wandb.Artifact(selection_artifact.name, type='selection',
                                   description='The selected voxels for the first active learning iteration.')
-        artifact.add_file(f'data/{selected_voxels_artifact.name}.pt')
+        artifact.add_file(f'data/{selection_artifact.name}.pt')
         wandb.run.log_artifact(artifact)
 
         # Log the results of the first selection

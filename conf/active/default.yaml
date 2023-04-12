@@ -1,17 +1,38 @@
-selector_type: 'average_entropy_voxels'
-random_selector_type: 'random_voxels'
+#selector_type: 'average_entropy_voxels'
+#random_selector_type: 'random_voxels'
+#
+#select_percentage: 0.5 # percentage of voxels to select
+#expected_percentage_labeled: 0.5 # expected number of voxels already selected
+#
+## Artifacts from Weights & Biases
+#model:
+#  name: 'model'
+#  version: 'latest'
+#
+#selected_voxels:
+#  name: 'selected_voxels'
+#  version: 'latest'
 
-select_percentage: 0.5 # percentage of voxels to select
-expected_percentage_labeled: 0.5 # expected number of voxels already selected
 
-# Artifacts from Weights & Biases
+
+criterion: 'average_entropy'
+selection_object: 'voxels'
+selector_type: '{{ criterion }}_{{ selection_object }}'
+random_selector_type: 'random_{{ selection_object }}'
+
+select_percentage: 0.5
+expected_percentage_labeled: 0.5
+
 model:
-  name: 'model'
+  name: 'model_{{ criterion }}
   version: 'latest'
 
-selected_voxels:
-  name: 'selected_voxels'
+selection:
+  name: 'selection_{{ criterion }}'
   version: 'latest'
 
+statistics:
+  name: 'statistics_{{ criterion }}'
 
-
+history:
+  name: 'history_{{ criterion }}'
