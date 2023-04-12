@@ -17,8 +17,6 @@ class Selector(object):
         self.num_voxels = 0
         self.voxels_labeled = 0
 
-        self._initialize()
-
     def _initialize(self) -> None:
         raise NotImplementedError
 

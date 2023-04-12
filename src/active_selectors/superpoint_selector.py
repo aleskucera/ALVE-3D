@@ -15,6 +15,8 @@ class SuperpointSelector(Selector):
         self.criterion = criterion
         self.mc_dropout = True if criterion == 'epistemic_uncertainty' else False
 
+        self._initialize()
+
     def _initialize(self):
         for cloud_id, cloud_path in enumerate(self.cloud_paths):
             with h5py.File(cloud_path, 'r') as f:

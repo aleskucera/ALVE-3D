@@ -71,18 +71,18 @@ class Cloud(object):
             dataset.label_voxels(voxels.numpy(), self.path)
 
     def get_average_entropies(self) -> tuple:
-        return self.__get_values(self.predictions, self.__average_entropy)
+        return self._get_values(self.predictions, self._average_entropy)
 
     def get_viewpoint_entropies(self) -> tuple:
-        return self.__get_values(self.predictions, self.__viewpoint_entropy)
+        return self._get_values(self.predictions, self._viewpoint_entropy)
 
     def get_viewpoint_variances(self) -> tuple:
-        return self.__get_values(self.predictions, self.__variance)
+        return self._get_values(self.predictions, self._variance)
 
     def get_epistemic_uncertainties(self) -> tuple:
-        return self.__get_values(self.variances, torch.mean)
+        return self._get_values(self.variances, torch.mean)
 
-    def __get_values(self, items: torch.Tensor, function: callable):
+    def _get_values(self, items: torch.Tensor, function: callable):
         values = torch.full((self.size,), float('nan'), dtype=torch.float32)
 
         order = torch.argsort(self.voxel_map)
@@ -100,23 +100,23 @@ class Cloud(object):
         values[voxel_map] = vals
         return self._return_values(values)
 
-    def __average_entropy(self, probability_distribution_set: torch.Tensor) -> torch.Tensor:
+    def _average_entropy(self, probability_distribution_set: torch.Tensor) -> torch.Tensor:
         probability_distribution_set = torch.clamp(probability_distribution_set, min=self.eps, max=1 - self.eps)
         entropies = torch.sum(- probability_distribution_set * torch.log(probability_distribution_set), dim=1)
         return torch.mean(entropies)
 
-    def __viewpoint_entropy(self, probability_distribution_set: torch.Tensor) -> torch.Tensor:
+    def _viewpoint_entropy(self, probability_distribution_set: torch.Tensor) -> torch.Tensor:
         mean_distribution = torch.mean(probability_distribution_set, dim=0)
         mean_distribution = torch.clamp(mean_distribution, min=self.eps, max=1 - self.eps)
         return torch.sum(- mean_distribution * torch.log(mean_distribution))
 
     @staticmethod
-    def __variance(predictions: torch.Tensor) -> torch.Tensor:
+    def _variance(predictions: torch.Tensor) -> torch.Tensor:
         var = torch.var(predictions, dim=0)
         return torch.mean(var)
 
     @staticmethod
-    def __cluster_by_voxels(items: torch.Tensor, voxel_map: torch.Tensor) -> tuple:
+    def _cluster_by_voxels(items: torch.Tensor, voxel_map: torch.Tensor) -> tuple:
         order = torch.argsort(voxel_map)
         unique_voxels, num_views = torch.unique(voxel_map, return_counts=True)
 

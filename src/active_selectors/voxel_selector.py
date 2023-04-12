@@ -15,6 +15,8 @@ class VoxelSelector(Selector):
         self.criterion = criterion
         self.mc_dropout = True if criterion == 'epistemic_uncertainty' else True
 
+        self._initialize()
+
     def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5) -> dict:
         if self.criterion == 'random':
             return self._select_randomly(dataset, percentage)
