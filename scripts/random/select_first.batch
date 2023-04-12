@@ -15,5 +15,4 @@ singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf960162
             active.select_percentage=0.5 \
             active.selection_objects=voxels \
             active.criterion=random \
-            active.expected_percentage_labeled=0 \
-            train.dataset_size=128
+            active.expected_percentage_labeled=0
