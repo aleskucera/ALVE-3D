@@ -17,22 +17,22 @@
 
 criterion: 'average_entropy'
 selection_object: 'voxels'
-selector_type: '${active.criterion}_${selection_object}'
-random_selector_type: 'random_${selection_object}'
+selector_type: '${active.criterion}_${active.selection_object}'
+random_selector_type: 'random_${active.selection_object}'
 
 select_percentage: 0.5
 expected_percentage_labeled: 0.5
 
 model:
-  name: 'model_${criterion}'
+  name: 'model_${active.criterion}'
   version: 'latest'
 
 selection:
-  name: 'selection_${criterion}'
+  name: 'selection_${active.criterion}'
   version: 'latest'
 
 statistics:
-  name: 'statistics_${criterion}'
+  name: 'statistics_${active.criterion}'
 
 history:
-  name: 'history_${criterion}'
+  name: 'history_${active.criterion}'
