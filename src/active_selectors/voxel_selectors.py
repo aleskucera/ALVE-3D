@@ -25,10 +25,7 @@ class BaseVoxelSelector:
         self.dataset_path = dataset_path
         self.dataset_percentage = dataset_percentage
 
-        # self.cloud_ids = torch.arange(len(cloud_paths), dtype=torch.long)
         self.cloud_paths = cloud_paths
-        print(f'Number of clouds: {len(self.cloud_paths)}')
-        print(f'Cloud paths: {self.cloud_paths}')
 
         self.clouds = []
         self.num_voxels = 0
@@ -71,9 +68,6 @@ class BaseVoxelSelector:
         return voxel_selection
 
     def load_voxel_selection(self, voxel_selection: dict, dataset: Dataset = None):
-        print('Loading voxel selection...')
-        print(f'Number of clouds: {len(self.clouds)}')
-        print(f'Voxel selection: {voxel_selection.keys()}')
         for cloud_name, label_mask in voxel_selection.items():
             cloud = self.get_cloud(cloud_name)
             voxels = torch.nonzero(label_mask).squeeze(1)
@@ -361,7 +355,7 @@ class EpistemicUncertaintyVoxelSelector(BaseVoxelSelector):
                     valid = (sample_voxel_map != -1)
                     sample_voxel_map = sample_voxel_map[valid]
 
-                    model_output = torch.zeros((0,), dtype=torch.float32)
+                    model_output = torch.zeros((0,), dtype=torch.float32, device=self.device)
 
                     # Forward pass 10 times and concatenate the results
                     for j in range(10):

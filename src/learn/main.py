@@ -77,7 +77,6 @@ def train_active(cfg: DictConfig, device: torch.device):
         selected_voxels = torch.load(path)
 
         # Label train dataset
-        print(f'Clouds: {selected_voxels.keys()}')
         selector.load_voxel_selection(selected_voxels, train_ds)
 
         # Load model from W&B
