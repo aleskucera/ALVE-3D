@@ -146,7 +146,6 @@ class SemanticDataset(Dataset):
             # Update the label mask on places where the points are inside the selected voxels
             with h5py.File(label_file, 'r') as f:
                 voxel_map = np.asarray(f['voxel_map'])
-                print(label_file.replace('sequences', self.project_name))
             with h5py.File(label_file.replace('sequences', self.project_name), 'r+') as f:
                 label_mask = f['label_mask']
                 label_mask[np.isin(voxel_map, voxels)] = 1
