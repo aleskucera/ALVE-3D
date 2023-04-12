@@ -21,10 +21,10 @@ show_help () {
   echo "Usage: select.batch [options]"
   echo "Options:"
   echo "  --first-selection     Select first voxels"
-  echo "  -c, --criterion       Active learning criterion"
-  echo "  -o, --objects         Active learning objects"
-  echo "  -p, --percentage      Percentage of dataset to select"
-  echo "  -s, --size            Dataset size"
+  echo "  -c, --criterion       Active learning criterion (default: random)"
+  echo "  -o, --objects         Active learning objects (default: voxels)"
+  echo "  -p, --percentage      Percentage of dataset to select (default: 0.5)"
+  echo "  -s, --size            Dataset size (default: null)"
   echo "  -h, --help            Display this help and exit"
 }
 
