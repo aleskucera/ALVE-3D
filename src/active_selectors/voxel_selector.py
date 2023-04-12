@@ -36,7 +36,7 @@ class VoxelSelector(Selector):
 
         for cloud in self.clouds:
             voxel_mask = dataset.get_voxel_mask(cloud.path, cloud.size)
-            voxels = torch.nonzero(voxel_mask).squeeze(1)
+            voxels = torch.nonzero(torch.from_numpy(voxel_mask)).squeeze(1)
 
             voxel_map = torch.cat((voxel_map, voxels))
             cloud_map = torch.cat((cloud_map, torch.full((voxels.shape[0],), cloud.id, dtype=torch.long)))
