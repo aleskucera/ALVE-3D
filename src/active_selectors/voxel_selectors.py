@@ -71,6 +71,9 @@ class BaseVoxelSelector:
         return voxel_selection
 
     def load_voxel_selection(self, voxel_selection: dict, dataset: Dataset = None):
+        print('Loading voxel selection...')
+        print(f'Number of clouds: {len(self.clouds)}')
+        print(f'Voxel selection: {voxel_selection.keys()}')
         for cloud_name, label_mask in voxel_selection.items():
             cloud = self.get_cloud(cloud_name)
             voxels = torch.nonzero(label_mask).squeeze(1)
