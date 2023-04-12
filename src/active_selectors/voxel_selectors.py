@@ -25,8 +25,10 @@ class BaseVoxelSelector:
         self.dataset_path = dataset_path
         self.dataset_percentage = dataset_percentage
 
-        self.cloud_ids = torch.arange(len(cloud_paths), dtype=torch.long)
+        # self.cloud_ids = torch.arange(len(cloud_paths), dtype=torch.long)
         self.cloud_paths = cloud_paths
+        print(f'Number of clouds: {len(self.cloud_paths)}')
+        print(f'Cloud paths: {self.cloud_paths}')
 
         self.clouds = []
         self.num_voxels = 0
@@ -39,7 +41,7 @@ class BaseVoxelSelector:
         The function also computes the total number of voxels in the dataset to determine the number of
         voxels to be labeled each iteration and if the dataset is fully labeled.
         """
-        for cloud_id, cloud_path in zip(self.cloud_ids, self.cloud_paths):
+        for cloud_id, cloud_path in enumerate(self.cloud_paths):
             with h5py.File(cloud_path, 'r') as f:
                 num_voxels = f['points'].shape[0]
                 label_mask = torch.zeros(num_voxels, dtype=torch.bool)
