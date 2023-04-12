@@ -1,4 +1,5 @@
 import os
+import logging
 
 import h5py
 import numpy as np
@@ -8,6 +9,8 @@ from torch.utils.data import Dataset
 
 from src.utils import project_points, map_labels, augment_points
 from .utils import load_semantic_dataset
+
+log = logging.getLogger(__name__)
 
 
 class SemanticDataset(Dataset):
@@ -103,6 +106,8 @@ class SemanticDataset(Dataset):
         self.selection_mask = self.selection_mask[:self.size]
 
         self.sample_map = np.arange(len(self.scans))
+
+        log.info(self.__repr__())
 
     def update_sequence_selection_masks(self) -> None:
         """ Update the selection masks for each sequence. This is used when the dataset is used in an active learning
