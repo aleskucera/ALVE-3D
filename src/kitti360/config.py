@@ -4,29 +4,6 @@ from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from .labels import labels
 
 
-# labels_train:
-#   0: void
-#   1: road
-#   2: sidewalk
-#   3: building
-#   4: wall
-#   5: fence
-#   6: pole
-#   7: traffic light
-#   8: traffic sign
-#   9: vegetation
-#   10: terrain
-#   11: sky
-#   12: person
-#   13: rider
-#   14: car
-#   15: truck
-#   16: bus
-#   17: train
-#   18: motorcycle
-#   19: bicycle
-
-
 def create_kitti360_config():
     """Create config file for KITTI-360 dataset from kitti360scripts.helpers.labels.
     The changes are:

@@ -157,27 +157,7 @@ class SemanticDataset(Dataset):
         # Update the selection masks also on the disk
         self.update_sequence_selection_masks()
 
-    def label_samples(self, sample_indices: np.ndarray) -> None:
-        """Label the samples in the dataset. This is used when the dataset is used in an active training when
-        SampleSelector object selects the samples to label. It updates the selection mask and the label masks
-        of the specified samples.
-
-        :param sample_indices: Array of sample indices. (N,)
-        """
-
-        # Update the selection mask
-        self.selection_mask[sample_indices] = 1
-
-        # Update the label masks
-        for idx in tqdm(sample_indices, desc='Updating label masks'):
-            with h5py.File(self.labels[idx].replace('sequences', self.project_name), 'r+') as f:
-                label_mask = f['label_mask']
-                label_mask[...] = np.ones_like(f['label_mask'])
-
-        # Update the selection masks also on the disk
-        self.update_sequence_selection_masks()
-
-    def get_item(self, idx) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
+    def get_item(self, idx) -> tuple[np.ndarray, np.ndarray, int]:
         """ Return a sample from the dataset. Typically used in an active learning loop for
         selecting samples to label. The difference between this function and __getitem__ is that
         this function returns the following data:
@@ -228,7 +208,7 @@ class SemanticDataset(Dataset):
         proj_voxel_map = np.full((self.proj_H, self.proj_W), -1, dtype=np.int64)
         proj_voxel_map[proj_mask] = voxel_map[proj_idx[proj_mask]]
 
-        return proj_scan, proj_distances, proj_voxel_map, self.cloud_map[idx]
+        return proj_scan, proj_voxel_map, self.cloud_map[idx]
 
     def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray]:
         """Returns a sample from the dataset. The sample is projected velodyne scan and the corresponding
@@ -378,7 +358,7 @@ class SemanticDataset(Dataset):
 
         # Iterate over all labels, which points can be inside the selected voxels
         for i in sample_map:
-            _, _, voxel_map, _ = self.get_item(i)
+            _, voxel_map, _ = self.get_item(i)
             voxel_map = voxel_map.flatten()
             valid = (voxel_map != -1)
             voxel_map = voxel_map[valid]

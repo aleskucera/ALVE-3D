@@ -1,7 +1,6 @@
 import logging
 
 import torch
-import wandb
 import numpy as np
 from tqdm import tqdm
 import torch.optim as optim
@@ -12,6 +11,7 @@ from .logger import get_logger
 from src.losses import get_loss
 from src.models import get_model
 from src.datasets import get_parser
+from src.utils import log_model, log_history
 
 log = logging.getLogger(__name__)
 
@@ -108,57 +108,23 @@ class BaseTrainer(object):
         # Calculate the loss and metrics of the current epoch and log them, then return the history
         self.logger.log_val(self.epoch)
 
-    def save_model(self, model_name: str, history: dict):
-        log.info(f'Saving model...')
-
-        # Create state dictionary and save it
-        self.model.eval()
-        state_dict = {'epoch': self.epoch,
-                      'model_state_dict': self.model.state_dict(),
-                      'optimizer_state_dict': self.optimizer.state_dict()}
-        torch.save(state_dict, f'data/{model_name}.pt')
-
-        # Create metadata for W&B artifact
-        metadata = {'epoch': self.epoch}
-        for key, value in history.items():
-            metadata[key] = value[-1]
-
-        # Create W&B artifact and log it
-        artifact = wandb.Artifact(model_name, type='model', metadata=metadata,
-                                  description='Model state with optimizer state and metric history for each epoch.')
-        artifact.add_file(f'data/{model_name}.pt')
-        wandb.run.log_artifact(artifact)
-
-    def load_model(self, state: dict):
-        self.epoch = state['epoch']
-        self.model.load_state_dict(state['model_state_dict'])
-        self.optimizer.load_state_dict(state['optimizer_state_dict'])
-
-    @staticmethod
-    def save_history(history_name: str, history: dict):
-        log.info(f'Saving history...')
-        torch.save(history, f'data/{history_name}.pt')
-        artifact = wandb.Artifact(history_name, type='history', description='Metric history for each epoch.')
-        artifact.add_file(f'data/{history_name}.pt')
-        wandb.run.log_artifact(artifact)
+    def load_model(self, model: dict):
+        self.epoch = model['epoch']
+        self.model.load_state_dict(model['model_state_dict'])
+        self.optimizer.load_state_dict(model['optimizer_state_dict'])
 
 
 class Trainer(BaseTrainer):
     def __init__(self, cfg: DictConfig, train_ds: Dataset, val_ds: Dataset, device: torch.device,
-                 weights: np.ndarray, state: dict = None, model_name: str = None, history_name: str = None):
-        super().__init__(cfg, train_ds, val_ds, device, weights, state, model_name, history_name)
+                 weights: np.ndarray, model: dict = None, model_name: str = None, history_name: str = None):
+        super().__init__(cfg, train_ds, val_ds, device, weights, model, model_name, history_name)
 
     def train(self):
-
-        # Reset the logger and the epoch counter
-        self.epoch = 0
-        self.logger.reset()
-
-        # Train the model until the mIoU converges
-        while not self.logger.miou_converged(self.min_epochs, 3):
+        while not self.logger.miou_converged(self.min_epochs, self.patience):
             self.train_epoch(validate=True)
-            if self.logger.miou_improved(0):
-                self.save_model(self.model_name, self.logger.history)
+            if self.logger.miou_improved(self.min_epochs // 2):
+                log_model(model=self.model, optimizer=self.optimizer,
+                          history=self.logger.history, epoch=self.epoch, model_name=self.model_name)
             self.epoch += 1
 
-        self.save_history(self.history_name, self.logger.history)
+        log_history(history=self.logger.history, history_name=self.history_name)

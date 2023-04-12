@@ -3,10 +3,10 @@ import logging
 import wandb
 import torch
 import numpy as np
-import seaborn as sn
-import matplotlib.pyplot as plt
 from torchmetrics.classification import MulticlassAccuracy, \
     MulticlassJaccardIndex, MulticlassConfusionMatrix
+
+from src.utils.log import log_class_iou, log_class_accuracy, log_confusion_matrix
 
 log = logging.getLogger(__name__)
 
@@ -109,10 +109,6 @@ class SemanticLogger(object):
             log.info(f'MIoU not improved: {self.history["miou_val"][-1]}')
             return False
 
-    def load_history(self, history: dict):
-        assert set(history.keys()) == set(self.history.keys()), "History keys don't match"
-        self.history = history
-
     def update(self, loss: float, outputs: torch.Tensor, targets: torch.Tensor):
         """ Update loss and metrics
 
@@ -204,13 +200,16 @@ class SemanticLogger(object):
         wandb.log({f"Accuracy Val": acc}, step=epoch)
 
         self.history['class_accuracy'].append(class_acc)
-        self._log_class_accuracy(class_acc, epoch)
+        log_class_accuracy(class_acc=class_acc, labels=self.labels,
+                           ignore_index=self.ignore_index, step=epoch)
 
         self.history['class_iou'].append(class_iou)
-        self._log_class_iou(class_iou, epoch)
+        log_class_iou(class_iou=class_iou, labels=self.labels,
+                      ignore_index=self.ignore_index, step=epoch)
 
         self.history['confusion_matrix'].append(conf_matrix)
-        self._log_confusion_matrix(conf_matrix, epoch)
+        log_confusion_matrix(confusion_matrix=conf_matrix, labels=self.labels,
+                             ignore_index=self.ignore_index, step=epoch)
 
         # Reset batch loss and metrics
         self.iou.reset()
@@ -219,39 +218,3 @@ class SemanticLogger(object):
         self.class_iou.reset()
         self.conf_matrix.reset()
         self.batch_loss_history = []
-
-    def _log_class_accuracy(self, class_acc: torch.Tensor, epoch: int):
-        class_acc = class_acc.tolist()
-        del class_acc[self.ignore_index]
-        for name, acc in zip(self.label_names, class_acc):
-            wandb.log({f"Accuracy - {name}": acc}, step=epoch)
-
-    def _log_class_iou(self, class_iou: torch.Tensor, epoch: int):
-        class_iou = class_iou.tolist()
-        del class_iou[self.ignore_index]
-        for name, iou in zip(self.label_names, class_iou):
-            wandb.log({f"IoU - {name}": iou}, step=epoch)
-
-    def _log_confusion_matrix(self, confusion_matrix: torch.Tensor, epoch: int):
-        conf_matrix = confusion_matrix.numpy()
-
-        # Remove the ignored class from the last two dimensions
-        conf_matrix = np.delete(conf_matrix, self.ignore_index, axis=-1)
-        conf_matrix = np.delete(conf_matrix, self.ignore_index, axis=-2)
-
-        # Plot confusion matrix
-        sn.set()
-        plt.figure(figsize=(16, 16))
-        sn.heatmap(conf_matrix, annot=True, cmap='Blues', fmt='.2f',
-                   xticklabels=self.label_names,
-                   yticklabels=self.label_names)
-
-        # Visualize confusion matrix
-        plt.xlabel('Predicted labels')
-        plt.ylabel('True labels')
-        plt.title('Multiclass Confusion Matrix')
-
-        # Log confusion matrix to W&B
-        wandb.log({"Confusion Matrix": wandb.Image(plt)}, step=epoch)
-
-        plt.close()

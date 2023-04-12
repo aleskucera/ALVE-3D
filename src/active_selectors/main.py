@@ -1,32 +1,16 @@
 import torch
 import numpy as np
 
-from .voxel_selectors import RandomVoxelSelector, AverageEntropyVoxelSelector, \
-    ViewpointVarianceVoxelSelector, EpistemicUncertaintyVoxelSelector
-from .superpoint_selector import RandomSuperpointSelector
+from .base_selector import Selector
+from .voxel_selector import VoxelSelector
+from .superpoint_selector import SuperpointSelector
 
 
-def get_selector(selector_type: str, dataset_path: str, cloud_paths: np.ndarray,
-                 device: torch.device, dataset_percentage: float = 10):
-    """ Get the selector function
-
-    :param selector_type: The type of selector to use (random_samples, entropy_samples, random_voxels, entropy_voxels)
-    :param dataset_path: The path to the dataset
-    :param cloud_paths: The paths to the clouds in the dataset
-    :param device: The device to use for the selection
-    :param dataset_percentage: The percentage of the dataset to select (default: 10)
-    """
-
-    if selector_type == 'random_voxels':
-        return RandomVoxelSelector(dataset_path, cloud_paths, device, dataset_percentage)
-    elif selector_type == 'average_entropy_voxels':
-        return AverageEntropyVoxelSelector(dataset_path, cloud_paths, device, dataset_percentage)
-    elif selector_type == 'viewpoint_variance_voxels':
-        return ViewpointVarianceVoxelSelector(dataset_path, cloud_paths, device, dataset_percentage)
-    elif selector_type == 'epistemic_uncertainty_voxels':
-        return EpistemicUncertaintyVoxelSelector(dataset_path, cloud_paths, device, dataset_percentage)
-
-    elif selector_type == 'random_superpoints':
-        return RandomSuperpointSelector(dataset_path, cloud_paths, device, dataset_percentage)
+def get_selector(selection_objects: str, criterion: str,
+                 dataset_path: str, cloud_paths: np.ndarray, device: torch.device) -> Selector:
+    if selection_objects == 'voxels':
+        return VoxelSelector(dataset_path, cloud_paths, device, criterion)
+    elif selection_objects == 'superpoints':
+        return SuperpointSelector(dataset_path, cloud_paths, device, criterion)
     else:
-        raise ValueError(f'Unknown selector: {selector_type}')
+        raise ValueError(f'Unknown selection_objects: {selection_objects}')

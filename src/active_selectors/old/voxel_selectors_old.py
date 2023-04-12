@@ -7,7 +7,7 @@ from tqdm import tqdm
 from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
-from .voxel_cloud import VoxelCloud
+from active_selectors.voxel_cloud import VoxelCloud
 from src.laserscan import LaserScan
 
 
