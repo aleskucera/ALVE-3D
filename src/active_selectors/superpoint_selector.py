@@ -41,12 +41,12 @@ class SuperpointSelector(Selector):
 
         for cloud in self.clouds:
             voxel_mask = dataset.get_voxel_mask(cloud.path, cloud.size)
-            superpoint_map = cloud.superpoint_map[voxel_mask]
-            cloud_superpoint_map, cloud_superpoint_sizes = torch.unique(superpoint_map, return_counts=True)
-            cloud_ids = torch.full((cloud_superpoint_map.shape[0],), cloud.id, dtype=torch.long)
+            cloud_superpoint_map = cloud.superpoint_map[voxel_mask]
+            superpoints, cloud_superpoint_sizes = torch.unique(cloud_superpoint_map, return_counts=True)
+            cloud_ids = torch.full((superpoints.shape[0],), cloud.id, dtype=torch.long)
 
             cloud_map = torch.cat((cloud_map, cloud_ids))
-            superpoint_map = torch.cat((superpoint_map, cloud_superpoint_map))
+            superpoint_map = torch.cat((superpoint_map, superpoints))
             superpoint_sizes = torch.cat((superpoint_sizes, cloud_superpoint_sizes))
 
         return self._get_voxel_selection(superpoint_map, superpoint_sizes, cloud_map, selection_size)
