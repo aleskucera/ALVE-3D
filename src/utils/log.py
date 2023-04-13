@@ -51,6 +51,7 @@ def log_confusion_matrix(confusion_matrix: torch.Tensor, labels: list[str],
 
 
 def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, save_artifact: bool) -> np.ndarray:
+    print('Logging dataset statistics...')
     ignore_index = cfg.ds.ignore_index
     statistics_artifact = cfg.active.statistics
     label_names = [v for k, v in cfg.ds.labels_train.items() if k != ignore_index]
@@ -100,6 +101,7 @@ def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, save_artifact: boo
 
 
 def log_most_labeled_sample(dataset: Dataset, laser_scan: LaserScan) -> None:
+    print('Logging most labeled sample...')
     most_labeled_sample, sample_labeled_ratio, label_mask = dataset.get_most_labeled_sample()
 
     # Open the scan and the label
