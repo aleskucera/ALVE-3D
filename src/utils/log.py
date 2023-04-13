@@ -7,6 +7,7 @@ from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
 from src.laserscan import LaserScan
+from .cloud import visualize_cloud, visualize_cloud_values
 
 
 def log_class_iou(class_iou: torch.Tensor, labels: list[str],
@@ -51,7 +52,6 @@ def log_confusion_matrix(confusion_matrix: torch.Tensor, labels: list[str],
 
 
 def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, save_artifact: bool) -> np.ndarray:
-    print('Logging dataset statistics...')
     ignore_index = cfg.ds.ignore_index
     statistics_artifact = cfg.active.statistics
     label_names = [v for k, v in cfg.ds.labels_train.items() if k != ignore_index]
@@ -65,21 +65,22 @@ def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, save_artifact: boo
     class_dist = np.delete(class_dist, ignore_index)
     data = [[name, value] for name, value in zip(label_names, class_dist)]
     table = wandb.Table(data=data, columns=["Class", "Distribution"])
-    wandb.log({f"Class Distribution - {labeled_ratio:.2f}": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
+    wandb.log({f"Class Distribution - "
+               f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
 
     # Log the labeled class distribution
     labeled_class_dist = np.delete(labeled_class_distribution, ignore_index)
     data = [[name, value] for name, value in zip(label_names, labeled_class_dist)]
     table = wandb.Table(data=data, columns=["Class", "Distribution"])
-    wandb.log({f"Labeled Class Distribution - {labeled_ratio:.2f}": wandb.plot.bar(table, "Class", "Distribution")},
-              step=0)
+    wandb.log({f"Labeled Class Distribution - "
+               f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
 
     # Filter and log the class labeling progress
     class_labeling_progress = np.delete(class_labeling_progress, ignore_index)
     data = [[name, value] for name, value in zip(label_names, class_labeling_progress)]
     table = wandb.Table(data=data, columns=["Class", "Labeling Progress"])
     wandb.log({f"Class Labeling Progress - "
-               f"{labeled_ratio:.2f}": wandb.plot.bar(table, "Class", "Labeling Progress")}, step=0)
+               f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Labeling Progress")}, step=0)
 
     if save_artifact:
         metadata = {'labeled_ratio': labeled_ratio}
@@ -100,12 +101,14 @@ def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, save_artifact: boo
 
 
 def log_most_labeled_sample(dataset: Dataset, laser_scan: LaserScan) -> None:
-    print('Logging most labeled sample...')
     most_labeled_sample, sample_labeled_ratio, label_mask = dataset.get_most_labeled_sample()
 
     # Open the scan and the label
     laser_scan.open_scan(dataset.scan_files[most_labeled_sample])
     laser_scan.open_label(dataset.label_files[most_labeled_sample])
+
+    # visualize_cloud(laser_scan.points, laser_scan.color)
+    # visualize_cloud(laser_scan.points, laser_scan.sem_label_color)
 
     # Create the point cloud and the projection with fully labeled points
     cloud = np.concatenate([laser_scan.points, laser_scan.color * 255], axis=1)
@@ -115,6 +118,8 @@ def log_most_labeled_sample(dataset: Dataset, laser_scan: LaserScan) -> None:
     # Open the label with the label mask
     laser_scan.open_scan(dataset.scan_files[most_labeled_sample])
     laser_scan.open_label(dataset.label_files[most_labeled_sample], label_mask)
+
+    # visualize_cloud(laser_scan.points, laser_scan.sem_label_color)
 
     # Create the point cloud and the projection with the most labeled points
     cloud_label = np.concatenate([laser_scan.points, laser_scan.sem_label_color * 255], axis=1)

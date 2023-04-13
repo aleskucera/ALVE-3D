@@ -11,7 +11,7 @@
 #SBATCH --mail-type=BEGIN,END,FAIL                  # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
 # Set default values for variables
-load_model_arg=""
+load_model_arg="+load_model=True"
 objects="voxels"
 criterion="random"
 dataset_size="null"

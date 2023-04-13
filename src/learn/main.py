@@ -125,9 +125,9 @@ def select_voxels(cfg: DictConfig, device: torch.device) -> None:
     select_percentage = cfg.active.select_percentage
     percentage = f'{cfg.active.expected_percentage_labeled + cfg.active.select_percentage}%'
 
-    with wandb.init(project=f'AL (test) - {project_name}', group='selection', name=f'Selection - {percentage}'):
+    with wandb.init(project=f'AL test - {project_name}', group='selection', name=f'Selection - {percentage}'):
         dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name=project_name,
-                                  cfg=cfg.ds, split='train', size=cfg.train.dataset_size)
+                                  cfg=cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
         selector = get_selector(selection_objects=selection_objects, criterion=criterion, dataset_path=cfg.ds.path,
                                 cloud_paths=dataset.get_dataset_clouds(), device=device)
 
@@ -177,9 +177,9 @@ def select_first_voxels(cfg: DictConfig, device: torch.device) -> None:
     select_percentage = cfg.active.select_percentage
     percentage = f'{cfg.active.expected_percentage_labeled + cfg.active.select_percentage}%'
 
-    with wandb.init(project=f'AL (test) - {project_name}', group='selection', name=f'First Selection - {percentage}'):
+    with wandb.init(project=f'AL test - {project_name}', group='selection', name=f'First Selection - {percentage}'):
         dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name=project_name,
-                                  cfg=cfg.ds, split='train', size=cfg.train.dataset_size)
+                                  cfg=cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
         selector = get_selector(selection_objects=selection_objects, criterion='random', dataset_path=dataset.path,
                                 cloud_paths=dataset.get_dataset_clouds(), device=device)
 
