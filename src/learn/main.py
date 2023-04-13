@@ -192,7 +192,7 @@ def select_first_voxels(cfg: DictConfig, device: torch.device) -> None:
         wandb.run.log_artifact(artifact)
 
         data = [['a', 1], ['b', 2], ['c', 3]]
-        table = wandb.Table(data=data, columns=["Class", "Distribution"])
+        table = wandb.Table(data=data, columns=["safda", "adfa"])
         wandb.log({f"Something": wandb.plot.bar(table, "safda", "adfa")}, step=0)
 
         # Log the results of the first selection
