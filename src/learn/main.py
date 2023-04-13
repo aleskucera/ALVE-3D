@@ -191,6 +191,10 @@ def select_first_voxels(cfg: DictConfig, device: torch.device) -> None:
         artifact.add_file(f'data/{selection_artifact.name}.pt')
         wandb.run.log_artifact(artifact)
 
+        data = [['a', 1], ['b', 2], ['c', 3]]
+        table = wandb.Table(data=data, columns=["Class", "Distribution"])
+        wandb.log({f"Something": wandb.plot.bar(table, "safda", "adfa")}, step=0)
+
         # Log the results of the first selection
         selector.load_voxel_selection(voxel_selection=selection, dataset=dataset)
         log_dataset_statistics(cfg=cfg, dataset=dataset, save_artifact=False)
