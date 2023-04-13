@@ -82,6 +82,10 @@ class SuperpointSelector(Selector):
 
     def _get_voxel_selection(self, superpoint_map: torch.Tensor, superpoint_sizes: torch.Tensor,
                              cloud_map: torch.Tensor, selection_size: int, values: torch.Tensor = None):
+        # print tensor shapes
+        print(f'superpoint_map: {superpoint_map.shape}')
+        print(f'superpoint_sizes: {superpoint_sizes.shape}')
+        print(f'cloud_map: {cloud_map.shape}')
         if values is None:
             order = torch.randperm(superpoint_map.shape[0])
         else:
