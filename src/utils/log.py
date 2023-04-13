@@ -65,22 +65,21 @@ def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, save_artifact: boo
     class_dist = np.delete(class_dist, ignore_index)
     data = [[name, value] for name, value in zip(label_names, class_dist)]
     table = wandb.Table(data=data, columns=["Class", "Distribution"])
-    wandb.log({f"Class Distribution - "
-               f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
+    wandb.log({f"Class Distribution - {labeled_ratio:.2f}": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
 
     # Log the labeled class distribution
     labeled_class_dist = np.delete(labeled_class_distribution, ignore_index)
     data = [[name, value] for name, value in zip(label_names, labeled_class_dist)]
     table = wandb.Table(data=data, columns=["Class", "Distribution"])
-    wandb.log({f"Labeled Class Distribution - "
-               f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
+    wandb.log({f"Labeled Class Distribution - {labeled_ratio:.2f}": wandb.plot.bar(table, "Class", "Distribution")},
+              step=0)
 
     # Filter and log the class labeling progress
     class_labeling_progress = np.delete(class_labeling_progress, ignore_index)
     data = [[name, value] for name, value in zip(label_names, class_labeling_progress)]
     table = wandb.Table(data=data, columns=["Class", "Labeling Progress"])
     wandb.log({f"Class Labeling Progress - "
-               f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Labeling Progress")}, step=0)
+               f"{labeled_ratio:.2f}": wandb.plot.bar(table, "Class", "Labeling Progress")}, step=0)
 
     if save_artifact:
         metadata = {'labeled_ratio': labeled_ratio}
