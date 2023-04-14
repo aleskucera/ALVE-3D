@@ -155,7 +155,7 @@ def log_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer,
     wandb.run.log_artifact(artifact)
 
 
-def log_history(history_name: str, history: dict) -> None:
+def log_history(history: dict, history_name: str) -> None:
     torch.save(history, f'data/{history_name}.pt')
     artifact = wandb.Artifact(history_name, type='history',
                               description='Metric history for each epoch.')
@@ -163,7 +163,15 @@ def log_history(history_name: str, history: dict) -> None:
     wandb.run.log_artifact(artifact)
 
 
-def log_selection_metric_statistics(metric_statistics_name: str, metric_statistics: dict) -> None:
+def log_selection(selection: dict, selection_name: str) -> None:
+    torch.save(selection, f'data/{selection_name}.pt')
+    artifact = wandb.Artifact(selection_name, type='selection',
+                              description='The selected voxels for the first active learning iteration.')
+    artifact.add_file(f'data/{selection_name}.pt')
+    wandb.run.log_artifact(artifact)
+
+
+def log_selection_metric_statistics(metric_statistics: dict, metric_statistics_name: str) -> None:
     selected_values = metric_statistics['selected_values']
     left_values = metric_statistics['left_values']
     threshold = metric_statistics['threshold']

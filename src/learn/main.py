@@ -71,17 +71,17 @@ def train_active(cfg: DictConfig, device: torch.device) -> None:
     # ========================================= Model Training =========================================
     # --------------------------------------------------------------------------------------------------
 
-    with wandb.init(project=f'AL - {project_name}', group='training', name=f'Training - {percentage}'):
+    with wandb.init(project=f'AL (test) - {project_name}', group='training', name=f'Training - {percentage}'):
 
         # Load Datasets
-        train_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name=project_name, cfg=cfg.ds,
-                                   split='train', size=cfg.train.dataset_size, active_mode=True)
-        val_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name=project_name, cfg=cfg.ds,
-                                 split='val', size=cfg.train.dataset_size, active_mode=True)
+        train_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name=project_name, cfg=cfg.ds, split='train',
+                                   size=cfg.train.dataset_size, al_experiment=True, selection_mode=False)
+        val_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name=project_name, cfg=cfg.ds, split='val',
+                                 size=cfg.train.dataset_size, al_experiment=True, selection_mode=False)
 
         # Load Selector for selecting labeled voxels
         selector = get_selector(selection_objects=selection_objects, criterion=criterion, dataset_path=cfg.ds.path,
-                                cloud_paths=train_ds.get_dataset_clouds(), device=device)
+                                cloud_paths=train_ds.voxel_clouds, device=device, batch_size=cfg.train.batch_size)
 
         # Load selected voxels from W&B
         artifact_dir = wandb.use_artifact(f'{selection_artifact.name}:{selection_artifact.version}').download()
@@ -126,7 +126,7 @@ def select_voxels(cfg: DictConfig, device: torch.device) -> None:
     select_percentage = cfg.active.select_percentage
     percentage = f'{cfg.active.expected_percentage_labeled + cfg.active.select_percentage}%'
 
-    with wandb.init(project=f'AL - {project_name}', group='selection', name=f'Selection - {percentage}'):
+    with wandb.init(project=f'AL (test) - {project_name}', group='selection', name=f'Selection - {percentage}'):
         dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name=project_name,
                                   cfg=cfg.ds, split='train', size=cfg.train.dataset_size, al_experiment=True,
                                   selection_mode=True)
