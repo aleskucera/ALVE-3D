@@ -15,7 +15,7 @@ class Cloud(object):
         self.label_mask = torch.zeros((size,), dtype=torch.bool)
         self.predictions = torch.zeros((0,), dtype=torch.float32)
 
-    def _return_values(self, values: torch.Tensor) -> tuple:
+    def _save_values(self, values: torch.Tensor) -> tuple:
         raise NotImplementedError
 
     def __str__(self) -> str:
@@ -58,11 +58,6 @@ class Cloud(object):
             unlabeled_variances = variances[indices]
             self.variances = torch.cat((self.variances, unlabeled_variances), dim=0)
 
-    def reset(self) -> None:
-        self.voxel_map = torch.zeros((0,), dtype=torch.int32)
-        self.variances = torch.zeros((0,), dtype=torch.float32)
-        self.predictions = torch.zeros((0,), dtype=torch.float32)
-
     def label_voxels(self, voxels: torch.Tensor, dataset: Dataset = None) -> None:
         self.label_mask[voxels] = True
         if dataset is not None:
@@ -70,19 +65,23 @@ class Cloud(object):
                 f.create_dataset('label_mask', data=self.label_mask.numpy())
             dataset.label_voxels(voxels.numpy(), self.path)
 
-    def get_average_entropies(self) -> tuple:
-        return self.__get_values(self.predictions, self.__average_entropy)
+    def calculate_average_entropies(self) -> None:
+        self.__calculate_values(self.predictions, self.__average_entropy)
+        self.__reset()
 
-    def get_viewpoint_entropies(self) -> tuple:
-        return self.__get_values(self.predictions, self.__viewpoint_entropy)
+    def calculate_viewpoint_entropies(self) -> None:
+        self.__calculate_values(self.predictions, self.__viewpoint_entropy)
+        self.__reset()
 
-    def get_viewpoint_variances(self) -> tuple:
-        return self.__get_values(self.predictions, self.__variance)
+    def calculate_viewpoint_variances(self) -> None:
+        self.__calculate_values(self.predictions, self.__variance)
+        self.__reset()
 
-    def get_epistemic_uncertainties(self) -> tuple:
-        return self.__get_values(self.variances, torch.mean)
+    def calculate_epistemic_uncertainties(self) -> None:
+        self.__calculate_values(self.variances, torch.mean)
+        self.__reset()
 
-    def __get_values(self, items: torch.Tensor, function: callable):
+    def __calculate_values(self, items: torch.Tensor, function: callable):
         values = torch.full((self.size,), float('nan'), dtype=torch.float32)
 
         order = torch.argsort(self.voxel_map)
@@ -98,7 +97,12 @@ class Cloud(object):
             vals = torch.cat((vals, val), dim=0)
 
         values[voxel_map] = vals
-        return self._return_values(values)
+        self._save_values(values)
+
+    def __reset(self) -> None:
+        self.voxel_map = torch.zeros((0,), dtype=torch.int32)
+        self.variances = torch.zeros((0,), dtype=torch.float32)
+        self.predictions = torch.zeros((0,), dtype=torch.float32)
 
     def __average_entropy(self, probability_distribution_set: torch.Tensor) -> torch.Tensor:
         probability_distribution_set = torch.clamp(probability_distribution_set, min=self.eps, max=1 - self.eps)

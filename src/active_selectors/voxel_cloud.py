@@ -7,14 +7,16 @@ class VoxelCloud(Cloud):
     def __init__(self, path: str, size: int, cloud_id: int):
         super().__init__(path, size, cloud_id)
 
-    def _return_values(self, values: torch.Tensor):
+        self.values = None
+        self.cloud_ids = None
+        self.voxel_indices = None
+
+    def _save_values(self, values: torch.Tensor):
         valid_indices = ~torch.isnan(values)
 
-        filtered_values = values[valid_indices]
-        filtered_voxel_indices = torch.arange(self.size, dtype=torch.long)[valid_indices]
-        filtered_cloud_ids = torch.full((self.size,), self.id, dtype=torch.long)[valid_indices]
-
-        return filtered_values, filtered_voxel_indices, filtered_cloud_ids
+        self.values = values[valid_indices]
+        self.voxel_indices = torch.arange(self.size, dtype=torch.long)[valid_indices]
+        self.cloud_ids = torch.full((self.size,), self.id, dtype=torch.long)[valid_indices]
 
     def __str__(self):
         ret = f'\nVoxelCloud:\n' \

@@ -10,6 +10,7 @@
 #SBATCH --mail-type=BEGIN,END,FAIL            # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
 # Set default values for variables
+batch_size="64"
 objects="voxels"
 percentage="0.5"
 criterion="random"
@@ -17,23 +18,11 @@ dataset_size="null"
 action="select_voxels"
 expected_percentage="0"
 
-# Define a function to display help information
-show_help () {
-  echo "Usage: select.batch [options]"
-  echo "Options:"
-  echo "  --first-selection     Select first voxels"
-  echo "  -c, --criterion       Active learning criterion (default: random)"
-  echo "  -e, --expected        Expected percentage of labeled data (default: 0)"
-  echo "  -o, --objects         Active learning objects (default: voxels)"
-  echo "  -p, --percentage      Percentage of dataset to select (default: 0.5)"
-  echo "  -s, --size            Dataset size (default: null)"
-  echo "  -h, --help            Display this help and exit"
-}
-
 # Parse command line arguments
 while [ "$#" -gt 0 ]; do
   case $1 in
     --first-selection) action="select_first_voxels" ;;
+    -b|--batch-size) batch_size="$2"; shift ;;
     -c|--criterion) criterion="$2"; shift ;;
     -e|--expected) expected_percentage="$2"; shift ;;
     -o|--objects) objects="$2"; shift ;;
@@ -49,7 +38,8 @@ singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf960162
                 singularity/alve-3d.sif python main.py \
                 action="$action" \
                 active.criterion="$criterion" \
-                active.selection_objects="$objects" \
+                active.batch_size="$batch_size" \
                 train.dataset_size="$dataset_size" \
+                active.selection_objects="$objects" \
                 active.select_percentage="$percentage" \
                 active.expected_percentage_labeled="$expected_percentage"

@@ -71,7 +71,7 @@ def initialize_dataset(dataset_path: str, project_name: str, sequences: list, sp
 
 
 def load_semantic_dataset(dataset_path: str, project_name: str, sequences: list, split: str,
-                          active: bool = False, resume: bool = False) -> tuple:
+                          al_experiment: bool = False, resume: bool = False) -> tuple:
     """ Load the semantic dataset for a given split and mode. The function loads the following information:
 
     - scans: Array of paths to the scans.
@@ -84,7 +84,7 @@ def load_semantic_dataset(dataset_path: str, project_name: str, sequences: list,
     :param dataset_path: Path to the dataset.
     :param sequences: List of sequences to load.
     :param split: Split to load.
-    :param active: If True, the samples are loaded as not selected and the labels are not available.
+    :param al_experiment: If True, the samples are loaded as not selected and the labels are not available.
     :param resume: If True, the dataset is not initialized and the dataset is loaded as it is stored on disk.
     :return: Tuple containing the scans, labels, poses, sequence map, cloud map, and selection mask.
     """
@@ -95,9 +95,10 @@ def load_semantic_dataset(dataset_path: str, project_name: str, sequences: list,
         os.makedirs(os.path.join(dataset_path, project_name, f'{s:02d}', 'voxel_clouds'), exist_ok=True)
 
     if not resume:
-        initialize_dataset(dataset_path, project_name, sequences, split, active)
+        initialize_dataset(dataset_path, project_name, sequences, split, al_experiment)
 
-    log.info(f'Loading dataset: {dataset_path} split: {split} with mode {"active" if active else "normal"}')
+    log.info(f'Loading dataset: {dataset_path} split: {split} for '
+             f'{"AL experiment" if al_experiment else "Normal experiment"}')
 
     scans = np.array([], dtype=np.str_)
     labels = np.array([], dtype=np.str_)

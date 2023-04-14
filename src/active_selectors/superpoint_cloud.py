@@ -7,6 +7,11 @@ class SuperpointCloud(Cloud):
         super().__init__(path, size, cloud_id)
         self.superpoint_map = superpoint_map
 
+        self.values = None
+        self.cloud_ids = None
+        self.superpoint_sizes = None
+        self.superpoint_indices = None
+
     @property
     def num_superpoints(self) -> int:
         return self.superpoint_map.max().item() + 1
@@ -27,16 +32,14 @@ class SuperpointCloud(Cloud):
                 average_superpoint_values[superpoint] = torch.mean(valid_superpoint_values)
         return average_superpoint_values, superpoint_sizes
 
-    def _return_values(self, values: torch.Tensor):
+    def _save_values(self, values: torch.Tensor):
         superpoint_values, superpoint_sizes = self._average_by_superpoint(values)
         valid_indices = ~torch.isnan(superpoint_values)
 
-        filtered_values = superpoint_values[valid_indices]
-        filtered_superpoint_sizes = superpoint_sizes[valid_indices]
-        filtered_superpoint_map = self.superpoint_map[valid_indices]
-        filtered_cloud_ids = torch.full((self.num_superpoints,), self.id, dtype=torch.long)[valid_indices]
-
-        return filtered_values, filtered_superpoint_map, filtered_superpoint_sizes, filtered_cloud_ids
+        self.values = superpoint_values[valid_indices]
+        self.superpoint_sizes = superpoint_sizes[valid_indices]
+        self.superpoint_indices = self.superpoint_map[valid_indices]
+        self.cloud_ids = torch.full((self.num_superpoints,), self.id, dtype=torch.long)[valid_indices]
 
     def __str__(self):
         ret = f'\nSuperpointCloud:\n' \

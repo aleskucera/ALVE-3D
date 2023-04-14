@@ -9,15 +9,14 @@ from .voxel_cloud import VoxelCloud
 
 
 class VoxelSelector(Selector):
-    def __init__(self, dataset_path: str, cloud_paths: np.ndarray, device: torch.device, criterion: str = 'random'):
-        super().__init__(dataset_path, cloud_paths, device)
-        assert criterion in ['random', 'average_entropy', 'epistemic_uncertainty', 'viewpoint_variance']
+    def __init__(self, dataset_path: str, cloud_paths: np.ndarray,
+                 device: torch.device, criterion: str, batch_size: int):
+        super().__init__(dataset_path, cloud_paths, device, batch_size)
         self.criterion = criterion
-        self.mc_dropout = True if criterion == 'epistemic_uncertainty' else True
-
+        self.mc_dropout = True if criterion == 'epistemic_uncertainty' else False
         self._initialize()
 
-    def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5) -> dict:
+    def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5) -> tuple:
         if self.criterion == 'random':
             return self._select_randomly(dataset, percentage)
         else:
@@ -43,49 +42,43 @@ class VoxelSelector(Selector):
             voxel_map = torch.cat((voxel_map, voxels))
             cloud_map = torch.cat((cloud_map, torch.full((voxels.shape[0],), cloud.id, dtype=torch.long)))
 
-        voxel_selection = self._get_voxel_selection(voxel_map, cloud_map, selection_size)
-        return voxel_selection
+        return self._choose_voxels(voxel_map, cloud_map, selection_size)
 
-    def _select_by_criterion(self, dataset: Dataset, model: nn.Module, percentage: float) -> dict:
+    def _select_by_criterion(self, dataset: Dataset, model: nn.Module, percentage: float) -> tuple:
 
         values = torch.tensor([], dtype=torch.float32)
         voxel_map = torch.tensor([], dtype=torch.long)
         cloud_map = torch.tensor([], dtype=torch.long)
         selection_size = self.get_selection_size(dataset, percentage)
 
-        self._map_model_predictions(model, dataset, self.mc_dropout)
+        self._calculate_values(model, dataset, self.criterion, self.mc_dropout)
 
         for cloud in self.clouds:
-            if self.criterion == 'average_entropy':
-                cloud_values, cloud_voxel_map, cloud_ids = cloud.get_average_entropies()
-            elif self.criterion == 'epistemic_uncertainty':
-                cloud_values, cloud_voxel_map, cloud_ids = cloud.get_epistemic_uncertainties()
-            elif self.criterion == 'viewpoint_variance':
-                cloud_values, cloud_voxel_map, cloud_ids = cloud.get_viewpoint_variances()
-            else:
-                raise ValueError('Criterion not supported')
+            values = torch.cat((values, cloud.values))
+            voxel_map = torch.cat((voxel_map, cloud.voxel_indices))
+            cloud_map = torch.cat((cloud_map, cloud.cloud_ids))
 
-            values = torch.cat((values, cloud_values))
-            voxel_map = torch.cat((voxel_map, cloud_voxel_map))
-            cloud_map = torch.cat((cloud_map, cloud_ids))
+        return self._choose_voxels(voxel_map, cloud_map, selection_size, values)
 
-            cloud.reset()
-
-        return self._get_voxel_selection(voxel_map, cloud_map, selection_size, values)
-
-    def _get_voxel_selection(self, voxel_map: torch.Tensor, cloud_map: torch.Tensor,
-                             selection_size: int, values: torch.Tensor = None) -> dict:
+    def _choose_voxels(self, voxel_map: torch.Tensor, cloud_map: torch.Tensor,
+                       selection_size: int, values: torch.Tensor = None) -> tuple:
         voxel_selection = dict()
 
         if values is None:
             order = torch.randperm(voxel_map.shape[0])
+            metric_statistics = None
         else:
             order = torch.argsort(values, descending=True)
+            values = values[order]
+            threshold = values[selection_size]
+            metric_statistics = self._metric_statistics(values, threshold)
+
         voxel_map, cloud_map = voxel_map[order], cloud_map[order]
-        selected_voxels = voxel_map[:selection_size].cpu()
-        selected_cloud_map = cloud_map[:selection_size].cpu()
+        selected_voxels = voxel_map[:selection_size]
+        selected_cloud_map = cloud_map[:selection_size]
 
         for cloud in self.clouds:
             cloud.label_voxels(selected_voxels[selected_cloud_map == cloud.id])
             voxel_selection[cloud.selection_key] = cloud.label_mask
-        return voxel_selection
+
+        return voxel_selection, metric_statistics

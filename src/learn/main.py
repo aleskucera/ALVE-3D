@@ -10,7 +10,7 @@ from src.models import get_model
 from src.laserscan import LaserScan
 from src.datasets import SemanticDataset
 from src.active_selectors import get_selector
-from src.utils import log_dataset_statistics, log_most_labeled_sample
+from src.utils import log_dataset_statistics, log_most_labeled_sample, log_selection_metric_statistics
 
 log = logging.getLogger(__name__)
 
@@ -117,6 +117,7 @@ def select_voxels(cfg: DictConfig, device: torch.device) -> None:
     # ================== Project Artifacts ==================
     model_artifact = cfg.active.model
     selection_artifact = cfg.active.selection
+    metric_statistics_artifact = cfg.active.metric_statistics
 
     # ================== Project ==================
     criterion = cfg.active.criterion
@@ -127,9 +128,10 @@ def select_voxels(cfg: DictConfig, device: torch.device) -> None:
 
     with wandb.init(project=f'AL - {project_name}', group='selection', name=f'Selection - {percentage}'):
         dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name=project_name,
-                                  cfg=cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
-        selector = get_selector(selection_objects=selection_objects, criterion=criterion, dataset_path=cfg.ds.path,
-                                cloud_paths=dataset.get_dataset_clouds(), device=device)
+                                  cfg=cfg.ds, split='train', size=cfg.train.dataset_size, al_experiment=True,
+                                  selection_mode=True)
+        selector = get_selector(selection_objects=selection_objects, criterion=criterion, dataset_path=dataset.path,
+                                cloud_paths=dataset.voxel_clouds, device=device, batch_size=cfg.active.batch_size)
 
         # Load selected voxels from W&B
         artifact_dir = wandb.use_artifact(f'{selection_artifact.name}:{selection_artifact.version}').download()
@@ -146,7 +148,7 @@ def select_voxels(cfg: DictConfig, device: torch.device) -> None:
         model.load_state_dict(model_state_dict)
 
         # Select the next voxels
-        selection = selector.select(dataset=dataset, model=model, percentage=select_percentage)
+        selection, metric_statistics = selector.select(dataset=dataset, model=model, percentage=select_percentage)
 
         # Save the selected voxels to W&B
         torch.save(selection, f'data/{selection_artifact.name}.pt')
@@ -154,6 +156,16 @@ def select_voxels(cfg: DictConfig, device: torch.device) -> None:
                                   description='The selected voxels for the next active learning iteration.')
         artifact.add_file(f'data/{selection_artifact.name}.pt')
         wandb.run.log_artifact(artifact)
+
+        log_selection_metric_statistics(metric_statistics=metric_statistics,
+                                        metric_statistics_name=metric_statistics_artifact.name)
+
+        # Save the statistics of the metric used for the selection to W&B
+        if metric_statistics is not None:
+            torch.save(metric_statistics, f'data/{metric_statistics_artifact.name}.pt')
+            artifact = wandb.Artifact(metric_statistics_artifact.name, type='metric_statistics',
+                                      description='The statistics of the metric used for the selection.')
+            artifact.add_file(f'data/{metric_statistics_artifact.name}.pt')
 
         # Log the results of the selection to W&B
         selector.load_voxel_selection(voxel_selection=selection, dataset=dataset)
@@ -182,11 +194,12 @@ def select_first_voxels(cfg: DictConfig, device: torch.device) -> None:
     select_percentage = cfg.active.select_percentage
     percentage = f'{cfg.active.expected_percentage_labeled + cfg.active.select_percentage}%'
 
-    with wandb.init(project=f'AL - {project_name}', group='selection', name=f'First Selection - {percentage}'):
+    with wandb.init(project=f'AL (test) - {project_name}', group='selection', name=f'First Selection - {percentage}'):
         dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name=project_name,
-                                  cfg=cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
+                                  cfg=cfg.ds, split='train', size=cfg.train.dataset_size, al_experiment=True,
+                                  selection_mode=True)
         selector = get_selector(selection_objects=selection_objects, criterion='random', dataset_path=dataset.path,
-                                cloud_paths=dataset.get_dataset_clouds(), device=device)
+                                cloud_paths=dataset.voxel_clouds, device=device, batch_size=cfg.active.batch_size)
 
         selection = selector.select(dataset=dataset, percentage=select_percentage)
 

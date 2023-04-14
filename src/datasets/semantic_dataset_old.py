@@ -14,9 +14,19 @@ log = logging.getLogger(__name__)
 
 
 class SemanticDataset(Dataset):
-    def __init__(self, dataset_path: str, project_name: str, cfg: DictConfig, split: str,
-                 size: int = None, selection_mode: bool = False, al_experiment: bool = False,
-                 sequences: iter = None, resume: bool = False):
+    """PyTorch dataset wrapper for the semantic segmentation dataset. This dataset is used also for active learning.
+    :param dataset_path: Path to the dataset.
+    :param cfg: Configuration of the dataset.
+    :param split: Split to load. ('train', 'val')
+    :param size: Number of samples to load. If None all the samples are loaded (default: None)
+    :param active_mode: If True the dataset initializes in active
+                                 mode - deactivates all labels. (default: False)
+    :param sequences: List of sequences to load. If None all the sequences defined in config
+                      for a given split are loaded. (default: None)
+    """
+
+    def __init__(self, dataset_path: str, project_name: str, cfg: DictConfig, split: str, size: int = None,
+                 active_mode: bool = False, sequences: iter = None, resume: bool = False):
 
         assert split in ['train', 'val']
 
@@ -25,10 +35,8 @@ class SemanticDataset(Dataset):
         self.resume = resume
         self.split = split
         self.path = dataset_path
+        self.active = active_mode
         self.project_name = project_name
-        self.al_experiment = al_experiment
-        self.selection_mode = selection_mode
-
         self.label_map = cfg.learning_map
         self.num_classes = cfg.num_classes
         self.ignore_index = cfg.ignore_index
@@ -43,8 +51,8 @@ class SemanticDataset(Dataset):
         self.proj_fov_up = cfg.projection.fov_up
         self.proj_fov_down = cfg.projection.fov_down
 
-        self.scan_files = None
-        self.label_files = None
+        self.scans = None
+        self.labels = None
 
         self.cloud_map = None
         self.sample_map = None
@@ -54,38 +62,41 @@ class SemanticDataset(Dataset):
         self._initialize()
 
     @property
-    def scans(self) -> np.ndarray:
-        if self.selection_mode:
-            return self.scan_files
+    def scan_files(self) -> np.ndarray:
+        """ Returns an array of scans that are currently
+        selected. (labels are available)
+        """
+
         selected = np.where(self.selection_mask == 1)[0]
-        return self.scan_files[selected]
+        return self.scans[selected]
 
     @property
-    def labels(self) -> np.ndarray:
-        if self.selection_mode:
-            return self.label_files
+    def label_files(self) -> np.ndarray:
+        """ Returns an array of labels that are currently
+        selected. (labels are available)
+        """
+
         selected = np.where(self.selection_mask == 1)[0]
-        return self.label_files[selected]
-
-    @property
-    def voxel_clouds(self) -> np.ndarray:
-        return np.unique(self.cloud_map)
-
-    def get_cloud_id(self, idx: int) -> int:
-        cloud = self.cloud_map[idx]
-        return np.where(self.voxel_clouds == cloud)[0][0]
-
-    def end_of_voxel_cloud(self, idx: int) -> bool:
-        cloud = self.cloud_map[idx]
-        return np.where(self.cloud_map == cloud)[0][-1] == idx
+        return self.labels[selected]
 
     def _initialize(self) -> None:
-        data = load_semantic_dataset(self.path, self.project_name, self.sequences, self.split, self.al_experiment,
-                                     self.resume)
-        self.scan_files, self.label_files, self.sequence_map, self.cloud_map, self.selection_mask = data
+        """ Initialize the dataset. Sets the sample selection masks and sample masks to 0 or 1 based on the
+        active learning mode. Then loads the following data:
+        - scans: Array of paths to scans. (N,)
+        - labels: Array of paths to labels. (N,)
+        - poses: Array of poses. (N, 4, 4)
+        - sequence_map: Array of sequence indices that maps each sample to a sequence. (N,)
+        - cloud_map: Array of cloud indices that maps each sample to a global cloud. (N,)
+        - selection_mask: Array of 0 or 1 that indicates if the sample is selected or not. (N,)
+        Then the function crops the dataset to the desired size (self.size) and creates a sample map that maps
+        the samples to the original dataset.
+        """
 
-        self.scan_files = self.scan_files[:self.size]
-        self.label_files = self.label_files[:self.size]
+        data = load_semantic_dataset(self.path, self.project_name, self.sequences, self.split, self.active, self.resume)
+        self.scans, self.labels, self.sequence_map, self.cloud_map, self.selection_mask = data
+
+        self.scans = self.scans[:self.size]
+        self.labels = self.labels[:self.size]
         self.sequence_map = self.sequence_map[:self.size]
         self.cloud_map = self.cloud_map[:self.size]
         self.selection_mask = self.selection_mask[:self.size]
@@ -117,12 +128,11 @@ class SemanticDataset(Dataset):
         """ Label the voxels in the dataset. This is used when the dataset is used in an active training when
         VoxelSelector object selects the samples to label. It updates the selection mask and the label masks
         which contains points inside the selected voxels.
-
         :param voxels: Array of voxel indices. (N,)
         :param cloud_path: Path to the cloud that contains the selected voxels.
         """
 
-        labels = self.label_files[np.where(self.cloud_map == cloud_path)[0]]
+        labels = self.labels[np.where(self.cloud_map == cloud_path)[0]]
         sample_map = self.sample_map[np.where(self.cloud_map == cloud_path)[0]]
 
         # Iterate over all labels, which points can be inside the selected voxels
@@ -142,35 +152,93 @@ class SemanticDataset(Dataset):
         # Update the selection masks also on the disk
         self.update_sequence_selection_masks()
 
-    def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray, np.ndarray, int, bool]:
+    def get_item(self, idx) -> tuple[np.ndarray, np.ndarray, int]:
+        """ Return a sample from the dataset. Typically used in an active learning loop for
+        selecting samples to label. The difference between this function and __getitem__ is that
+        this function returns the following data:
+        - Projected scan to the 2D plane (5, H, W)
+        - Projected radial distances to the 2D plane (H, W)
+        - Projected voxel map to the 2D plane (H, W)
+        - Sequence index
+        - Cloud index
+        This function does not apply augmentations and does not return labels.
+        :param idx: Sample index.
+        :return: Projected scan, projected voxel map, sequence index, cloud index.
+        """
+
         # Load scan
         with h5py.File(self.scans[idx], 'r') as f:
             points = np.asarray(f['points'])
             colors = np.asarray(f['colors'])
             remissions = np.asarray(f['remissions']).flatten()
 
-        # Load label
+        # Load voxel map
         with h5py.File(self.labels[idx], 'r') as f:
             labels = np.asarray(f['labels']).flatten()
             voxel_map = np.asarray(f['voxel_map']).flatten().astype(np.float32)
             labels = map_labels(labels, self.label_map)
-
-        if self.selection_mode:
             voxel_map[labels == self.ignore_index] = -1
-        elif self.split == 'train':
+
+        # Project points to image and map the projection
+        proj = project_points(points, self.proj_H, self.proj_W, self.proj_fov_up, self.proj_fov_down)
+        proj_distances, proj_idx, proj_mask = proj['depth'], proj['idx'], proj['mask']
+
+        # Project remissions
+        proj_remissions = np.full((self.proj_H, self.proj_W), -1, dtype=np.float32)
+        proj_remissions[proj_mask] = remissions[proj_idx[proj_mask]]
+
+        # Project colors
+        proj_colors = np.zeros((self.proj_H, self.proj_W, 3), dtype=np.float32)
+        proj_colors[proj_mask] = colors[proj_idx[proj_mask]]
+
+        # Concatenate scan features
+        proj_scan = np.concatenate([proj_distances[..., np.newaxis],
+                                    proj_remissions[..., np.newaxis],
+                                    proj_colors], axis=-1, dtype=np.float32).transpose((2, 0, 1))
+
+        # Project voxel map
+        proj_voxel_map = np.full((self.proj_H, self.proj_W), -1, dtype=np.int64)
+        proj_voxel_map[proj_mask] = voxel_map[proj_idx[proj_mask]]
+
+        return proj_scan, proj_voxel_map, self.cloud_map[idx]
+
+    def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray]:
+        """Returns a sample from the dataset. The sample is projected velodyne scan and the corresponding
+        label.
+        The function creates a sample by following the steps:
+        1. Load the scan and the label from the disk.
+        2. Apply the label mask to the label - some labels may be hidden for
+           training. (Only for active learning mode and training split)
+        3. Apply the augmentations to the scan and the label. (Only for training split)
+        4. Map the labels to the training labels.
+        5. Project the scan to the image.
+        :param idx: Sample index (indexing only from the labeled samples)
+        :return: Projected scan, projected label
+        """
+
+        # Load scan
+        with h5py.File(self.scan_files[idx], 'r') as f:
+            points = np.asarray(f['points'])
+            colors = np.asarray(f['colors'])
+            remissions = np.asarray(f['remissions']).flatten()
+
+        # Load label
+        with h5py.File(self.label_files[idx], 'r') as f:
+            labels = np.asarray(f['labels']).flatten()
+            labels = map_labels(labels, self.label_map)
+
+        with h5py.File(self.label_files[idx].replace('sequences', self.project_name), 'r') as f:
+            label_mask = np.asarray(f['label_mask']).flatten()
+
+        if self.split == 'train':
             # Apply label mask
-            with h5py.File(self.labels[idx].replace('sequences', self.project_name), 'r') as f:
-                labels *= np.asarray(f['label_mask']).flatten()
+            labels *= label_mask
 
             # Apply augmentations
-            points, drop_mask = augment_points(points,
-                                               drop_prob=0.5,
-                                               flip_prob=0.5,
-                                               rotation_prob=0.5,
-                                               translation_prob=0.5)
-            labels = labels[drop_mask]
-            colors = colors[drop_mask]
-            remissions = remissions[drop_mask]
+            points, drop_mask = augment_points(points, translation_prob=0.5,
+                                               rotation_prob=0.5, flip_prob=0.5,
+                                               drop_prob=0.5)
+            labels, colors, remissions = labels[drop_mask], colors[drop_mask], remissions[drop_mask]
 
         # Project points to image and map the projection
         proj = project_points(points, self.proj_H, self.proj_W, self.proj_fov_up, self.proj_fov_down)
@@ -188,19 +256,26 @@ class SemanticDataset(Dataset):
         proj_labels = np.zeros((self.proj_H, self.proj_W), dtype=np.long)
         proj_labels[proj_mask] = labels[proj_idx[proj_mask]]
 
-        # Project voxel map
-        proj_voxel_map = np.full((self.proj_H, self.proj_W), -1, dtype=np.int64)
-        proj_voxel_map[proj_mask] = voxel_map[proj_idx[proj_mask]]
-
         # Concatenate scan features
-        proj_scan = np.concatenate([proj_distances[..., np.newaxis],
-                                    proj_remissions[..., np.newaxis],
-                                    proj_colors], axis=-1, dtype=np.float32).transpose((2, 0, 1))
+        proj_image = np.concatenate([proj_distances[..., np.newaxis],
+                                     proj_remissions[..., np.newaxis],
+                                     proj_colors], axis=-1, dtype=np.float32).transpose((2, 0, 1))
 
-        return proj_scan, proj_labels, proj_voxel_map, self.get_cloud_id(idx), self.end_of_voxel_cloud(idx)
+        return proj_image, proj_labels
+
+    def __len__(self):
+        return np.sum(self.selection_mask)
+
+    def get_full_length(self):
+        return len(self.scans)
+
+    def get_dataset_clouds(self) -> np.ndarray:
+        return np.unique(self.cloud_map)
 
     def get_most_labeled_sample(self) -> tuple[int, float, np.ndarray]:
-        max_label_ratio, most_labeled_sample = 0, 0
+
+        max_label_ratio = 0
+        most_labeled_sample = 0
         sample_label_mask = np.zeros(self.__len__(), dtype=np.float32)
 
         for i in range(self.__len__()):
@@ -217,10 +292,11 @@ class SemanticDataset(Dataset):
     def get_statistics(self, ignore: int = 0) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
         """ Returns the statistics of the dataset. The statistics are the class distribution, the labeling
         progress for each class and the labeling progress for the dataset.
-
         :param ignore: The label to ignore when calculating the statistics
         :return: The class distribution, the labeling progress for each class and the labeling progress for the dataset
         """
+
+        cloud_paths = self.get_dataset_clouds()
 
         counter = 0
         labeled_counter = 0
@@ -228,7 +304,7 @@ class SemanticDataset(Dataset):
         class_counts = np.zeros(self.num_classes, dtype=np.long)
         labeled_class_counts = np.zeros(self.num_classes, dtype=np.long)
 
-        for path in tqdm(self.voxel_clouds, desc='Calculating dataset statistics'):
+        for path in tqdm(cloud_paths, desc='Calculating dataset statistics'):
             with h5py.File(path, 'r') as f:
                 labels = np.asarray(f['labels']).flatten()
                 labels = map_labels(labels, self.label_map)
@@ -267,22 +343,21 @@ class SemanticDataset(Dataset):
 
     def get_voxel_mask(self, cloud_path: str, cloud_size: int) -> np.ndarray:
         voxel_mask = np.zeros(cloud_size, dtype=np.bool)
-        sample_indices = self.sample_map[np.where(self.cloud_map == cloud_path)[0]]
+        sample_map = self.sample_map[np.where(self.cloud_map == cloud_path)[0]]
 
-        for i in sample_indices:
-            with h5py.File(self.label_files[i], 'r') as f:
-                voxel_map = np.asarray(f['voxel_map']).flatten()
-                voxel_map = voxel_map[(voxel_map != -1)]
-                voxel_mask[voxel_map] = True
+        # Iterate over all labels, which points can be inside the selected voxels
+        for i in sample_map:
+            _, voxel_map, _ = self.get_item(i)
+            voxel_map = voxel_map.flatten()
+            valid = (voxel_map != -1)
+            voxel_map = voxel_map[valid]
+            voxel_mask[voxel_map] = True
 
         return voxel_mask
 
-    def __len__(self):
-        return len(self.scans)
-
     def __str__(self):
         return f'\nSemanticDataset: {self.split}\n' \
-               f'\t - Dataset size: {self.__len__()} / {len(self.scan_files)}\n' \
+               f'\t - Dataset size: {self.__len__()} / {self.get_full_length()}\n' \
                f'\t - Sequences: {self.sequences}\n'
 
     def __repr__(self):

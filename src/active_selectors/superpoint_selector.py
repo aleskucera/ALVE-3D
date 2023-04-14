@@ -9,12 +9,11 @@ from .superpoint_cloud import SuperpointCloud
 
 
 class SuperpointSelector(Selector):
-    def __init__(self, dataset_path: str, cloud_paths: np.ndarray, device: torch.device, criterion: str = 'random'):
-        super().__init__(dataset_path, cloud_paths, device)
-        assert criterion in ['random', 'average_entropy', 'epistemic_uncertainty', 'viewpoint_variance']
+    def __init__(self, dataset_path: str, cloud_paths: np.ndarray,
+                 device: torch.device, criterion: str, batch_size: int):
+        super().__init__(dataset_path, cloud_paths, device, batch_size)
         self.criterion = criterion
         self.mc_dropout = True if criterion == 'epistemic_uncertainty' else False
-
         self._initialize()
 
     def _initialize(self):
@@ -26,13 +25,13 @@ class SuperpointSelector(Selector):
                 self.num_voxels += num_voxels
                 self.clouds.append(SuperpointCloud(cloud_path, num_voxels, cloud_id, superpoint_map))
 
-    def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5):
+    def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5) -> tuple:
         if self.criterion == 'random':
             return self._select_randomly(dataset, percentage)
         else:
             return self._select_by_criterion(dataset, model, percentage)
 
-    def _select_randomly(self, dataset: Dataset, percentage: float):
+    def _select_randomly(self, dataset: Dataset, percentage: float) -> tuple:
         selection_size = self.get_selection_size(dataset, percentage)
 
         cloud_map = torch.tensor([], dtype=torch.long)
@@ -49,44 +48,36 @@ class SuperpointSelector(Selector):
             superpoint_map = torch.cat((superpoint_map, superpoints))
             superpoint_sizes = torch.cat((superpoint_sizes, cloud_superpoint_sizes))
 
-        return self._get_voxel_selection(superpoint_map, superpoint_sizes, cloud_map, selection_size)
+        return self._choose_voxels(superpoint_map, superpoint_sizes, cloud_map, selection_size)
 
-    def _select_by_criterion(self, dataset: Dataset, model: nn.Module, percentage: float):
-        selection_size = self.get_selection_size(dataset, percentage)
-
+    def _select_by_criterion(self, dataset: Dataset, model: nn.Module, percentage: float) -> tuple:
         values = torch.tensor([], dtype=torch.float32)
         cloud_map = torch.tensor([], dtype=torch.long)
         superpoint_map = torch.tensor([], dtype=torch.long)
         superpoint_sizes = torch.tensor([], dtype=torch.long)
+        selection_size = self.get_selection_size(dataset, percentage)
 
-        self._map_model_predictions(model, dataset, self.mc_dropout)
+        self._calculate_values(model, dataset, self.criterion, self.mc_dropout)
 
         for cloud in self.clouds:
-            if self.criterion == 'average_entropy':
-                cloud_values, cloud_superpoint_map, cloud_superpoint_sizes, cloud_ids = cloud.get_average_entropies()
-            elif self.criterion == 'epistemic_uncertainty':
-                cloud_values, cloud_superpoint_map, cloud_superpoint_sizes, cloud_ids = cloud.get_epistemic_uncertainties()
-            elif self.criterion == 'viewpoint_variance':
-                cloud_values, cloud_superpoint_map, cloud_superpoint_sizes, cloud_ids = cloud.get_viewpoint_variances()
-            else:
-                raise ValueError('Criterion not supported')
+            values = torch.cat((values, cloud.values))
+            cloud_map = torch.cat((cloud_map, cloud.cloud_ids))
+            superpoint_map = torch.cat((superpoint_map, cloud.superpoint_indices))
+            superpoint_sizes = torch.cat((superpoint_sizes, cloud.superpoint_sizes))
 
-            values = torch.cat((values, cloud_values))
-            cloud_map = torch.cat((cloud_map, cloud_ids))
-            superpoint_map = torch.cat((superpoint_map, cloud_superpoint_map))
-            superpoint_sizes = torch.cat((superpoint_sizes, cloud_superpoint_sizes))
+        return self._choose_voxels(superpoint_map, superpoint_sizes, cloud_map, selection_size, values)
 
-            cloud.reset()
-
-        return self._get_voxel_selection(superpoint_map, superpoint_sizes, cloud_map, selection_size, values)
-
-    def _get_voxel_selection(self, superpoint_map: torch.Tensor, superpoint_sizes: torch.Tensor,
-                             cloud_map: torch.Tensor, selection_size: int, values: torch.Tensor = None):
+    def _choose_voxels(self, superpoint_map: torch.Tensor, superpoint_sizes: torch.Tensor,
+                       cloud_map: torch.Tensor, selection_size: int, values: torch.Tensor = None) -> tuple:
 
         if values is None:
             order = torch.randperm(superpoint_map.shape[0])
+            metric_statistics = None
         else:
             order = torch.argsort(values, descending=True)
+            values = values[order]
+            threshold = values[selection_size - 1]
+            metric_statistics = self._metric_statistics(values, threshold)
 
         cloud_map = cloud_map[order]
         superpoint_map = superpoint_map[order]
@@ -104,4 +95,4 @@ class SuperpointSelector(Selector):
                 voxels = torch.nonzero(cloud.superpoint_map == superpoint).squeeze(1)
                 cloud.label_voxels(voxels)
             voxel_selection[cloud.selection_key] = cloud.label_mask
-        return voxel_selection
+        return voxel_selection, metric_statistics

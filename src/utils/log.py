@@ -53,7 +53,7 @@ def log_confusion_matrix(confusion_matrix: torch.Tensor, labels: list[str],
 
 def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, save_artifact: bool) -> np.ndarray:
     ignore_index = cfg.ds.ignore_index
-    statistics_artifact = cfg.active.statistics
+    statistics_artifact = cfg.active.dataset_statistics
     label_names = [v for k, v in cfg.ds.labels_train.items() if k != ignore_index]
 
     class_dist, labeled_class_distribution, class_labeling_progress, labeled_ratio = dataset.get_statistics()
@@ -160,4 +160,30 @@ def log_history(history_name: str, history: dict) -> None:
     artifact = wandb.Artifact(history_name, type='history',
                               description='Metric history for each epoch.')
     artifact.add_file(f'data/{history_name}.pt')
+    wandb.run.log_artifact(artifact)
+
+
+def log_selection_metric_statistics(metric_statistics_name: str, metric_statistics: dict) -> None:
+    selected_values = metric_statistics['selected_values']
+    left_values = metric_statistics['left_values']
+    threshold = metric_statistics['threshold']
+
+    x = np.linspace(0, 1, len(selected_values) + len(left_values))
+
+    plt.figure(figsize=(10, 8))
+    plt.plot(x[:len(selected_values)], selected_values, label='Selected Values', linewidth=3)
+    plt.plot(x[len(selected_values):], left_values, label='Left Values', linewidth=3)
+    plt.axhline(y=threshold, color='k', linestyle='--', label='Threshold')
+    plt.title('Selection Metric Statistics')
+    plt.xlabel('Sorted Values')
+    plt.ylabel('Metric Value')
+    plt.legend()
+    plt.grid()
+
+    wandb.log({f"Selection Metric Statistics": wandb.Image(plt)}, step=0)
+
+    torch.save(metric_statistics, f'data/{metric_statistics_name}.pt')
+    artifact = wandb.Artifact(metric_statistics_name, type='statistics',
+                              description='Metric statistics for each epoch.')
+    artifact.add_file(f'data/{metric_statistics_name}.pt')
     wandb.run.log_artifact(artifact)

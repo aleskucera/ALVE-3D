@@ -15,10 +15,9 @@
 
 
 
+batch_size: 64
 criterion: 'average_entropy'
 selection_objects: 'voxels'
-#selector_type: '${active.criterion}_${active.selection_objects}'
-#random_selector_type: 'random_${active.selection_objects}'
 
 select_percentage: 0.5
 expected_percentage_labeled: 0.5
@@ -31,8 +30,11 @@ selection:
   name: 'selection_${active.criterion}_${active.selection_objects}'
   version: 'latest'
 
-statistics:
+dataset_statistics:
   name: 'statistics_${active.criterion}_${active.selection_objects}'
+
+metric_statistics:
+  name: 'metric_statistics_${active.criterion}_${active.selection_objects}'
 
 history:
   name: 'history_${active.criterion}_${active.selection_objects}'
