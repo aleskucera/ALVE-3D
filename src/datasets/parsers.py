@@ -30,7 +30,7 @@ class SemanticParser(BaseParser):
         super().__init__(device)
 
     def parse_batch(self, batch: tuple) -> tuple:
-        proj_images, proj_labels = batch
+        proj_images, proj_labels, _, _, _ = batch
         return proj_images.to(self.device), proj_labels.to(self.device)
 
 
