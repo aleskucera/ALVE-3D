@@ -40,7 +40,7 @@ while [ "$#" -gt 0 ]; do
     -p|--percentage) percentage="$2"; shift ;;
     -s|--size) dataset_size="$2"; shift ;;
     -h|--help) show_help; exit 0 ;;
-    *) echo "Unknown parameter passed: $1"; exit 1 ;;
+    *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;
   esac
   shift
 done
