@@ -159,6 +159,11 @@ def select_voxels(cfg: DictConfig, device: torch.device) -> None:
         selector.load_voxel_selection(voxel_selection=selection, dataset=dataset)
         log_dataset_statistics(cfg=cfg, dataset=dataset, save_artifact=False)
 
+        scan = LaserScan(label_map=cfg.ds.learning_map,
+                         color_map=cfg.ds.color_map_train,
+                         colorize=True)
+        log_most_labeled_sample(dataset=dataset, laser_scan=scan)
+
 
 def select_first_voxels(cfg: DictConfig, device: torch.device) -> None:
     """ Select the first voxels for active learning.
