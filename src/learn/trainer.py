@@ -109,7 +109,6 @@ class BaseTrainer(object):
         self.logger.log_val(self.epoch)
 
     def load_model(self, model: dict):
-        self.epoch = model['epoch']
         self.model.load_state_dict(model['model_state_dict'])
         self.optimizer.load_state_dict(model['optimizer_state_dict'])
 
