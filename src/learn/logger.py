@@ -200,15 +200,15 @@ class SemanticLogger(object):
         wandb.log({f"Accuracy Val": acc}, step=epoch)
 
         self.history['class_accuracy'].append(class_acc)
-        log_class_accuracy(class_acc=class_acc, labels=self.labels,
+        log_class_accuracy(class_acc=class_acc, labels=self.label_names,
                            ignore_index=self.ignore_index, step=epoch)
 
         self.history['class_iou'].append(class_iou)
-        log_class_iou(class_iou=class_iou, labels=self.labels,
+        log_class_iou(class_iou=class_iou, labels=self.label_names,
                       ignore_index=self.ignore_index, step=epoch)
 
         self.history['confusion_matrix'].append(conf_matrix)
-        log_confusion_matrix(confusion_matrix=conf_matrix, labels=self.labels,
+        log_confusion_matrix(confusion_matrix=conf_matrix, labels=self.label_names,
                              ignore_index=self.ignore_index, step=epoch)
 
         # Reset batch loss and metrics

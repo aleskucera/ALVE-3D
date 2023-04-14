@@ -8,6 +8,18 @@ from tqdm import tqdm
 log = logging.getLogger(__name__)
 
 
+def create_experiment_file():
+    with h5py.File('experiment.h5', 'w') as f:
+        f.create_group('selection_mask')
+        f.create_group('label_mask')
+
+        # Datasets
+        f.create_dataset('selection_mask/scans', data=np.zeros((10,), dtype=bool))
+        f.create_dataset('selection_mask/clouds', data=np.ones((3,), dtype=bool))
+        f.create_dataset('label_mask/scans', data=np.zeros((10,), dtype=bool))
+        f.create_dataset('label_mask/clouds', data=np.ones((3,), dtype=bool))
+
+
 def initialize_dataset(dataset_path: str, project_name: str, sequences: list, split: str, active: bool) -> None:
     """ Initialize semantic samples for a given split and mode. The initialization is done by setting
     the selection mask and the label mask to 0 or 1 depending on the mode.

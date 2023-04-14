@@ -27,47 +27,28 @@
 # print(proj_voxel_map)
 import torch
 import numpy as np
+import h5py
 import matplotlib.pyplot as plt
 
+with h5py.File('experiment.h5', 'w') as f:
+    # Groups
+    f.create_group('selection_mask')
+    f.create_group('label_mask')
 
-class MyDataProcessor:
+    # Datasets
+    f.create_dataset('selection_mask/scans', data=np.zeros((10,), dtype=bool))
+    f.create_dataset('selection_mask/clouds', data=np.ones((3,), dtype=bool))
+    f.create_dataset('label_mask/scans', data=np.zeros((10,), dtype=bool))
+    f.create_dataset('label_mask/clouds', data=np.ones((3,), dtype=bool))
 
-    @staticmethod
-    def _interpolate_values(values: torch.Tensor, min_selected_value: float) -> torch.Tensor:
-        # sort values in descending order
-        sorted_indices = torch.argsort(values, descending=True)
-        sorted_values = values[sorted_indices]
+# Open the file
+with h5py.File('experiment.h5', 'r') as f:
+    scans_selection_mask = np.asarray(f['selection_mask']['scans'])
+    clouds_selection_mask = np.asarray(f['selection_mask']['clouds'])
+    scans_label_mask = np.asarray(f['label_mask']['scans'])
+    clouds_label_mask = np.asarray(f['label_mask']['clouds'])
 
-        # interpolate the values using a linear interpolation function
-        f = torch.nn.functional.interpolate
-        expected_size = int(0.01 * sorted_values.shape[0])
-        interp_values = f(sorted_values.unsqueeze(0).unsqueeze(0), size=expected_size, mode='linear',
-                          align_corners=True).squeeze()
-        # identify the threshold index
-        threshold_index = torch.nonzero(interp_values < min_selected_value, as_tuple=True)[0]
-
-        # create the downsampled x-axis values
-        interp_values = interp_values.numpy()
-        x = torch.linspace(0, 1, len(interp_values))
-
-        # plot the original and interpolated values
-        plt.plot(x[:threshold_index], interp_values[:threshold_index], 'b', label='larger than threshold')
-        plt.plot(x[threshold_index:], interp_values[threshold_index:], 'r', label='smaller than threshold')
-        plt.axhline(y=0.5, color='gray', linestyle='--')
-        plt.legend()
-        plt.show()
-
-        return interp_values
-
-
-# create a random tensor of 10000 elements
-values = torch.randn(10000)
-
-# set the minimum selected value threshold
-min_selected_value = 0.5
-
-# downsample the tensor using interpolation and plot the resulting graph
-downsampled_values = MyDataProcessor._interpolate_values(values, min_selected_value)
-
-# print the shape of the downsampled tensor
-print("Downsampled tensor shape:", downsampled_values.shape)
+print(scans_selection_mask)
+print(clouds_selection_mask)
+print(scans_label_mask)
+print(clouds_label_mask)
