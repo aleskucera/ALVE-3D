@@ -201,7 +201,7 @@ def select_first_voxels(cfg: DictConfig, device: torch.device) -> None:
         selector = get_selector(selection_objects=selection_objects, criterion='random', dataset_path=dataset.path,
                                 cloud_paths=dataset.voxel_clouds, device=device, batch_size=cfg.active.batch_size)
 
-        selection = selector.select(dataset=dataset, percentage=select_percentage)
+        selection, _ = selector.select(dataset=dataset, percentage=select_percentage)
 
         torch.save(selection, f'data/{selection_artifact.name}.pt')
         artifact = wandb.Artifact(selection_artifact.name, type='selection',
