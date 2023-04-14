@@ -6,4 +6,5 @@ from .cloud import transform_points, downsample_cloud, nearest_neighbors, neares
     visualize_global_cloud, calculate_radial_distances, augment_points
 from .visualization import plot, bar_chart, grouped_bar_chart, plot_confusion_matrix
 from .log import log_class_iou, log_class_accuracy, log_confusion_matrix, \
-    log_dataset_statistics, log_most_labeled_sample, log_model, log_history, log_selection_metric_statistics
+    log_dataset_statistics, log_most_labeled_sample, log_model, log_history, \
+    log_selection, log_selection_metric_statistics

@@ -10,7 +10,7 @@ from src.models import get_model
 from src.laserscan import LaserScan
 from src.datasets import SemanticDataset
 from src.active_selectors import get_selector
-from src.utils import log_dataset_statistics, log_most_labeled_sample, log_selection_metric_statistics
+from src.utils import log_dataset_statistics, log_most_labeled_sample, log_selection_metric_statistics, log_selection
 
 log = logging.getLogger(__name__)
 
@@ -150,22 +150,13 @@ def select_voxels(cfg: DictConfig, device: torch.device) -> None:
         # Select the next voxels
         selection, metric_statistics = selector.select(dataset=dataset, model=model, percentage=select_percentage)
 
-        # Save the selected voxels to W&B
-        torch.save(selection, f'data/{selection_artifact.name}.pt')
-        artifact = wandb.Artifact(selection_artifact.name, type='selection',
-                                  description='The selected voxels for the next active learning iteration.')
-        artifact.add_file(f'data/{selection_artifact.name}.pt')
-        wandb.run.log_artifact(artifact)
-
-        log_selection_metric_statistics(metric_statistics=metric_statistics,
-                                        metric_statistics_name=metric_statistics_artifact.name)
+        # Save the selection to W&B
+        log_selection(selection=selection, selection_name=selection_artifact.name)
 
         # Save the statistics of the metric used for the selection to W&B
         if metric_statistics is not None:
-            torch.save(metric_statistics, f'data/{metric_statistics_artifact.name}.pt')
-            artifact = wandb.Artifact(metric_statistics_artifact.name, type='metric_statistics',
-                                      description='The statistics of the metric used for the selection.')
-            artifact.add_file(f'data/{metric_statistics_artifact.name}.pt')
+            log_selection_metric_statistics(metric_statistics=metric_statistics,
+                                            metric_statistics_name=metric_statistics_artifact.name)
 
         # Log the results of the selection to W&B
         selector.load_voxel_selection(voxel_selection=selection, dataset=dataset)
@@ -203,11 +194,8 @@ def select_first_voxels(cfg: DictConfig, device: torch.device) -> None:
 
         selection, _ = selector.select(dataset=dataset, percentage=select_percentage)
 
-        torch.save(selection, f'data/{selection_artifact.name}.pt')
-        artifact = wandb.Artifact(selection_artifact.name, type='selection',
-                                  description='The selected voxels for the first active learning iteration.')
-        artifact.add_file(f'data/{selection_artifact.name}.pt')
-        wandb.run.log_artifact(artifact)
+        # Save the selection to W&B
+        log_selection(selection=selection, selection_name=selection_artifact.name)
 
         # Log the results of the first selection
         selector.load_voxel_selection(voxel_selection=selection, dataset=dataset)
