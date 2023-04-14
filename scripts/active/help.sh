@@ -39,6 +39,7 @@ show_help_train () {
 show_help () {
   echo "Usage: help.sh [options]"
   echo "Options:"
+  echo "  --job                 Display help for job"
   echo "  --selection           Display help for selection"
   echo "  --train               Display help for training"
   echo "  -h, --help            Display this help and exit"
