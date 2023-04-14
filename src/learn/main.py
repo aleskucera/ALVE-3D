@@ -30,7 +30,7 @@ def train_model(cfg: DictConfig, device: torch.device) -> None:
     # ========================================= Model Training =========================================
     # --------------------------------------------------------------------------------------------------
 
-    with wandb.init(project='Train Semantic Model'):
+    with wandb.init(project='Train Model'):
         train_ds = SemanticDataset(cfg.ds.path, project_name='train_full', cfg=cfg.ds,
                                    split='train', size=cfg.train.dataset_size, active_mode=False)
         val_ds = SemanticDataset(cfg.ds.path, project_name='train_full', cfg=cfg.ds,
@@ -71,7 +71,7 @@ def train_active(cfg: DictConfig, device: torch.device) -> None:
     # ========================================= Model Training =========================================
     # --------------------------------------------------------------------------------------------------
 
-    with wandb.init(project=f'AL (test) - {project_name}', group='training', name=f'Training - {percentage}'):
+    with wandb.init(project=f'AL - {project_name}', group='training', name=f'Training - {percentage}'):
 
         # Load Datasets
         train_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name=project_name, cfg=cfg.ds,
@@ -125,7 +125,7 @@ def select_voxels(cfg: DictConfig, device: torch.device) -> None:
     select_percentage = cfg.active.select_percentage
     percentage = f'{cfg.active.expected_percentage_labeled + cfg.active.select_percentage}%'
 
-    with wandb.init(project=f'AL test - {project_name}', group='selection', name=f'Selection - {percentage}'):
+    with wandb.init(project=f'AL - {project_name}', group='selection', name=f'Selection - {percentage}'):
         dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name=project_name,
                                   cfg=cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
         selector = get_selector(selection_objects=selection_objects, criterion=criterion, dataset_path=cfg.ds.path,
@@ -177,7 +177,7 @@ def select_first_voxels(cfg: DictConfig, device: torch.device) -> None:
     select_percentage = cfg.active.select_percentage
     percentage = f'{cfg.active.expected_percentage_labeled + cfg.active.select_percentage}%'
 
-    with wandb.init(project=f'AL test - {project_name}', group='selection', name=f'First Selection - {percentage}'):
+    with wandb.init(project=f'AL - {project_name}', group='selection', name=f'First Selection - {percentage}'):
         dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name=project_name,
                                   cfg=cfg.ds, split='train', size=cfg.train.dataset_size, active_mode=True)
         selector = get_selector(selection_objects=selection_objects, criterion='random', dataset_path=dataset.path,
@@ -190,10 +190,6 @@ def select_first_voxels(cfg: DictConfig, device: torch.device) -> None:
                                   description='The selected voxels for the first active learning iteration.')
         artifact.add_file(f'data/{selection_artifact.name}.pt')
         wandb.run.log_artifact(artifact)
-
-        data = [['a', 1], ['b', 2], ['c', 3]]
-        table = wandb.Table(data=data, columns=["safda", "adfa"])
-        wandb.log({f"Something": wandb.plot.bar(table, "safda", "adfa")}, step=0)
 
         # Log the results of the first selection
         selector.load_voxel_selection(voxel_selection=selection, dataset=dataset)

@@ -347,7 +347,7 @@ class KITTI360Converter:
             with h5py.File(os.path.join(global_cloud_dir, cloud_name), 'r+') as superpoint:
                 superpoint.create_dataset('superpoints', data=in_comp)
 
-            # visualize_cloud_values(points[selected_ver,], in_comp, random_colors=True)
+            visualize_cloud_values(points[selected_ver,], in_comp, random_colors=True)
 
     def get_splits(self, window_ranges: list[tuple[int, int]], train_file: str, val_file: str) -> tuple:
         """ Get the train and validation splits for the dataset. Also returns the cloud names.
