@@ -15,7 +15,7 @@
 
 
 
-batch_size: 64
+batch_size: 128
 criterion: 'average_entropy'
 selection_objects: 'voxels'
 
