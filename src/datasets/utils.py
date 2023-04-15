@@ -148,6 +148,35 @@ def load_semantic_dataset(dataset_path: str, project_name: str, sequences: list,
     return scans, labels, sequence_map, cloud_map, selection_mask
 
 
+def load_partition_dataset(dataset_path: str, project_name: str, sequences: list, split: str,
+                           al_experiment: bool = False, resume: bool = False) -> tuple:
+    assert 'project_name' != 'sequences', 'The project name cannot be sequences.'
+    for s in sequences:
+        os.makedirs(os.path.join(dataset_path, project_name, f'{s:02d}'), exist_ok=True)
+        os.makedirs(os.path.join(dataset_path, project_name, f'{s:02d}', 'labels'), exist_ok=True)
+        os.makedirs(os.path.join(dataset_path, project_name, f'{s:02d}', 'voxel_clouds'), exist_ok=True)
+
+    if not resume:
+        initialize_dataset(dataset_path, project_name, sequences, split, al_experiment)
+
+    clouds = np.array([], dtype=np.str_)
+    sequence_map = np.array([], dtype=np.int32)
+    selection_mask = np.array([], dtype=bool)
+
+    sequence_dirs = [os.path.join(dataset_path, 'sequences', f'{s:02d}') for s in sequences]
+    for sequence, sequence_dir in tqdm(zip(sequences, sequence_dirs), desc='Loading dataset sequences'):
+        info_path = os.path.join(sequence_dir, 'info.h5')
+        clouds_dir = os.path.join(sequence_dir, 'voxel_clouds')
+
+        with h5py.File(info_path, 'r') as f:
+            split_clouds = np.asarray(f[f'{split}_clouds']).astype(np.str_)
+            split_clouds = [os.path.join(clouds_dir, t) for t in split_clouds]
+
+        clouds = np.concatenate((clouds, split_clouds), axis=0).astype(np.str_)
+        sequence_map = np.concatenate((sequence_map, np.full_like(split_clouds, fill_value=sequence)), axis=0).astype(
+            np.int32)
+
+
 def create_cloud_map(clouds: np.ndarray) -> np.ndarray:
     cloud_map = np.array([], dtype=np.str_)
     for cloud_file in sorted(clouds):

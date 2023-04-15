@@ -22,19 +22,15 @@ def train_model(cfg: DictConfig, device: torch.device) -> None:
     :param device: Device to use for training
     """
 
-    # ================== Project Artifacts ==================
-    model_artifact = cfg.active.model
-    history_artifact = cfg.active.history
-
     # --------------------------------------------------------------------------------------------------
     # ========================================= Model Training =========================================
     # --------------------------------------------------------------------------------------------------
 
     with wandb.init(project='Train Semantic Model'):
         train_ds = SemanticDataset(cfg.ds.path, project_name='train_full', cfg=cfg.ds,
-                                   split='train', size=cfg.train.dataset_size, active_mode=False)
+                                   split='train', size=cfg.train.dataset_size, al_experiment=False)
         val_ds = SemanticDataset(cfg.ds.path, project_name='train_full', cfg=cfg.ds,
-                                 split='val', size=cfg.train.dataset_size, active_mode=False)
+                                 split='val', size=cfg.train.dataset_size, al_experiment=False)
 
         _, _, class_distribution, label_ratio = train_ds.get_statistics()
         weights = 1 / (class_distribution + 1e-6)
@@ -44,7 +40,7 @@ def train_model(cfg: DictConfig, device: torch.device) -> None:
             raise ValueError
 
         trainer = Trainer(cfg=cfg, train_ds=train_ds, val_ds=val_ds, device=device, weights=weights,
-                          model=None, model_name=model_artifact.name, history_name=history_artifact.name)
+                          model=None, model_name='model', history_name='history')
         trainer.train()
 
 
@@ -81,7 +77,7 @@ def train_active(cfg: DictConfig, device: torch.device) -> None:
 
         # Load Selector for selecting labeled voxels
         selector = get_selector(selection_objects=selection_objects, criterion=criterion, dataset_path=cfg.ds.path,
-                                cloud_paths=train_ds.voxel_clouds, device=device, batch_size=cfg.train.batch_size)
+                                cloud_paths=train_ds.voxel_clouds, device=device, batch_size=cfg.active.batch_size)
 
         # Load selected voxels from W&B
         artifact_dir = wandb.use_artifact(f'{selection_artifact.name}:{selection_artifact.version}').download()
