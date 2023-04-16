@@ -1,13 +1,10 @@
-import os
-
 import h5py
 import numpy as np
-from tqdm import tqdm
 from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
-from src.utils import project_points, map_labels, augment_points
-from datasets.utils import load_semantic_dataset
+from src.utils import project_points
+from old.utils import load_semantic_dataset
 
 
 class SelectionDataset(Dataset):

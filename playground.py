@@ -26,29 +26,26 @@
 # print(proj_scan)
 # print(proj_voxel_map)
 import torch
+import os
 import numpy as np
-import h5py
-import matplotlib.pyplot as plt
 
-with h5py.File('experiment.h5', 'w') as f:
-    # Groups
-    f.create_group('selection_mask')
-    f.create_group('label_mask')
 
-    # Datasets
-    f.create_dataset('selection_mask/scans', data=np.zeros((10,), dtype=bool))
-    f.create_dataset('selection_mask/clouds', data=np.ones((3,), dtype=bool))
-    f.create_dataset('label_mask/scans', data=np.zeros((10,), dtype=bool))
-    f.create_dataset('label_mask/clouds', data=np.ones((3,), dtype=bool))
+def find_index(arr: np.ndarray, number: int) -> int:
+    sizes = np.zeros_like(arr, dtype=np.int32)
+    for i, path in enumerate(arr):
+        file_name = os.path.basename(path)
+        bounds = file_name.split('.')[0].split('_')
+        size = int(bounds[1]) - int(bounds[0]) + 1
+        sizes[i] = size
 
-# Open the file
-with h5py.File('experiment.h5', 'r') as f:
-    scans_selection_mask = np.asarray(f['selection_mask']['scans'])
-    clouds_selection_mask = np.asarray(f['selection_mask']['clouds'])
-    scans_label_mask = np.asarray(f['label_mask']['scans'])
-    clouds_label_mask = np.asarray(f['label_mask']['clouds'])
+    cum_sizes = np.cumsum(sizes)
+    index = np.where(cum_sizes >= number)[0][0]
+    return index
 
-print(scans_selection_mask)
-print(clouds_selection_mask)
-print(scans_label_mask)
-print(clouds_label_mask)
+
+arr = np.array(['/path/to/the/file/000100_000199.h5',
+                '/path/to/the/file/000200_000299.h5',
+                '/path/to/the/file/000300_000399.h5'])
+
+index = find_index(arr, 250)  # Returns 0
+print(index)

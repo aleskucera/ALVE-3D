@@ -6,7 +6,7 @@ from omegaconf import DictConfig
 from torch.utils.data import Dataset
 from numpy.lib.recfunctions import structured_to_unstructured
 
-from .ply import read_ply
+from kitti360.ply import read_ply
 
 log = logging.getLogger(__name__)
 

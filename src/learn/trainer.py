@@ -113,7 +113,7 @@ class BaseTrainer(object):
         self.optimizer.load_state_dict(model['optimizer_state_dict'])
 
 
-class Trainer(BaseTrainer):
+class SemanticTrainer(BaseTrainer):
     def __init__(self, cfg: DictConfig, train_ds: Dataset, val_ds: Dataset, device: torch.device,
                  weights: np.ndarray, model: dict = None, model_name: str = None, history_name: str = None):
         super().__init__(cfg, train_ds, val_ds, device, weights, model, model_name, history_name)

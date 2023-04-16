@@ -4,7 +4,7 @@ from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
 from src.utils.project import project_scan
-from datasets.utils import update_selection_mask, load_semantic_dataset, crop_sequence_format
+from old.utils import update_selection_mask, load_semantic_dataset, crop_sequence_format
 
 
 class SemanticDataset(Dataset):

@@ -1,2 +1,3 @@
+from .parsers import get_parser, Parser
 from .semantic_dataset import SemanticDataset
-from .parsers import get_parser, BaseParser
+from .partition_dataset import PartitionDataset

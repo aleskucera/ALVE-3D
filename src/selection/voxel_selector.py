@@ -9,9 +9,9 @@ from .voxel_cloud import VoxelCloud
 
 
 class VoxelSelector(Selector):
-    def __init__(self, dataset_path: str, cloud_paths: np.ndarray,
+    def __init__(self, dataset_path: str, project_name: str, cloud_paths: np.ndarray,
                  device: torch.device, criterion: str, batch_size: int):
-        super().__init__(dataset_path, cloud_paths, device, batch_size)
+        super().__init__(dataset_path, project_name, cloud_paths, device, batch_size)
         self.criterion = criterion
         self.mc_dropout = True if criterion == 'epistemic_uncertainty' else False
         self._initialize()

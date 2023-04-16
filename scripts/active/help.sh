@@ -31,6 +31,7 @@ show_help_train () {
   echo "  --from-scratch        Train from scratch, do not load model"
   echo "  -c, --criterion       Active learning criterion (default: random)"
   echo "  -e, --expected        Expected percentage of labeled data (default: 0)"
+  echo "  -m, --model           Model type (default: semantic)"
   echo "  -o, --objects         Active learning objects (default: voxels)"
   echo "  -s, --size            Dataset size (default: null)"
   echo "  -h, --help            Display this help and exit"

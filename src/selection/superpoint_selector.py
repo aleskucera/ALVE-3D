@@ -9,9 +9,9 @@ from .superpoint_cloud import SuperpointCloud
 
 
 class SuperpointSelector(Selector):
-    def __init__(self, dataset_path: str, cloud_paths: np.ndarray,
+    def __init__(self, dataset_path: str, project_name: str, cloud_paths: np.ndarray,
                  device: torch.device, criterion: str, batch_size: int):
-        super().__init__(dataset_path, cloud_paths, device, batch_size)
+        super().__init__(dataset_path, project_name, cloud_paths, device, batch_size)
         self.criterion = criterion
         self.mc_dropout = True if criterion == 'epistemic_uncertainty' else False
         self._initialize()
@@ -23,7 +23,7 @@ class SuperpointSelector(Selector):
                 superpoint_map = np.asarray(f['superpoints'], dtype=np.int64)
                 superpoint_map = torch.from_numpy(superpoint_map)
                 self.num_voxels += num_voxels
-                self.clouds.append(SuperpointCloud(cloud_path, num_voxels, cloud_id, superpoint_map))
+                self.clouds.append(SuperpointCloud(cloud_path, self.project_name, num_voxels, cloud_id, superpoint_map))
 
     def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5) -> tuple:
         if self.criterion == 'random':
@@ -49,6 +49,20 @@ class SuperpointSelector(Selector):
             superpoint_sizes = torch.cat((superpoint_sizes, cloud_superpoint_sizes))
 
         return self._choose_voxels(superpoint_map, superpoint_sizes, cloud_map, selection_size)
+
+    def _select_random_graphs(self, dataset: Dataset, percentage: float) -> tuple:
+        selection_size = self.get_selection_size(dataset, percentage)
+        print(selection_size)
+        subgraph_size = max(10000, selection_size // 10)
+        sizes = [subgraph_size] * (selection_size // subgraph_size)
+        sizes.append(selection_size % subgraph_size)
+        print(sizes)
+
+        raise NotImplementedError()
+
+        for cloud, size in zip(self.clouds, sizes):
+            print('fuck')
+            raise GetFuckedUpError()
 
     def _select_by_criterion(self, dataset: Dataset, model: nn.Module, percentage: float) -> tuple:
         values = torch.tensor([], dtype=torch.float32)

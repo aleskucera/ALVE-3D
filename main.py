@@ -9,14 +9,14 @@ from hydra.core.hydra_config import HydraConfig
 
 from src.utils import set_paths
 from src.kitti360 import KITTI360Converter
-from src.learn import train_model, train_active, select_voxels, select_first_voxels
+from src.learn import train_semantic_model, train_partition_model, \
+    train_semantic_active, train_partition_active, select_voxels, select_first_voxels
 
 log = logging.getLogger(__name__)
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(cfg: DictConfig):
-    # Set paths to absolute paths and update the output directory
     cfg = set_paths(cfg, HydraConfig.get().runtime.output_dir)
 
     if 'device' in cfg:
@@ -26,10 +26,14 @@ def main(cfg: DictConfig):
 
     log.info(f'Starting action: {cfg.action} using device {device}')
 
-    if cfg.action == 'train':
-        train_model(cfg, device)
-    elif cfg.action == 'train_active':
-        train_active(cfg, device)
+    if cfg.action == 'train_semantic':
+        train_semantic_model(cfg, device)
+    elif cfg.action == 'train_partition':
+        train_partition_model(cfg, device)
+    elif cfg.action == 'train_semantic_active':
+        train_semantic_active(cfg, device)
+    elif cfg.action == 'train_partition_active':
+        train_partition_active(cfg, device)
     elif cfg.action == 'select_voxels':
         select_voxels(cfg, device)
     elif cfg.action == 'select_first_voxels':
@@ -37,10 +41,6 @@ def main(cfg: DictConfig):
     elif cfg.action == 'convert_kitti360':
         converter = KITTI360Converter(cfg)
         converter.convert()
-    elif cfg.action == 'create_kitti360_voxel_clouds':
-        converter = KITTI360Converter(cfg)
-        converter.create_global_clouds()
-        converter.create_superpoints(device)
     else:
         log.error(f'The action "{cfg.action}" is not supported')
 

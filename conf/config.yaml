@@ -11,9 +11,6 @@ defaults:
   - path: default
   - hydra: default
 
-  # Configure launch
-  - launch: default
-
   # KITTI-360 conversion settings
   - conversion: default
 

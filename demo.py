@@ -7,17 +7,17 @@ import torch
 import wandb
 import hydra
 import numpy as np
-import seaborn as sn
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 from omegaconf import DictConfig
+from torch.utils.data import DataLoader
 from hydra.core.hydra_config import HydraConfig
 
-from src.utils import set_paths, visualize_global_cloud, visualize_cloud_values
+from src.utils import set_paths, visualize_global_cloud, visualize_cloud_values, map_labels, visualize_cloud
 from src.utils import plot, bar_chart, grouped_bar_chart, plot_confusion_matrix
-from src.datasets import SemanticDataset
+from src.datasets import SemanticDataset, PartitionDataset, get_parser
 from src.kitti360 import KITTI360Converter, create_kitti360_config
 from src.laserscan import LaserScan, ScanVis
+from src.models import get_model
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +30,8 @@ def main(cfg: DictConfig):
 
     if cfg.action == 'config':
         show_hydra_config(cfg)
+    elif cfg.action == 'test_model':
+        test_model(cfg)
     elif cfg.action == 'visualize_dataset':
         visualize_dataset(cfg)
     elif cfg.action == 'visualize_sequence':
@@ -66,6 +68,36 @@ def show_hydra_config(cfg: DictConfig) -> None:
     print('')
 
 
+def test_model(cfg: DictConfig) -> None:
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    artifact_path = cfg.artifact_path
+    model_name = artifact_path.split('/')[-1].split(':')[0]
+    dataset = SemanticDataset(split='val', cfg=cfg.ds, dataset_path=cfg.ds.path,
+                              project_name='demo', num_scans=None)
+    loader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
+
+    with wandb.init(project='demo'):
+        artifact_dir = wandb.use_artifact(artifact_path).download()
+        model = torch.load(os.path.join(artifact_dir, f'{model_name}.pt'), map_location=device)
+        model_state_dict = model['model_state_dict']
+        model = get_model(cfg=cfg, device=device)
+        model.load_state_dict(model_state_dict)
+
+        parser = get_parser('semantic', device)
+
+        model.eval()
+        with torch.no_grad():
+            for i, data in enumerate(loader):
+                x, y = parser.parse_batch(data)
+                y_hat = model(x)
+                y_hat = y_hat.argmax(dim=1)
+                y_hat = y_hat.cpu().numpy()
+                y = y.cpu().numpy()
+                print(y_hat.shape)
+                print(y.shape)
+                break
+
+
 def visualize_dataset(cfg: DictConfig):
     """ Show how to use SemanticDataset.
 
@@ -78,13 +110,13 @@ def visualize_dataset(cfg: DictConfig):
 
     # Create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
-                              cfg=cfg.ds, split=split, size=size, sequences=sequences)
+                              cfg=cfg.ds, split=split, num_scans=size, sequences=sequences)
 
     # Create scan object
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
 
     # Visualizer
-    vis = ScanVis(scan=scan, scans=dataset.scan_files, labels=dataset.label_files, raw_cloud=True, instances=False)
+    vis = ScanVis(scan=scan, scans=dataset.scan_files, labels=dataset.scan_files, raw_cloud=True, instances=False)
     vis.run()
 
 
@@ -98,9 +130,9 @@ def visualize_sequence(cfg: DictConfig) -> None:
 
     # Create dataset
     train_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
-                               cfg=cfg.ds, split='train', size=size, sequences=[sequence])
+                               cfg=cfg.ds, split='train', num_scans=size, sequences=[sequence])
     val_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
-                             cfg=cfg.ds, split='val', size=size, sequences=[sequence])
+                             cfg=cfg.ds, split='val', num_scans=size, sequences=[sequence])
 
     # Create scan object
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)

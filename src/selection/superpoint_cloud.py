@@ -1,10 +1,14 @@
 import torch
 from .base_cloud import Cloud
 
+from src.ply_c import libply_c
+from src.utils import load_cloud_file
+
 
 class SuperpointCloud(Cloud):
-    def __init__(self, path: str, size: int, cloud_id: int, superpoint_map: torch.Tensor):
+    def __init__(self, path: str, project_name: str, size: int, cloud_id: int, superpoint_map: torch.Tensor):
         super().__init__(path, size, cloud_id)
+        self.project_name = project_name
         self.superpoint_map = superpoint_map
 
         self.values = None
@@ -40,6 +44,16 @@ class SuperpointCloud(Cloud):
         self.superpoint_sizes = superpoint_sizes[valid_indices]
         self.superpoint_indices = self.superpoint_map[valid_indices]
         self.cloud_ids = torch.full((self.num_superpoints,), self.id, dtype=torch.long)[valid_indices]
+
+    def subgraph(self, size: int):
+        cloud_data = load_cloud_file(self.path, self.project_name)
+        points = cloud_data['points']
+        edge_sources = cloud_data['edge_sources']
+        edge_targets = cloud_data['edge_targets']
+        selected_edg, selected_ver = libply_c.random_subgraph(points.shape[0], edge_sources.astype('uint32'),
+                                                              edge_targets.astype('uint32'), size)
+
+        return selected_edg.astype(bool), selected_ver.astype(bool)
 
     def __str__(self):
         ret = f'\nSuperpointCloud:\n' \

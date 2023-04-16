@@ -10,10 +10,12 @@ from .base_cloud import Cloud
 
 
 class Selector(object):
-    def __init__(self, dataset_path: str, cloud_paths: np.ndarray, device: torch.device, batch_size: int = None):
+    def __init__(self, dataset_path: str, project_name: str, cloud_paths: np.ndarray,
+                 device: torch.device, batch_size: int = None):
         self.device = device
         self.cloud_paths = cloud_paths
         self.dataset_path = dataset_path
+        self.project_name = project_name
         self.batch_size = batch_size if device == 'gpu' else 1
 
         self.clouds = []

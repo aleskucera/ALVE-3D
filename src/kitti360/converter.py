@@ -1,28 +1,20 @@
 import os
 import logging
 
-import h5py
-import torch
-import wandb
 import numpy as np
 import open3d as o3d
-from tqdm import tqdm
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from omegaconf import DictConfig
 from mpl_toolkits.axes_grid1 import ImageGrid
-from sklearn.linear_model import RANSACRegressor
 
-from src.ply_c import libply_c
 from .ply import read_kitti360_ply
-from src.utils import project_points, colorize_instances, visualize_cloud, visualize_cloud_values
+from src.utils import project_points
 from src.utils import map_labels, map_colors
-from src.losses.crosspartition import compute_partition, compute_dist
-from src.models.pointnet_sp import LocalCloudEmbedder, STNkD, PointNet
-from src.utils import transform_points, downsample_cloud, nearest_neighbors, \
-    nearest_neighbors_2, connected_label_components, nn_graph
+from src.utils import transform_points, nearest_neighbors_2
+from src.utils.kitti360 import get_disjoint_ranges, read_kitti360_poses, \
+    read_kitti360_scan, get_window_range, read_txt
 
-from src.old.kitti360_dataset import KITTI360Dataset
+from .convert import convert_sequence, STATIC_THRESHOLD
 
 log = logging.getLogger(__name__)
 
@@ -59,43 +51,32 @@ class KITTI360Converter:
         splits = self.get_splits(self.window_ranges, self.train_windows_path, self.val_windows_path)
         self.train_samples, self.val_samples, self.train_clouds, self.val_clouds = splits
 
-        # ----------------- Conversion attributes -----------------
-        self.static_threshold = cfg.conversion.static_threshold
-        self.dynamic_threshold = cfg.conversion.dynamic_threshold
-
         # Sequence info
         self.num_scans = len(os.listdir(self.velodyne_path))
         self.num_windows = len(self.static_windows)
 
         self.semantic = None
-        self.instances = None
 
         # ----------------- Transformations -----------------
 
         self.T_cam_to_velo = np.concatenate([np.loadtxt(self.calib_path).reshape(3, 4), [[0, 0, 0, 1]]], axis=0)
         self.T_velo_to_cam = np.linalg.inv(self.T_cam_to_velo)
-        self.poses = read_poses(self.poses_path, self.T_velo_to_cam)
+        self.poses = read_kitti360_poses(self.poses_path, self.T_velo_to_cam)
 
         # ----------------- Visualization attributes -----------------
 
         # Point clouds for visualization
-        if o3d is not None:
-            self.scan = o3d.geometry.PointCloud()
-            self.static_window = o3d.geometry.PointCloud()
-            self.dynamic_window = o3d.geometry.PointCloud()
+        self.scan = o3d.geometry.PointCloud()
+        self.static_window = o3d.geometry.PointCloud()
+        self.dynamic_window = o3d.geometry.PointCloud()
 
         self.semantic_color = None
-        self.instance_color = None
 
         # Visualization parameters
         self.scan_num = 0
         self.window_num = 0
 
         self.visualization_step = cfg.conversion.visualization_step
-
-        # Color map for instance labels
-        self.cmap = cm.get_cmap('Set1')
-        self.cmap_length = 9
 
         self.key_callbacks = {
             ord(']'): self.prev_window,
@@ -105,249 +86,18 @@ class KITTI360Converter:
             ord('Q'): self.quit,
         }
 
-        self.k_nn_adj = 5
-        self.k_nn_local = 20
-
     def convert(self):
-        """Convert KITTI-360 dataset to SemanticKITTI format. That is done by following these steps:
-
-        1. Create a new directory structure for the sequence
-        2. Load the static windows, dynamic windows and the voxel clouds
-        3. For each scan:
-            - Load the velodyne scan
-            - Transform the scan to the world frame
-            - Find the nearest points in the dynamic window and remove them from the scan
-            - Find the nearest points in the static window and assign them corresponding RGB colors
-            - Find the nearest points in the voxel clouds and assign them corresponding labels and voxel ID
-            - Save the scan and the labels in the new directory structure
-        4. Save the sequence info (train and val samples)
-
-        The sequence directory will contain the following files:
-            - velodyne: Velodyne scans
-            - labels: Labels for each scan
-            - info.npz: Sequence info (train and val samples)
-            - voxel_clouds: Voxel clouds for each window in the KITTI-360 dataset (this has to be created beforehand)
-        """
-
-        # Create output directories
         sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
-
-        # Labels directory
-        labels_dir = os.path.join(sequence_path, 'labels')
-        os.makedirs(labels_dir, exist_ok=True)
-
-        # Velodyne directory
-        velodyne_dir = os.path.join(sequence_path, 'velodyne')
-        os.makedirs(velodyne_dir, exist_ok=True)
-
-        # Clouds directory
-        voxel_clouds_dir = os.path.join(sequence_path, 'voxel_clouds')
-        assert os.path.exists(voxel_clouds_dir), f'Global clouds directory {voxel_clouds_dir} does not exist'
-
-        voxel_clouds = sorted([os.path.join(voxel_clouds_dir, f) for f in os.listdir(voxel_clouds_dir)])
-
-        val_samples, train_samples = self.val_samples.astype('S'), self.train_samples.astype('S')
-        val_clouds, train_clouds = self.val_clouds.astype('S'), self.train_clouds.astype('S')
-
-        # Write the sequence info to a file
-        with h5py.File(os.path.join(sequence_path, 'info.h5'), 'w') as f:
-            f.create_dataset('val', data=val_samples)
-            f.create_dataset('train', data=train_samples)
-            f.create_dataset('val_clouds', data=val_clouds)
-            f.create_dataset('train_clouds', data=train_clouds)
-            f.create_dataset('selection_mask', data=np.ones(len(train_samples), dtype=np.bool))
-
-        for i, files in enumerate(zip(self.static_windows, self.dynamic_windows, voxel_clouds)):
-            log.info(f'Converting window {i + 1}/{self.num_windows}')
-
-            # Load the static and dynamic windows
-            static_file, dynamic_file, voxel_cloud_file = files
-            static_points, static_colors, _, _ = read_kitti360_ply(static_file)
-            dynamic_points, _, _, _ = read_kitti360_ply(dynamic_file)
-
-            # Load the voxel cloud
-            with h5py.File(voxel_cloud_file, 'r') as f:
-                voxel_points = np.asarray(f['points'])
-                voxel_labels = np.asarray(f['labels'])
-            voxel_mask = np.zeros(len(voxel_points), dtype=np.bool)
-
-            # For each scan in the window, find the points that belong to it and write them to a files
-            log.info(f'Window range: {self.window_ranges[i]}')
-            start, end = self.window_ranges[i]
-            for j in tqdm(range(start, end + 1), desc=f'Creating samples {start} - {end}'):
-                scan = read_scan(self.velodyne_path, j)
-                scan_points = scan[:, :3]
-                scan_remissions = scan[:, 3]
-
-                # Transform scan to the current pose
-                transformed_scan_points = transform_points(scan_points, self.poses[j])
-
-                # Find neighbors in the dynamic window and remove dynamic points
-                if len(dynamic_points) > 0:
-                    dists, indices = nearest_neighbors_2(dynamic_points, transformed_scan_points, k_nn=1)
-                    mask = np.logical_and(dists >= 0, dists <= self.dynamic_threshold)
-                    transformed_scan_points = transformed_scan_points[~mask]
-                    scan_remissions = scan_remissions[~mask]
-                    scan_points = scan_points[~mask]
-
-                # Find neighbours in the static window and assign their color
-                dists, indices = nearest_neighbors_2(static_points, transformed_scan_points, k_nn=1)
-                mask = np.logical_and(dists >= 0, dists <= self.static_threshold)
-                colors = static_colors[indices[mask]].astype(np.float32)
-                transformed_scan_points = transformed_scan_points[mask]
-                scan_remissions = scan_remissions[mask]
-                scan_points = scan_points[mask]
-
-                # Find neighbours in the voxel cloud and assign their label and index
-                dists, voxel_indices = nearest_neighbors_2(voxel_points, transformed_scan_points, k_nn=1)
-                labels = voxel_labels[voxel_indices].astype(np.uint8)
-                voxel_mask[voxel_indices] = True
-
-                # Write the scan to a file
-                with h5py.File(os.path.join(velodyne_dir, f'{j:06d}.h5'), 'w') as f:
-                    f.create_dataset('colors', data=colors, dtype=np.float32)
-                    f.create_dataset('points', data=scan_points, dtype=np.float32)
-                    f.create_dataset('remissions', data=scan_remissions, dtype=np.float32)
-                    f.create_dataset('pose', data=self.poses[j], dtype=np.float32)
-
-                # Write the labels to a file
-                with h5py.File(os.path.join(labels_dir, f'{j:06d}.h5'), 'w') as f:
-                    f.create_dataset('labels', data=labels, dtype=np.uint8)
-                    f.create_dataset('voxel_map', data=voxel_indices.astype(np.uint32), dtype=np.uint32)
-                    f.create_dataset('label_mask', data=np.zeros_like(labels, dtype=np.bool), dtype=np.bool)
-
-            # with h5py.File(voxel_cloud_file, 'r+') as f:
-            #     f.create_dataset('voxel_mask', data=voxel_mask, dtype=np.bool)
-
-    def create_global_clouds(self):
-        sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
-        global_cloud_dir = os.path.join(sequence_path, 'voxel_clouds')
-        os.makedirs(global_cloud_dir, exist_ok=True)
-
-        clouds = np.sort(np.concatenate([self.train_clouds, self.val_clouds]))
-        for window, name in tqdm(zip(self.static_windows, clouds), total=len(clouds), desc='Creating global clouds'):
-            output_file = h5py.File(os.path.join(global_cloud_dir, name), 'w')
-
-            # Read static window and downsample
-            points, colors, labels, _ = read_kitti360_ply(window)
-            points, colors, labels = downsample_cloud(points, colors, labels, 0.2)
-
-            # Compute graph edges
-            edge_sources, edge_targets, distances = nn_graph(points, self.k_nn_adj)
-
-            # Compute local neighbors
-            local_neighbors, _ = nearest_neighbors(points, self.k_nn_local)
-
-            # Computes object in point cloud and transition edges
-            objects = connected_label_components(labels, edge_sources, edge_targets)
-            edge_transitions = objects[edge_sources] != objects[edge_targets]
-
-            # Create label mask
-            label_mask = np.zeros(len(points), dtype=np.bool)
-
-            output_file.create_dataset('points', data=points, dtype='float32')
-            output_file.create_dataset('colors', data=colors, dtype='float32')
-            output_file.create_dataset('labels', data=labels.flatten(), dtype='uint8')
-            output_file.create_dataset('objects', data=objects, dtype='uint32')
-            output_file.create_dataset('label_mask', data=label_mask, dtype='bool')
-
-            output_file.create_dataset('edge_sources', data=edge_sources, dtype='uint32')
-            output_file.create_dataset('edge_targets', data=edge_targets, dtype='uint32')
-            output_file.create_dataset('edge_transitions', data=edge_transitions, dtype='uint8')
-            output_file.create_dataset('local_neighbors', data=local_neighbors, dtype='uint32')
-
-    def create_superpoints(self, device: torch.device):
-        subgraph = False
-
-        sequence_path = os.path.join(self.cfg.ds.path, 'sequences', f'{self.sequence:02d}')
-        global_cloud_dir = os.path.join(sequence_path, 'voxel_clouds')
-        model_path = os.path.join(self.cfg.path.models, 'pretrained', 'cv3', 'model.pth.tar')
-        checkpoint = torch.load(model_path)
-
-        # dataset = KITTI360Dataset(self.cfg, self.cfg.ds.path, 'val')
-        # print(dataset[0])
-
-        model = create_model(checkpoint['args'])
-        model.load_state_dict(checkpoint['state_dict'])
-        ptn_cloud_embedder = LocalCloudEmbedder(checkpoint['args'])
-
-        model.eval()
-        model.to(device)
-
-        cloud_names = np.sort(np.concatenate([self.train_clouds, self.val_clouds]))
-        for cloud_name in tqdm(cloud_names, desc='Creating superpoints'):
-
-            # Load the voxel cloud
-            with h5py.File(os.path.join(global_cloud_dir, cloud_name), 'r') as cloud:
-                points = np.asarray(cloud['points'])
-                objects = np.asarray(cloud['objects'])
-
-                edge_sources = np.asarray(cloud['edge_sources'])
-                edge_targets = np.asarray(cloud['edge_targets'])
-                local_neighbors = np.asarray(cloud['local_neighbors']).reshape((points.shape[0], self.k_nn_local))
-
-            selected_ver = np.ones((points.shape[0],), dtype=bool)
-            is_transition = objects[edge_sources] != objects[edge_targets]
-
-            # If the subgraph is enabled select a random subgraph
-            if subgraph:
-                # Randomly select a subgraph
-                selected_edg, selected_ver = libply_c.random_subgraph(points.shape[0], edge_sources.astype('uint32'),
-                                                                      edge_targets.astype('uint32'),
-                                                                      30000)
-                # Change the type to bool
-                selected_edg = selected_edg.astype(bool)
-                selected_ver = selected_ver.astype(bool)
-
-                new_ver_index = -np.ones((points.shape[0],), dtype=int)
-                new_ver_index[selected_ver.nonzero()] = range(selected_ver.sum())
-
-                edge_sources = new_ver_index[edge_sources[selected_edg]]
-                edge_targets = new_ver_index[edge_targets[selected_edg]]
-
-                is_transition = is_transition[selected_edg]
-                local_neighbors = local_neighbors[selected_ver,]
-
-            # Compute elevation
-            low_points = (points[:, 2] - points[:, 2].min() < 5).nonzero()[0]
-            if low_points.shape[0] > 100:
-                reg = RANSACRegressor(random_state=0).fit(points[low_points, :2], points[low_points, 2])
-                elevation = points[:, 2] - reg.predict(points[:, :2])
-            else:
-                elevation = np.zeros((points.shape[0],), dtype=np.float32)
-
-            # Compute the xyn (normalized x and y)
-            ma, mi = np.max(points[:, :2], axis=0, keepdims=True), np.min(points[:, :2], axis=0, keepdims=True)
-            xyn = (points[:, :2] - mi) / (ma - mi)
-            xyn = xyn[selected_ver,]
-
-            # Compute the local geometry
-            clouds = points[local_neighbors,]
-            diameters = np.sqrt(clouds.var(1).sum(1))
-            clouds = (clouds - points[selected_ver, np.newaxis, :]) / (diameters[:, np.newaxis, np.newaxis] + 1e-10)
-            clouds = np.concatenate([clouds, points[local_neighbors,]], axis=2)
-            clouds = clouds.transpose([0, 2, 1])
-
-            # Compute the global geometry
-            clouds_global = np.hstack(
-                [diameters[:, np.newaxis], elevation[selected_ver, np.newaxis], points[selected_ver,], xyn])
-
-            # Convert to torch
-            clouds = torch.from_numpy(clouds).float().to(device)
-            clouds_global = torch.from_numpy(clouds_global).float().to(device)
-
-            # Compute embeddings
-            with torch.no_grad():
-                embeddings = ptn_cloud_embedder.run_batch(model, clouds, clouds_global)
-                diff = compute_dist(embeddings, edge_sources.astype(np.int64), edge_targets.astype(np.int64),
-                                    'euclidian')
-                pred_comp, in_comp = compute_partition(embeddings, edge_sources, edge_targets, diff,
-                                                       points[selected_ver,])
-
-            with h5py.File(os.path.join(global_cloud_dir, cloud_name), 'r+') as superpoint:
-                superpoint.create_dataset('superpoints', data=in_comp)
-
-            visualize_cloud_values(points[selected_ver,], in_comp, random_colors=True)
+        convert_sequence(sequence_path=sequence_path,
+                         velodyne_dir=self.velodyne_path,
+                         poses=self.poses,
+                         train_samples=self.train_samples,
+                         val_samples=self.val_samples,
+                         train_clouds=self.train_clouds,
+                         val_clouds=self.val_clouds,
+                         static_windows=self.static_windows,
+                         dynamic_windows=self.dynamic_windows,
+                         window_ranges=self.window_ranges)
 
     def get_splits(self, window_ranges: list[tuple[int, int]], train_file: str, val_file: str) -> tuple:
         """ Get the train and validation splits for the dataset. Also returns the cloud names.
@@ -401,7 +151,7 @@ class KITTI360Converter:
     def update_scan(self):
 
         # Read scan
-        scan = read_scan(self.velodyne_path, self.scan_num)
+        scan = read_kitti360_scan(self.velodyne_path, self.scan_num)
         scan_points = scan[:, :3]
 
         # Transform scan to world coordinates
@@ -409,7 +159,7 @@ class KITTI360Converter:
 
         # Find neighbours in the static window
         dists, indices = nearest_neighbors_2(self.static_window.points, transformed_scan_points, k_nn=1)
-        mask = np.logical_and(dists >= 0, dists <= self.static_threshold)
+        mask = np.logical_and(dists >= 0, dists <= STATIC_THRESHOLD)
 
         # Extract RGB values from the static window
         rgb = np.array(self.static_window.colors)[indices[mask]]
@@ -506,117 +256,3 @@ class KITTI360Converter:
         o3d.visualization.draw_geometries_with_key_callbacks(
             [self.static_window, self.scan],
             self.key_callbacks)
-
-
-def create_model(args):
-    """ Creates model """
-    model = torch.nn.Module()
-    if args.learned_embeddings and 'ptn' in args.ptn_embedding and args.ptn_nfeat_stn > 0:
-        model.stn = STNkD(args.ptn_nfeat_stn, args.ptn_widths_stn[0], args.ptn_widths_stn[1],
-                          norm=args.ptn_norm,
-                          n_group=args.ptn_n_group)
-
-    if args.learned_embeddings and 'ptn' in args.ptn_embedding:
-        n_embed = args.ptn_widths[1][-1]
-        n_feat = 3 + 3 * args.use_rgb
-        nfeats_global = len(args.global_feat) + 4 * args.stn_as_global + 1  # we always add the diameter
-        model.ptn = PointNet(args.ptn_widths[0], args.ptn_widths[1], [], [], n_feat, 0,
-                             prelast_do=args.ptn_prelast_do,
-                             nfeat_global=nfeats_global, norm=args.ptn_norm, is_res=False,
-                             last_bn=True)  # = args.normalize_intermediary==0)
-
-    if args.ver_value == 'geofrgb':
-        n_embed = 7
-        model.placeholder = torch.nn.Parameter(torch.tensor(0.0))
-    if args.ver_value == 'geof':
-        n_embed = 4
-        model.placeholder = torch.nn.Parameter(torch.tensor(0.0))
-
-    print('Total number of parameters: {}'.format(sum([p.numel() for p in model.parameters()])))
-    print(model)
-    if args.cuda:
-        model.cuda()
-    return model
-
-
-def read_poses(poses_path: str, T_velo2cam: np.ndarray) -> np.ndarray:
-    """Read poses from poses.txt file. The poses are transformations from the velodyne coordinate
-    system to the world coordinate system.
-    :return: array of poses (Nx4x4), where N is the number of velodyne scans
-    """
-
-    # Load poses. Some poses are missing, because the camera was not moving.
-    compressed_poses = np.loadtxt(poses_path, dtype=np.float32)
-    frames = compressed_poses[:, 0].astype(np.int32)
-    lidar_poses = compressed_poses[:, 1:].reshape(-1, 4, 4)
-
-    # Create a full list of poses (with missing poses with value of the last known pose)
-    sequence_length = np.max(frames) + 1
-    poses = np.zeros((sequence_length, 4, 4), dtype=np.float32)
-
-    last_valid_pose = lidar_poses[0]
-    for i in range(sequence_length):
-        if i in frames:
-            last_valid_pose = lidar_poses[frames == i] @ T_velo2cam
-        poses[i] = last_valid_pose
-    return poses
-
-
-def read_txt(file: str, sequence_name: str):
-    """ Read file with one value per line. """
-    with open(file, 'r') as f:
-        lines = f.readlines()
-    return [os.path.basename(line.strip()) for line in lines if sequence_name in line]
-
-
-def get_window_range(path: str):
-    """ Parse string of form '/path/to/file/start_end.ply' and return range of integers. """
-    file_name = os.path.basename(path)
-    file_name = os.path.splitext(file_name)[0]
-    split_file_name = file_name.split('_')
-
-    assert len(split_file_name) == 2, f'Invalid file name: {file_name}'
-    start, end = split_file_name
-    return int(start), int(end)
-
-
-def read_scan(velodyne_path: str, i: int):
-    """ Read velodyne scan from binary file. """
-    file = os.path.join(velodyne_path, f'{i:010d}.bin')
-    scan = np.fromfile(file, dtype=np.float32).reshape(-1, 4)
-    return scan
-
-
-def get_list(ranges: list[tuple[int, int]]) -> list[int]:
-    """ Create list of sorted values without duplicates. """
-    values = []
-    for start, end in ranges:
-        values.extend(range(start, end))
-    return sorted(set(values))
-
-
-def split_indices(ranges: list[tuple[int, int]], all_indices: list) -> np.ndarray:
-    """ Create list of sorted indices without duplicates. """
-    indices = get_list(ranges)
-    return np.searchsorted(all_indices, indices)
-
-
-def get_disjoint_ranges(paths: list[str]) -> list[tuple[int, int]]:
-    """ Create list of disjoint ranges. """
-    paths.sort()
-    ranges = [get_window_range(path) for path in paths]
-    disjoint_ranges = []
-    for i, (start, end) in enumerate(ranges):
-        if i == len(ranges) - 1:
-            disjoint_ranges.append((start, end))
-        else:
-            next_start, _ = ranges[i + 1]
-            if next_start < end:
-                end = next_start - 1
-            disjoint_ranges.append((start, end))
-    return disjoint_ranges
-
-
-def names_from_ranges(window_ranges: list[tuple[int, int]]) -> list[str]:
-    """ Create list of window names. """
-    return [f'{start:06d}_{end:06d}' for start, end in window_ranges]
