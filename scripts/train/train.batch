@@ -11,6 +11,6 @@
 #SBATCH --mail-type=BEGIN,FAIL,END        # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
 singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf96016298e59b1e030ae \
-            singularity/alve-3d.sif python main.py action=train \
+            singularity/alve-3d.sif python main.py action=train_semantic \
             train.patience=20 \
             train.min_epochs=100 \
