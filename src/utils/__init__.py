@@ -1,6 +1,6 @@
 from .project import project_points
 from .map import colorize, map_labels, map_colors, colorize_instances
-from .io import set_paths, load_scan_file, load_label_file, load_cloud_file, load_dataset, \
+from .io import set_paths, load_scan_file, load_cloud_file, load_dataset, \
     label_voxels_in_scan, label_voxels_in_cloud
 from .cloud import transform_points, downsample_cloud, nearest_neighbors, nearest_neighbors_2, \
     connected_label_components, nn_graph, visualize_cloud, visualize_cloud_values, compute_elevation, normalize_xy, \

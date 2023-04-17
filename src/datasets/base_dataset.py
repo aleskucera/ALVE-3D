@@ -6,7 +6,7 @@ from tqdm import tqdm
 from omegaconf import DictConfig
 from torch.utils.data import Dataset as TorchDataset
 
-from src.utils import load_dataset, load_cloud_file, load_label_file, \
+from src.utils import load_dataset, load_cloud_file, load_scan_file, \
     label_voxels_in_scan, label_voxels_in_cloud
 
 log = logging.getLogger(__name__)
@@ -51,13 +51,15 @@ class Dataset(TorchDataset):
         self.proj_fov_down = cfg.projection.fov_down
 
         self.cloud_map = None
-        self.sample_map = None
+
         self.scan_files = None
-        self.label_files = None
+        self.scan_id_map = None
+        # self.label_files = None
         self.scan_sequence_map = None
         self.scan_selection_mask = None
 
         self.cloud_files = None
+        self.cloud_id_map = None
         self.cloud_sequence_map = None
         self.cloud_selection_mask = None
 
@@ -89,12 +91,12 @@ class Dataset(TorchDataset):
         selected = np.where(self.scan_selection_mask == 1)[0]
         return self.scan_files[selected]
 
-    @property
-    def labels(self):
-        if self.selection_mode:
-            return self.label_files
-        selected = np.where(self.scan_selection_mask == 1)[0]
-        return self.label_files[selected]
+    # @property
+    # def labels(self):
+    #     if self.selection_mode:
+    #         return self.label_files
+    #     selected = np.where(self.scan_selection_mask == 1)[0]
+    #     return self.label_files[selected]
 
     @property
     def num_clouds(self):
@@ -120,15 +122,15 @@ class Dataset(TorchDataset):
 
         for path in tqdm(self.clouds, desc='Calculating dataset statistics'):
             data = load_cloud_file(path, self.project_name, self.label_map, graph_data=False)
-            labels, label_mask = data['labels'], data['label_mask']
+            labels, label_mask = data['labels'], data['selected_labels']
 
             labels *= self.cloud_voxel_mask(path, len(labels))
-            selected_labels = labels * label_mask
+            sel_labels = labels[label_mask]
 
             class_counts, counter = self.__add_counts(labels=labels,
                                                       counter=counter,
                                                       class_counts=class_counts)
-            labeled_class_counts, labeled_counter = self.__add_counts(labels=selected_labels,
+            labeled_class_counts, labeled_counter = self.__add_counts(labels=sel_labels,
                                                                       counter=labeled_counter,
                                                                       class_counts=labeled_class_counts)
 
@@ -142,11 +144,11 @@ class Dataset(TorchDataset):
     @property
     def most_labeled_sample(self) -> tuple[int, float, np.ndarray]:
         idx, max_label_ratio = 0, 0
-        sample_label_mask = np.zeros(len(self.labels), dtype=np.float32)
+        sample_label_mask = None
 
-        for i, label_file in enumerate(tqdm(self.label_files, desc='Finding most labeled sample')):
-            data = load_label_file(label_file, self.project_name)
-            label_mask = data['label_mask']
+        for i, scan_file in enumerate(tqdm(self.scan_files, desc='Finding most labeled sample')):
+            data = load_scan_file(scan_file, self.project_name)
+            label_mask = data['selected_labels']
             label_ratio = np.sum(label_mask) / len(label_mask)
 
             if label_ratio > max_label_ratio:
@@ -167,21 +169,21 @@ class Dataset(TorchDataset):
         return np.where(self.cloud_files == cloud_path)[0][0]
 
     def label_voxels(self, voxels: np.ndarray, cloud_path: str) -> None:
-        labels = self.label_files[np.where(self.cloud_map == cloud_path)[0]]
+        scans = self.scan_files[np.where(self.cloud_map == cloud_path)[0]]
         indices = self.sample_map[np.where(self.cloud_map == cloud_path)[0]]
 
-        for label_file, sample_idx in tqdm(zip(labels, indices), total=len(labels), desc='Labeling voxels'):
-            self.scan_selection_mask[sample_idx] = label_voxels_in_scan(label_file, self.project_name, voxels)
+        for scan_file, sample_idx in tqdm(zip(scans, indices), total=len(scans), desc='Labeling voxels'):
+            self.scan_selection_mask[sample_idx] = label_voxels_in_scan(scan_file, self.project_name, voxels)
 
         cloud_idx = self.cloud_index(cloud_path)
         self.cloud_selection_mask[cloud_idx] = label_voxels_in_cloud(cloud_path, self.project_name, voxels)
 
     def cloud_voxel_mask(self, cloud_path: str, cloud_size: int) -> np.ndarray:
         voxel_mask = np.zeros(cloud_size, dtype=np.bool)
-        sample_indices = self.sample_map[np.where(self.cloud_map == cloud_path)[0]]
+        sample_indices = self.scan_id_map[np.where(self.cloud_map == cloud_path)[0]]
 
-        for label_file in self.label_files[sample_indices]:
-            data = load_label_file(label_file, self.project_name)
+        for scan_file in self.scan_files[sample_indices]:
+            data = load_scan_file(scan_file, self.project_name)
             voxel_map = data['voxel_map'].flatten()
             voxel_map = voxel_map[(voxel_map != -1)]
             voxel_mask[voxel_map] = True
@@ -191,7 +193,7 @@ class Dataset(TorchDataset):
     def __initialize(self):
         load_args = (self.path, self.project_name, self.sequences, self.split, self.al_experiment, self.resume)
         loaded_data = load_dataset(*load_args)
-        self.scan_files, self.label_files = loaded_data['scans'], loaded_data['labels']
+        self.scan_files = loaded_data['scans']
         self.cloud_map, self.scan_sequence_map = loaded_data['cloud_map'], loaded_data['scan_sequence_map']
         self.cloud_files, self.cloud_sequence_map = loaded_data['clouds'], loaded_data['cloud_sequence_map']
 
@@ -208,7 +210,6 @@ class Dataset(TorchDataset):
     def __reduce_dataset(self) -> None:
         self.cloud_map = self.cloud_map[:self.num_scans]
         self.scan_files = self.scan_files[:self.num_scans]
-        self.label_files = self.label_files[:self.num_scans]
         self.scan_id_map = self.scan_id_map[:self.num_scans]
         self.scan_sequence_map = self.scan_sequence_map[:self.num_scans]
         self.scan_selection_mask = self.scan_selection_mask[:self.num_scans]

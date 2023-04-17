@@ -25,27 +25,30 @@
 #
 # print(proj_scan)
 # print(proj_voxel_map)
-import torch
-import os
+
 import numpy as np
+from utils import nearest_neighbors_2
 
+voxel_points = np.array([[0, 0, 0], [1, 0, 1], [2, 1, 0], [3, 1, 1], [4, 0, 0], [5, 0, 1], [6, 1, 0], [7, 1, 1]])
+voxel_labels = np.array([0, 1, 2, 3, 4, 5, 6, 7])
+transformed_scan_points = np.array(
+    [[4.1, 0.8, 0.1], [3.1, 0.1, 0.9], [7.1, 0.9, 0.1], [1.1, 0.1, 0.1], [0.9, 0.1, 0.1], [0.9, 0.1, 0.9],
+     [0.9, 0.6, 0.1], [0.3, 0.2, 0.9]])
 
-def find_index(arr: np.ndarray, number: int) -> int:
-    sizes = np.zeros_like(arr, dtype=np.int32)
-    for i, path in enumerate(arr):
-        file_name = os.path.basename(path)
-        bounds = file_name.split('.')[0].split('_')
-        size = int(bounds[1]) - int(bounds[0]) + 1
-        sizes[i] = size
+voxel_mask = np.zeros(voxel_points.shape[0], dtype=bool)
 
-    cum_sizes = np.cumsum(sizes)
-    index = np.where(cum_sizes >= number)[0][0]
-    return index
+dists, voxel_indices = nearest_neighbors_2(voxel_points, transformed_scan_points, k_nn=1)
+labels = voxel_labels[voxel_indices].astype(np.uint8)
+voxel_mask[voxel_indices] = True
 
+print(voxel_indices)
 
-arr = np.array(['/path/to/the/file/000100_000199.h5',
-                '/path/to/the/file/000200_000299.h5',
-                '/path/to/the/file/000300_000399.h5'])
+voxel_points = voxel_points[voxel_mask]
 
-index = find_index(arr, 250)  # Returns 0
-print(index)
+# create a mask that maps old indices to new indices
+new_map = np.cumsum(voxel_mask) - 1
+
+voxel_map = new_map[voxel_indices]
+
+print(voxel_points)
+print(voxel_map)

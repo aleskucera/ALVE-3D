@@ -15,7 +15,7 @@ def map_colors(data: np.ndarray, mapping: dict):
     color_map = np.zeros((max(mapping.keys()) + 1, 3), dtype=np.float32)
     for key, color in mapping.items():
         color_map[key] = np.array(color, np.float32) / 255
-    return color_map[data]
+    return np.take(color_map, data, axis=0)
 
 
 def colorize_instances(data: np.ndarray, max_inst_id=100000, ignore: tuple = (0,)):

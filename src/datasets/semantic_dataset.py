@@ -2,7 +2,7 @@ import numpy as np
 from omegaconf import DictConfig
 
 from .base_dataset import Dataset
-from src.utils import project_points, augment_points, load_scan_file, load_label_file
+from src.utils import project_points, augment_points, load_scan_file, map_labels
 
 
 class SemanticDataset(Dataset):
@@ -22,11 +22,11 @@ class SemanticDataset(Dataset):
                          sequences, al_experiment, selection_mode)
 
     def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray, np.ndarray, int, bool]:
-        scan_data = load_scan_file(self.scans[idx])
+        scan_data = load_scan_file(self.scans[idx], self.project_name)
         points, colors, remissions = scan_data['points'], scan_data['colors'], scan_data['remissions']
+        labels, voxel_map, label_mask = scan_data['labels'], scan_data['voxel_map'], scan_data['selected_labels']
 
-        label_data = load_label_file(self.labels[idx], self.project_name, self.label_map)
-        labels, voxel_map, label_mask = label_data['labels'], label_data['voxel_map'], label_data['label_mask']
+        labels = map_labels(labels, self.label_map)
 
         if self.selection_mode:
             voxel_map[labels == self.ignore_index] = -1

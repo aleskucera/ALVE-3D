@@ -30,12 +30,10 @@ def convert_sequence(sequence_path: str,
                      window_ranges: list[tuple[int, int]]):
     # Velodyne directory
     scans_dir = os.path.join(sequence_path, 'velodyne')
-    print(scans_dir)
     os.makedirs(scans_dir, exist_ok=True)
 
     # Clouds directory
     clouds_dir = os.path.join(sequence_path, 'voxel_clouds')
-    print(clouds_dir)
     os.makedirs(clouds_dir, exist_ok=True)
 
     clouds = np.sort(np.concatenate([train_clouds, val_clouds]))
@@ -60,7 +58,7 @@ def convert_sequence(sequence_path: str,
         voxel_mask = np.zeros(len(voxel_points), dtype=np.bool)
 
         start, end = window_range
-        for j in tqdm(range(start, end + 1), desc=f'Creating samples {start} - {end}'):
+        for j in tqdm(range(start, end + 1), desc=f'Creating scans {start} - {end}'):
             scan = read_kitti360_scan(velodyne_dir, j)
             scan_points, scan_remissions = scan[:, :3], scan[:, 3]
 
@@ -97,6 +95,12 @@ def convert_sequence(sequence_path: str,
 
                 f.create_dataset('labels', data=labels, dtype=np.uint8)
                 f.create_dataset('voxel_map', data=voxel_indices.astype(np.uint32), dtype=np.uint32)
+
+        filter_map = np.cumsum(voxel_mask) - 1
+        for j in tqdm(range(start, end + 1), desc=f'Changing voxel maps {start} - {end}'):
+            with h5py.File(os.path.join(scans_dir, f'{j:06d}.h5'), 'r+') as f:
+                voxel_map = np.asarray(f['voxel_map'])
+                f['voxel_map'] = filter_map[voxel_map]
 
         # Filter unused voxels
         voxel_points = voxel_points[voxel_mask]

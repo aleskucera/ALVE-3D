@@ -24,7 +24,7 @@ def train_semantic_model(cfg: DictConfig, device: torch.device) -> None:
     # ========================================= Model Training =========================================
     # --------------------------------------------------------------------------------------------------
 
-    with wandb.init(project='Train Semantic Model'):
+    with wandb.init(project='Train Semantic Model (DeepLabV3)'):
         train_ds = SemanticDataset(split='train', cfg=cfg.ds, dataset_path=cfg.ds.path,
                                    project_name='train_full', num_scans=cfg.train.dataset_size, al_experiment=False)
         val_ds = SemanticDataset(split='val', cfg=cfg.ds, dataset_path=cfg.ds.path,

@@ -5,8 +5,7 @@
 #SBATCH --time=1-00:00:00                 # time limits: 1 day
 #SBATCH --error=conversion_0.err          # standard error file
 #SBATCH --output=conversion_0.out         # standard output file
-#SBATCH --partition=amdgpu                   # partition name
-#SBATCH --gres=gpu:1                   # partition name
+#SBATCH --partition=amd                   # partition name
 #SBATCH --mail-user=kuceral4@fel.cvut.cz  # where send info about job
 #SBATCH --mail-type=ALL                   # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
