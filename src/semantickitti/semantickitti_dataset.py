@@ -6,7 +6,7 @@ from tqdm import tqdm
 from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
-from .utils import open_sequence
+from semantickitti.utils import open_sequence
 from src.laserscan import LaserScan
 
 log = logging.getLogger(__name__)

@@ -9,7 +9,6 @@ import hydra
 import numpy as np
 from tqdm import tqdm
 from omegaconf import DictConfig
-from torch.utils.data import DataLoader
 from hydra.core.hydra_config import HydraConfig
 
 from src.utils import set_paths, visualize_global_cloud, visualize_cloud_values, map_labels, visualize_cloud

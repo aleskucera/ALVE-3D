@@ -3,14 +3,12 @@ import h5py
 import numpy as np
 
 
-def open_sequence(path: str, split: str = None):
+def open_sequence(path: str):
     velodyne_path = os.path.join(os.path.join(path, 'velodyne'))
     labels_path = os.path.join(os.path.join(path, 'labels'))
 
     poses_path = os.path.join(os.path.join(path, 'poses.txt'))
     calib_path = os.path.join(os.path.join(path, 'calib.txt'))
-
-    info_path = os.path.join(path, 'info.h5')
 
     velodyne = []
     if os.path.exists(velodyne_path):
@@ -22,24 +20,8 @@ def open_sequence(path: str, split: str = None):
         labels = [os.path.join(labels_path, label) for label in os.listdir(labels_path)]
         labels.sort()
 
-    if os.path.exists(info_path):
-        # info = np.load(info_path, allow_pickle=True)
-        # poses = [pose for pose in info['poses']]
-        # if split is not None:
-        #     split_indices = info[split]
-        #     velodyne = [velodyne[i] for i in split_indices]
-        #     labels = [labels[i] for i in split_indices]
-        #     poses = [poses[i] for i in split_indices]
-        with h5py.File(info_path, 'r') as f:
-            poses = list(f['poses'])
-            if split is not None:
-                split_indices = list(f[split])
-                velodyne = [velodyne[i] for i in split_indices]
-                labels = [labels[i] for i in split_indices]
-                poses = [poses[i] for i in split_indices]
-    else:
-        calib = parse_calibration(calib_path)
-        poses = parse_poses(poses_path, calib)
+    calib = parse_calibration(calib_path)
+    poses = parse_poses(poses_path, calib)
 
     return velodyne, labels, poses
 

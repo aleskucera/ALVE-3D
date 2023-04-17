@@ -100,7 +100,7 @@ def convert_sequence(sequence_path: str,
         for j in tqdm(range(start, end + 1), desc=f'Changing voxel maps {start} - {end}'):
             with h5py.File(os.path.join(scans_dir, f'{j:06d}.h5'), 'r+') as f:
                 voxel_map = np.asarray(f['voxel_map'])
-                f['voxel_map'] = filter_map[voxel_map]
+                f['voxel_map'][:] = filter_map[voxel_map]
 
         # Filter unused voxels
         voxel_points = voxel_points[voxel_mask]
