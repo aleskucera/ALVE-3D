@@ -9,6 +9,7 @@ from hydra.core.hydra_config import HydraConfig
 
 from src.utils import set_paths
 from src.kitti360 import KITTI360Converter
+from src.semantickitti import SemanticKITTIConverter
 from src.learn import train_semantic_model, train_partition_model, \
     train_semantic_active, train_partition_active, select_voxels, select_first_voxels
 
@@ -38,8 +39,13 @@ def main(cfg: DictConfig):
         select_voxels(cfg, device)
     elif cfg.action == 'select_first_voxels':
         select_first_voxels(cfg, device)
-    elif cfg.action == 'convert_kitti360':
-        converter = KITTI360Converter(cfg)
+    elif cfg.action == 'convert_dataset':
+        if cfg.ds.name == 'KITTI-360':
+            converter = KITTI360Converter(cfg)
+        elif cfg.ds.name == 'SemanticKITTI':
+            converter = SemanticKITTIConverter(cfg)
+        else:
+            raise NotImplementedError(f'The dataset "{cfg.ds.name}" is not supported')
         converter.convert()
     else:
         log.error(f'The action "{cfg.action}" is not supported')

@@ -6,7 +6,14 @@ from tqdm import tqdm
 from omegaconf import DictConfig
 
 from .utils import open_sequence
-from src.utils import transform_points, downsample_cloud, nearest_neighbors_2
+from src.utils import transform_points, downsample_cloud, nearest_neighbors_2, nearest_neighbors, nn_graph, \
+    connected_label_components
+
+K_NN_ADJ = 5
+K_NN_LOCAL = 20
+VOXEL_SIZE = 0.2
+STATIC_THRESHOLD = 0.2
+DYNAMIC_THRESHOLD = 0.2
 
 
 class SemanticKITTIConverter:
@@ -15,18 +22,19 @@ class SemanticKITTIConverter:
         self.cfg = cfg
         self.sequence = cfg.sequence if 'sequence' in cfg else 3
 
-        self.sequence_path = os.path.join(cfg.ds.path, 'sequences', f"{self.sequence:02d}")
-        self.scans, self.labels, self.poses = open_sequence(self.sequence_path)
+        old_sequence_path = os.path.join(cfg.ds.path, 'sequences_kitti', f"{self.sequence:02d}")
+        self.sequence_dir = os.path.join(cfg.ds.path, 'sequences', f"{self.sequence:02d}")
+        self.scans, self.labels, self.poses = open_sequence(old_sequence_path)
 
         self.window_ranges = create_window_ranges(self.scans)
         splits = get_splits(self.window_ranges, val_split=0.2)
         self.train_scans, self.val_scans, self.train_clouds, self.val_clouds = splits
 
     def convert(self):
-        scans_dir = os.path.join(self.sequence_path, 'velodyne')
+        scans_dir = os.path.join(self.sequence_dir, 'velodyne')
         os.makedirs(scans_dir, exist_ok=True)
 
-        clouds_dir = os.path.join(self.sequence_path, 'voxel_clouds')
+        clouds_dir = os.path.join(self.sequence_dir, 'voxel_clouds')
         os.makedirs(clouds_dir, exist_ok=True)
 
         clouds = np.sort(np.concatenate([self.train_clouds, self.val_clouds]))
@@ -35,16 +43,15 @@ class SemanticKITTIConverter:
         val_scans, train_scans = self.val_scans.astype('S'), self.train_scans.astype('S')
         val_clouds, train_clouds = self.val_clouds.astype('S'), self.train_clouds.astype('S')
 
-        with h5py.File(os.path.join(self.sequence_path, 'info.h5'), 'w') as f:
+        with h5py.File(os.path.join(self.sequence_dir, 'info.h5'), 'w') as f:
             f.create_dataset('val', data=val_scans)
             f.create_dataset('train', data=train_scans)
             f.create_dataset('val_clouds', data=val_clouds)
             f.create_dataset('train_clouds', data=train_clouds)
 
-        for cloud, window_range in zip(clouds, self.window_ranges):
-            global_points = []
-            global_labels = []
+        for cloud_file, window_range in zip(clouds, self.window_ranges):
             start, end = window_range
+            global_points, global_labels = [], []
             for j in tqdm(range(start, end + 1), desc=f'Creating scans {start} - {end}'):
                 scan_file = self.scans[j]
                 label_file = self.labels[j]
@@ -74,32 +81,28 @@ class SemanticKITTIConverter:
             global_labels = np.concatenate(global_labels)
 
             # Downsample the point cloud
-            voxel_cloud, voxel_labels = downsample_cloud(points=global_points, labels=global_labels, voxel_size=0.2)
+            voxel_points, voxel_labels = downsample_cloud(points=global_points, labels=global_labels, voxel_size=0.2)
 
             for j in tqdm(range(start, end + 1), desc=f'Creating voxel clouds {start} - {end}'):
                 with h5py.File(os.path.join(scans_dir, f'{j:06d}.h5'), 'r+') as f:
                     points = np.asarray(f['points'])
                     transformed_points = transform_points(points, self.poses[j])
-                    dists, voxel_indices = nearest_neighbors_2(voxel_cloud, transformed_points, k_nn=1)
+                    dists, voxel_indices = nearest_neighbors_2(voxel_points, transformed_points, k_nn=1)
                     f.create_dataset('voxel_map', data=voxel_indices.flatten(), dtype=np.int32)
 
+            local_neighbors, _ = nearest_neighbors(voxel_points, K_NN_LOCAL)
+            edge_sources, edge_targets, distances = nn_graph(voxel_points, K_NN_ADJ)
+            objects = connected_label_components(voxel_labels, edge_sources, edge_targets)
 
-class GlobalCloud(object):
-    def __init__(self):
-        self.points = []
-        self.labels = []
+            with h5py.File(cloud_file, 'w') as f:
+                f.create_dataset('points', data=voxel_points, dtype='float32')
 
-    def add(self, points, labels):
-        self.points.append(points)
-        self.labels.append(labels)
+                f.create_dataset('objects', data=objects.flatten(), dtype='uint32')
+                f.create_dataset('labels', data=voxel_labels.flatten(), dtype='uint8')
 
-    def compute(self, voxel_size=0.2):
-        self.points = np.concatenate(self.points)
-        self.labels = np.concatenate(self.labels)
-        voxel_cloud, voxel_labels = downsample_cloud(points=self.points,
-                                                     labels=self.labels,
-                                                     voxel_size=voxel_size)
-        return voxel_cloud, voxel_labels
+                f.create_dataset('local_neighbors', data=local_neighbors, dtype='uint32')
+                f.create_dataset('edge_sources', data=edge_sources.flatten(), dtype='uint32')
+                f.create_dataset('edge_targets', data=edge_targets.flatten(), dtype='uint32')
 
 
 def create_window_ranges(scans: list, window_size: int = 200):
@@ -138,21 +141,23 @@ def get_splits(window_ranges: list, val_split: float = 0.2):
     num_scans = sum([end - start + 1 for start, end in window_ranges])
     num_val_scans = int(num_scans * val_split)
 
-    val_windows = []
+    val_ranges = []
+    train_ranges = window_ranges.copy()
     while num_val_scans > 0:
-        window = np.random.choice(window_ranges)
-        val_windows.append(window)
-        num_val_scans -= window[1] - window[0] + 1
-        window_ranges.remove(window)
+        idx = np.random.choice(len(train_ranges))
+        rng = train_ranges[idx]
+        val_ranges.append(rng)
+        num_val_scans -= rng[1] - rng[0] + 1
+        train_ranges.remove(rng)
 
-    for window in val_windows:
-        start, end = window
+    for rng in val_ranges:
+        start, end = rng
         scan_names = [f'{i:06d}.h5' for i in range(start, end + 1)]
         val_scans = np.concatenate([val_scans, np.array(scan_names, dtype=np.str_)])
         val_clouds = np.append(val_clouds, f'{start:06d}_{end:06d}')
 
-    for window in window_ranges:
-        start, end = window
+    for rng in train_ranges:
+        start, end = rng
         scan_names = [f'{i:06d}.h5' for i in range(start, end + 1)]
         train_scans = np.concatenate([train_scans, np.array(scan_names, dtype=np.str_)])
         train_clouds = np.append(train_clouds, f'{start:06d}_{end:06d}')
