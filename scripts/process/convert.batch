@@ -26,6 +26,6 @@ while [ "$#" -gt 0 ]; do
 done
 
 singularity run --nv --bind /mnt singularity/alve-3d.sif python main.py \
-            action=convert \
+            action=convert_dataset \
             ds="$dataset" \
             +sequence="$sequence"
