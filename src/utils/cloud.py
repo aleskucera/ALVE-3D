@@ -27,21 +27,27 @@ def visualize_cloud_values(points: np.ndarray, values: np.ndarray, random_colors
     visualize_cloud(points, colors)
 
 
-def downsample_cloud(points: np.ndarray, colors: np.ndarray, labels: np.ndarray = None,
+def downsample_cloud(points: np.ndarray, colors: np.ndarray = None, labels: np.ndarray = None,
                      voxel_size: float = 0.1) -> tuple:
     device = o3d.core.Device("CPU:0")
     pcd = o3d.t.geometry.PointCloud(device)
 
     pcd.point.positions = o3d.core.Tensor(points, o3d.core.float32, device)
-    pcd.point.colors = o3d.core.Tensor(colors, o3d.core.float32, device)
+    if colors is not None:
+        pcd.point.colors = o3d.core.Tensor(colors, o3d.core.float32, device)
     if labels is not None:
         pcd.point.labels = o3d.core.Tensor(labels, o3d.core.uint32, device)
 
     pcd = pcd.voxel_down_sample(voxel_size=voxel_size)
 
-    if labels is not None:
+    if labels is not None and colors is not None:
         return pcd.point.positions.numpy(), pcd.point.colors.numpy(), pcd.point.labels.numpy()
-    return pcd.point.positions.numpy(), pcd.point.colors.numpy()
+    elif labels is not None:
+        return pcd.point.positions.numpy(), pcd.point.labels.numpy()
+    elif colors is not None:
+        return pcd.point.positions.numpy(), pcd.point.colors.numpy()
+    else:
+        return pcd.point.positions.numpy()
 
 
 def nearest_neighbors(points: np.ndarray, k_nn: int) -> np.ndarray:
