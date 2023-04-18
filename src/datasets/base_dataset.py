@@ -118,7 +118,9 @@ class Dataset(TorchDataset):
             labels = self.CI.read_labels(path)
             label_mask = self.CI.read_selected_labels(path)
 
-            labels *= self.cloud_voxel_mask(path, len(labels))
+            voxel_mask = self.cloud_voxel_mask(path, len(labels))
+            print(np.unique(voxel_mask))
+            labels *= voxel_mask
             sel_labels = labels[label_mask]
 
             class_counts, counter = self.__add_counts(labels=labels,
