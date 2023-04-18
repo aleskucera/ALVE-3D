@@ -57,7 +57,7 @@ def convert_sequence(sequence_path: str,
         static_points, static_colors, static_labels, _ = read_kitti360_ply(static_file)
 
         # Filter out the points that will be mapped to ignore_index
-        learn_labels = map_labels(static_labels, label_map)
+        learn_labels = map_labels(static_labels.flatten(), label_map)
         mask = learn_labels != ignore_index
         static_points = static_points[mask]
         static_colors = static_colors[mask]
