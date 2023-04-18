@@ -64,8 +64,8 @@ class BaseTrainer(object):
             inputs, targets = self.parser.parse_batch(batch)
 
             # Forward pass
-            print(inputs.shape)
             outputs = self.model(inputs)
+            print(type(outputs))
             if isinstance(outputs, dict):
                 outputs = outputs['out']
             loss = self.loss_fn(outputs, targets)
