@@ -23,7 +23,7 @@ def load_scan_file(scan_file: str, project_name: str = None) -> dict:
     with h5py.File(scan_file, 'r') as f:
         ret['pose'] = np.asarray(f['pose'])
         ret['points'] = np.asarray(f['points'])
-        ret['colors'] = np.asarray(f['colors'])
+        # ret['colors'] = np.asarray(f['colors'])
         ret['remissions'] = np.asarray(f['remissions'])
 
         ret['labels'] = np.asarray(f['labels']).flatten()
@@ -42,7 +42,7 @@ def load_cloud_file(cloud_file: str, project_name: str = None, label_map: dict =
 
     with h5py.File(cloud_file, 'r') as f:
         ret['points'] = np.asarray(f['points'])
-        ret['colors'] = np.asarray(f['colors'])
+        # ret['colors'] = np.asarray(f['colors'])
         ret['labels'] = np.asarray(f['labels']).flatten().astype(np.int64)
         ret['objects'] = np.asarray(f['objects']).flatten().astype(np.int64)
 

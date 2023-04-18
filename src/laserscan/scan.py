@@ -163,7 +163,8 @@ class LaserScan:
         elif filename.endswith('.h5'):
             with h5py.File(filename, 'r') as f:
                 points = np.array(f['points'])
-                color = np.array(f['colors'])
+                # color = np.array(f['colors'])
+                color = None
                 remissions = np.array(f['remissions'])
                 self.pose = np.array(f['pose'])
         else:

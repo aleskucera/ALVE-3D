@@ -12,7 +12,7 @@ from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
 from src.utils import set_paths, visualize_global_cloud, visualize_cloud_values, map_labels, visualize_cloud
-from src.utils import plot, bar_chart, grouped_bar_chart, plot_confusion_matrix, map_colors
+from src.utils import plot, bar_chart, grouped_bar_chart, plot_confusion_matrix, map_colors, load_cloud_file
 from src.datasets import SemanticDataset, PartitionDataset, get_parser
 from src.kitti360 import KITTI360Converter, create_kitti360_config
 from src.laserscan import LaserScan, ScanVis
@@ -35,8 +35,10 @@ def main(cfg: DictConfig):
         show_hydra_config(cfg)
     elif cfg.action == 'test_model':
         test_model(cfg)
-    elif cfg.action == 'visualize_dataset':
-        visualize_dataset(cfg)
+    elif cfg.action == 'visualize_dataset_scans':
+        visualize_dataset_scans(cfg)
+    elif cfg.action == 'visualize_dataset_clouds':
+        visualize_dataset_clouds(cfg)
     elif cfg.action == 'visualize_sequence':
         visualize_sequence(cfg)
     elif cfg.action == 'visualize_superpoints':
@@ -114,12 +116,7 @@ def test_model(cfg: DictConfig) -> None:
                 # time.sleep(1)
 
 
-def visualize_dataset(cfg: DictConfig):
-    """ Show how to use SemanticDataset.
-
-    :param cfg: Configuration object.
-    """
-
+def visualize_dataset_scans(cfg: DictConfig):
     size = cfg.size if 'size' in cfg else None
     split = cfg.split if 'split' in cfg else 'train'
     sequences = [cfg.sequence] if 'sequence' in cfg else None
@@ -134,6 +131,25 @@ def visualize_dataset(cfg: DictConfig):
     # Visualizer
     vis = ScanVis(scan=scan, scans=dataset.scan_files, labels=dataset.scan_files, raw_cloud=True, instances=False)
     vis.run()
+
+
+def visualize_dataset_clouds(cfg: DictConfig):
+    size = cfg.size if 'size' in cfg else None
+    split = cfg.split if 'split' in cfg else 'train'
+    sequences = [cfg.sequence] if 'sequence' in cfg else None
+
+    # Create dataset
+    dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
+                              cfg=cfg.ds, split=split, num_scans=size, sequences=sequences)
+
+    cloud_file = dataset.clouds[0]
+    cloud = load_cloud_file(cloud_file)
+    points, labels = cloud['points'], cloud['labels']
+
+    labels = map_labels(labels, cfg.ds.learning_map)
+
+    colors = map_colors(labels, cfg.ds.color_map_train)
+    visualize_cloud(points, colors)
 
 
 def visualize_sequence(cfg: DictConfig) -> None:

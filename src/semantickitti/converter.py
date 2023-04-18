@@ -7,7 +7,7 @@ from omegaconf import DictConfig
 
 from .utils import open_sequence
 from src.utils import transform_points, downsample_cloud, nearest_neighbors_2, nearest_neighbors, nn_graph, \
-    connected_label_components
+    connected_label_components, map_labels
 
 K_NN_ADJ = 5
 K_NN_LOCAL = 20
@@ -65,6 +65,20 @@ class SemanticKITTIConverter:
                     label = np.fromfile(label_file, dtype=np.int32)
                     semantics = label & 0xFFFF  # semantic label in lower half
                     semantics = semantics.flatten()
+
+                    # Filter out the dynamic objects
+                    dynamic_labels = [252, 253, 254, 255, 256, 257, 258, 259]
+                    static_mask = np.isin(semantics, dynamic_labels, invert=True)
+                    points = points[static_mask]
+                    semantics = semantics[static_mask]
+                    remissions = remissions[static_mask]
+
+                    # Filter out the points which will be mapped to the ignore label
+                    learn_labels = map_labels(semantics, self.cfg.ds.learning_map)
+                    mask = learn_labels != self.cfg.ds.ignore_index
+                    points = points[mask]
+                    semantics = semantics[mask]
+                    remissions = remissions[mask]
 
                     global_points.append(transform_points(points, self.poses[j]))
                     global_labels.append(semantics)

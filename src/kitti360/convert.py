@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 from .ply import read_kitti360_ply
 from src.utils import transform_points, downsample_cloud, nearest_neighbors, \
-    nearest_neighbors_2, connected_label_components, nn_graph
+    nearest_neighbors_2, connected_label_components, nn_graph, map_labels
 from src.utils.kitti360 import read_kitti360_scan
 
 log = logging.getLogger(__name__)
@@ -27,7 +27,9 @@ def convert_sequence(sequence_path: str,
                      val_clouds: np.ndarray,
                      static_windows: list[str],
                      dynamic_windows: list[str],
-                     window_ranges: list[tuple[int, int]]):
+                     window_ranges: list[tuple[int, int]],
+                     label_map: dict[int, int],
+                     ignore_index: int):
     # Velodyne directory
     scans_dir = os.path.join(sequence_path, 'velodyne')
     os.makedirs(scans_dir, exist_ok=True)
@@ -53,8 +55,17 @@ def convert_sequence(sequence_path: str,
         static_file, dynamic_file, cloud_file, window_range = data
         dynamic_points, _, _, _ = read_kitti360_ply(dynamic_file)
         static_points, static_colors, static_labels, _ = read_kitti360_ply(static_file)
+
+        # Filter out the points that will be mapped to ignore_index
+        learn_labels = map_labels(static_labels, label_map)
+        mask = learn_labels != ignore_index
+        static_points = static_points[mask]
+        static_colors = static_colors[mask]
+        static_labels = static_labels[mask]
+
         voxel_points, voxel_colors, voxel_labels = downsample_cloud(static_points, static_colors,
                                                                     static_labels, VOXEL_SIZE)
+
         voxel_mask = np.zeros(len(voxel_points), dtype=np.bool)
 
         start, end = window_range

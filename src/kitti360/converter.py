@@ -97,7 +97,9 @@ class KITTI360Converter:
                          val_clouds=self.val_clouds,
                          static_windows=self.static_windows,
                          dynamic_windows=self.dynamic_windows,
-                         window_ranges=self.window_ranges)
+                         window_ranges=self.window_ranges,
+                         label_map=self.cfg.ds.learning_map,
+                         ignore_index=self.cfg.ds.ignore_index)
 
     def get_splits(self, window_ranges: list[tuple[int, int]], train_file: str, val_file: str) -> tuple:
         """ Get the train and validation splits for the dataset. Also returns the cloud names.

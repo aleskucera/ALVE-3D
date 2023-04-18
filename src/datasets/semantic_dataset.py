@@ -23,7 +23,7 @@ class SemanticDataset(Dataset):
 
     def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray, np.ndarray, int, bool]:
         scan_data = load_scan_file(self.scans[idx], self.project_name)
-        points, colors, remissions = scan_data['points'], scan_data['colors'], scan_data['remissions']
+        points, remissions = scan_data['points'], scan_data['remissions']
         labels, voxel_map, label_mask = scan_data['labels'], scan_data['voxel_map'], scan_data['selected_labels']
 
         labels = map_labels(labels, self.label_map)
@@ -40,7 +40,7 @@ class SemanticDataset(Dataset):
                                                rotation_prob=0.5,
                                                translation_prob=0.5)
             labels = labels[drop_mask]
-            colors = colors[drop_mask]
+            # colors = colors[drop_mask]
             remissions = remissions[drop_mask]
 
         # Project points to image and map the projection
@@ -52,8 +52,8 @@ class SemanticDataset(Dataset):
         proj_remissions[proj_mask] = remissions[proj_idx[proj_mask]]
 
         # Project colors
-        proj_colors = np.zeros((self.proj_H, self.proj_W, 3), dtype=np.float32)
-        proj_colors[proj_mask] = colors[proj_idx[proj_mask]]
+        # proj_colors = np.zeros((self.proj_H, self.proj_W, 3), dtype=np.float32)
+        # proj_colors[proj_mask] = colors[proj_idx[proj_mask]]
 
         # Project labels
         proj_labels = np.zeros((self.proj_H, self.proj_W), dtype=np.long)
@@ -65,8 +65,7 @@ class SemanticDataset(Dataset):
 
         # Concatenate scan features
         proj_scan = np.concatenate([proj_distances[..., np.newaxis],
-                                    proj_remissions[..., np.newaxis],
-                                    proj_colors], axis=-1, dtype=np.float32).transpose((2, 0, 1))
+                                    proj_remissions[..., np.newaxis]], axis=-1, dtype=np.float32).transpose((2, 0, 1))
 
         cloud_id = self.cloud_id_of_scan(idx)
         end_of_cloud = self.is_scan_end_of_cloud(idx)
