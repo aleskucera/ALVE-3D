@@ -3,7 +3,7 @@
 #SBATCH --nodes=1                         # 1 node
 #SBATCH --ntasks-per-node=4               # 4 CPUs per node
 #SBATCH --time=1-00:00:00                 # time limits: 1 day
-#SBATCH --error=train_semantic.err        # standard error file
+#SBATCH --error=train_semantic.out        # standard error file
 #SBATCH --output=train_semantic.out       # standard output file
 #SBATCH --partition=amdgpu                # partition name
 #SBATCH --gres=gpu:1                      # number of GPUs per node
