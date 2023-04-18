@@ -45,7 +45,6 @@ class SemanticLogger(object):
         self.device = device
         self.num_classes = num_classes
         self.ignore_index = ignore_index
-        # self.labels = [k for k in labels.keys() if k != ignore_index]
         self.label_names = [v for k, v in labels.items() if k != ignore_index]
 
         metric_args = dict(num_classes=num_classes, ignore_index=ignore_index, validate_args=False)

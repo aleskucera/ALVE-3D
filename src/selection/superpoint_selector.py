@@ -13,7 +13,7 @@ class SuperpointSelector(Selector):
                  device: torch.device, criterion: str, batch_size: int):
         super().__init__(dataset_path, project_name, cloud_paths, device, batch_size)
         self.criterion = criterion
-        self.mc_dropout = True if criterion == 'epistemic_uncertainty' else False
+        self.mc_dropout = True if criterion == 'EpistemicUncertainty' else False
         self._initialize()
 
     def _initialize(self):
@@ -26,7 +26,7 @@ class SuperpointSelector(Selector):
                 self.clouds.append(SuperpointCloud(cloud_path, self.project_name, num_voxels, cloud_id, superpoint_map))
 
     def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5) -> tuple:
-        if self.criterion == 'random':
+        if self.criterion == 'Random':
             return self._select_randomly(dataset, percentage)
         else:
             return self._select_by_criterion(dataset, model, percentage)
@@ -51,7 +51,7 @@ class SuperpointSelector(Selector):
         return self._choose_voxels(superpoint_map, superpoint_sizes, cloud_map, selection_size)
 
     def _select_random_graphs(self, dataset: Dataset, percentage: float) -> tuple:
-        selection_size = self.get_selection_size(dataset, percentage)
+        selection_size = self.get_selection_size(percentage)
         print(selection_size)
         subgraph_size = max(10000, selection_size // 10)
         sizes = [subgraph_size] * (selection_size // subgraph_size)
@@ -59,10 +59,6 @@ class SuperpointSelector(Selector):
         print(sizes)
 
         raise NotImplementedError()
-
-        for cloud, size in zip(self.clouds, sizes):
-            print('fuck')
-            raise GetFuckedUpError()
 
     def _select_by_criterion(self, dataset: Dataset, model: nn.Module, percentage: float) -> tuple:
         values = torch.tensor([], dtype=torch.float32)

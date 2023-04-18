@@ -13,7 +13,7 @@ from hydra.core.hydra_config import HydraConfig
 
 from src.utils import set_paths, visualize_global_cloud, visualize_cloud_values, visualize_cloud
 from src.utils import plot, bar_chart, grouped_bar_chart, plot_confusion_matrix, map_colors, ScanInterface, \
-    CloudInterface
+    CloudInterface, Experiment
 from src.datasets import SemanticDataset, PartitionDataset, get_parser
 from src.kitti360 import KITTI360Converter, create_kitti360_config
 from src.laserscan import LaserScan, ScanVis
@@ -34,6 +34,8 @@ def main(cfg: DictConfig):
 
     if cfg.action == 'config':
         show_hydra_config(cfg)
+    elif cfg.action == 'experiment':
+        show_experiment(cfg)
     elif cfg.action == 'test_model':
         test_model(cfg)
     elif cfg.action == 'visualize_dataset_scans':
@@ -74,6 +76,12 @@ def show_hydra_config(cfg: DictConfig) -> None:
     print('')
 
 
+def show_experiment(cfg: DictConfig) -> None:
+    cfg.action = 'train_semantic_active'
+    experiment = Experiment(cfg)
+    print(experiment)
+
+
 def test_model(cfg: DictConfig) -> None:
     import matplotlib.pyplot as plt
     import numpy as np
@@ -84,7 +92,7 @@ def test_model(cfg: DictConfig) -> None:
     model_name = artifact_path.split('/')[-1].split(':')[0]
     dataset = SemanticDataset(split='val', cfg=cfg.ds, dataset_path=cfg.ds.path,
                               project_name='demo', num_scans=None)
-    
+
     with wandb.init(project='demo'):
         artifact_dir = wandb.use_artifact(artifact_path).download()
         model = torch.load(os.path.join(artifact_dir, f'{model_name}.pt'), map_location=device)

@@ -2,6 +2,7 @@ import h5py
 import torch
 import numpy as np
 import torch.nn as nn
+from tqdm import tqdm
 from torch.utils.data import Dataset
 
 from .base_selector import Selector
@@ -13,11 +14,11 @@ class VoxelSelector(Selector):
                  device: torch.device, criterion: str, batch_size: int):
         super().__init__(dataset_path, project_name, cloud_paths, device, batch_size)
         self.criterion = criterion
-        self.mc_dropout = True if criterion == 'epistemic_uncertainty' else False
+        self.mc_dropout = True if criterion == 'EpistemicUncertainty' else False
         self._initialize()
 
     def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5) -> tuple:
-        if self.criterion == 'random':
+        if self.criterion == 'Random':
             return self._select_randomly(dataset, percentage)
         else:
             return self._select_by_criterion(dataset, model, percentage)
@@ -33,14 +34,11 @@ class VoxelSelector(Selector):
 
         voxel_map = torch.tensor([], dtype=torch.long)
         cloud_map = torch.tensor([], dtype=torch.long)
-        selection_size = self.get_selection_size(dataset, percentage)
+        selection_size = self.get_selection_size(percentage)
 
-        for cloud in self.clouds:
-            voxel_mask = dataset.get_voxel_mask(cloud.path, cloud.size)
-            voxels = torch.nonzero(torch.from_numpy(voxel_mask)).squeeze(1)
-
-            voxel_map = torch.cat((voxel_map, voxels))
-            cloud_map = torch.cat((cloud_map, torch.full((voxels.shape[0],), cloud.id, dtype=torch.long)))
+        for cloud in tqdm(self.clouds, desc='Selecting voxels randomly'):
+            voxel_map = torch.cat((voxel_map, torch.arange(cloud.size)))
+            cloud_map = torch.cat((cloud_map, torch.full((cloud.size,), cloud.id, dtype=torch.long)))
 
         return self._choose_voxels(voxel_map, cloud_map, selection_size)
 

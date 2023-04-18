@@ -220,7 +220,7 @@ def __initialize_dataset(scans: np.ndarray, clouds: np.ndarray, project_name: st
                          split: str, al_experiment: bool) -> None:
     for scan in tqdm(scans, desc=f'Initializing sequence scans'):
         with h5py.File(scan, 'r') as f:
-            labels = np.asarray(f['labels'])
+            labels = np.asarray(f['labels']).flatten()
 
         with h5py.File(scan.replace('sequences', project_name), 'w') as f:
             if al_experiment and split == 'train':
@@ -230,8 +230,8 @@ def __initialize_dataset(scans: np.ndarray, clouds: np.ndarray, project_name: st
 
     for cloud in tqdm(clouds, desc=f'Initializing sequence clouds'):
         with h5py.File(cloud, 'r') as f:
-            labels = np.asarray(f['labels'])
-            edge_sources = np.asarray(f['edge_sources'])
+            labels = np.asarray(f['labels']).flatten()
+            edge_sources = np.asarray(f['edge_sources']).flatten()
 
         with h5py.File(cloud.replace('sequences', project_name), 'w') as f:
             if al_experiment and split == 'train':

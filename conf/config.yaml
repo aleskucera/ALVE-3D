@@ -2,9 +2,9 @@ defaults:
   - _self_
 
   # Training and testing settings
-  - ds: kitti-360
+  - ds: KITTI360
   - train: default
-  - model: deeplabv3
+  - model: DeepLabV3
   - active: default
 
   # Common settings

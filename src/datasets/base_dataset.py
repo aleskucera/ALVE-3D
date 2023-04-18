@@ -117,10 +117,6 @@ class Dataset(TorchDataset):
         for path in tqdm(self.clouds, desc='Calculating dataset statistics'):
             labels = self.CI.read_labels(path)
             label_mask = self.CI.read_selected_labels(path)
-
-            voxel_mask = self.cloud_voxel_mask(path, len(labels))
-            print(np.unique(voxel_mask))
-            labels *= voxel_mask
             sel_labels = labels[label_mask]
 
             class_counts, counter = self.__add_counts(labels=labels,
@@ -173,17 +169,18 @@ class Dataset(TorchDataset):
             self.scan_selection_mask[sample_idx] = self.SI.select_voxels(scan_file, voxels)
 
         cloud_idx = self.cloud_index(cloud_path)
-        self.cloud_selection_mask[cloud_idx] = self.CI.select_voxels(cloud_path, voxels)
+        self.CI.select_voxels(cloud_path, voxels)
+        self.cloud_selection_mask[cloud_idx] = True
 
-    def cloud_voxel_mask(self, cloud_path: str, cloud_size: int) -> np.ndarray:
-        voxel_mask = np.zeros(cloud_size, dtype=np.bool)
-        sample_indices = self.scan_id_map[np.where(self.cloud_map == cloud_path)[0]]
-
-        for scan_file in self.scan_files[sample_indices]:
-            voxel_map = self.SI.read_voxel_map(scan_file)
-            voxel_mask[voxel_map] = True
-
-        return voxel_mask
+    # def cloud_voxel_mask(self, cloud_path: str, cloud_size: int) -> np.ndarray:
+    #     voxel_mask = np.zeros(cloud_size, dtype=np.bool)
+    #     sample_indices = self.scan_id_map[np.where(self.cloud_map == cloud_path)[0]]
+    #
+    #     for scan_file in self.scan_files[sample_indices]:
+    #         voxel_map = self.SI.read_voxel_map(scan_file)
+    #         voxel_mask[voxel_map] = True
+    #
+    #     return voxel_mask
 
     def __initialize(self):
         load_args = (self.path, self.project_name, self.sequences, self.split, self.al_experiment, self.resume)

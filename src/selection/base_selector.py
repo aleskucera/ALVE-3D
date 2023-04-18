@@ -35,12 +35,8 @@ class Selector(object):
             elif isinstance(key, str) and (cloud.path == key or key in cloud.path):
                 return cloud
 
-    def get_selection_size(self, dataset: Dataset, percentage: float) -> int:
-        num_voxels = 0
-        for cloud in self.clouds:
-            voxel_mask = dataset.get_voxel_mask(cloud.path, cloud.size)
-            num_voxels += np.sum(voxel_mask)
-        return int(num_voxels * percentage / 100)
+    def get_selection_size(self, percentage: float) -> int:
+        return int(self.num_voxels * percentage / 100)
 
     def load_voxel_selection(self, voxel_selection: dict, dataset: Dataset = None) -> None:
         for cloud_name, label_mask in voxel_selection.items():
@@ -84,13 +80,13 @@ class Selector(object):
 
     @staticmethod
     def _calculate_cloud_values(cloud: Cloud, criterion: str):
-        if criterion == 'average_entropy':
+        if criterion == 'AverageEntropy':
             cloud.calculate_average_entropies()
-        elif criterion == 'viewpoint_entropy':
+        elif criterion == 'ViewpointEntropy':
             cloud.calculate_viewpoint_entropies()
-        elif criterion == 'viewpoint_variance':
+        elif criterion == 'ViewpointVariance':
             cloud.calculate_viewpoint_variances()
-        elif criterion == 'epistemic_uncertainty':
+        elif criterion == 'EpistemicUncertainty':
             cloud.calculate_epistemic_uncertainties()
         else:
             raise ValueError('Criterion not supported')

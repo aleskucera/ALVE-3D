@@ -1,4 +1,5 @@
 from .project import project_points
+from .experiment import Experiment
 from .map import colorize, map_labels, map_colors, colorize_instances
 from .io import set_paths, load_dataset, ScanInterface, CloudInterface
 from .visualize import plot, bar_chart, grouped_bar_chart, plot_confusion_matrix

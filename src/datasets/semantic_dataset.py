@@ -2,7 +2,7 @@ import numpy as np
 from omegaconf import DictConfig
 
 from .base_dataset import Dataset
-from src.utils import project_points, augment_points, map_labels
+from src.utils import project_points, augment_points
 
 
 class SemanticDataset(Dataset):
@@ -37,9 +37,10 @@ class SemanticDataset(Dataset):
                                                flip_prob=0.5,
                                                rotation_prob=0.5,
                                                translation_prob=0.5)
-            labels, remissions = labels[drop_mask], remissions[drop_mask]
-            colors = colors[drop_mask] if colors is not None else None
+            labels = labels[drop_mask]
             voxel_map = voxel_map[drop_mask]
+            remissions = remissions[drop_mask]
+            colors = colors[drop_mask] if colors is not None else None
 
         # Project points to image and map the projection
         proj = project_points(points, self.proj_H, self.proj_W, self.proj_fov_up, self.proj_fov_down)

@@ -51,12 +51,11 @@ def log_confusion_matrix(confusion_matrix: torch.Tensor, labels: list[str],
     plt.close()
 
 
-def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, save_artifact: bool) -> np.ndarray:
+def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, artifact_name: str = None) -> np.ndarray:
     ignore_index = cfg.ds.ignore_index
-    statistics_artifact = cfg.active.dataset_statistics
     label_names = [v for k, v in cfg.ds.labels_train.items() if k != ignore_index]
 
-    class_dist, labeled_class_distribution, class_labeling_progress, labeled_ratio = dataset.get_statistics()
+    class_dist, labeled_class_distribution, class_labeling_progress, labeled_ratio = dataset.statistics
 
     # Log the dataset labeling progress
     wandb.log({f'Dataset Labeling Progress': labeled_ratio}, step=0)
@@ -82,30 +81,30 @@ def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, save_artifact: boo
     wandb.log({f"Class Labeling Progress - "
                f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Labeling Progress")}, step=0)
 
-    if save_artifact:
+    if artifact_name is not None:
         metadata = {'labeled_ratio': labeled_ratio}
         dataset_statistics = {'class_distribution': class_dist,
                               'labeled_class_distribution': labeled_class_dist,
                               'class_labeling_progress': class_labeling_progress,
                               'labeled_ratio': labeled_ratio}
 
-        torch.save(dataset_statistics, f'data/{statistics_artifact.name}.pt')
-        artifact = wandb.Artifact(statistics_artifact.name,
+        torch.save(dataset_statistics, f'data/{artifact_name}.pt')
+        artifact = wandb.Artifact(artifact_name,
                                   type='statistics',
                                   metadata=metadata,
                                   description='Dataset statistics')
-        artifact.add_file(f'data/{statistics_artifact.name}.pt')
+        artifact.add_file(f'data/{artifact_name}.pt')
         wandb.run.log_artifact(artifact)
 
     return labeled_class_distribution
 
 
 def log_most_labeled_sample(dataset: Dataset, laser_scan: LaserScan) -> None:
-    most_labeled_sample, sample_labeled_ratio, label_mask = dataset.get_most_labeled_sample()
+    most_labeled_sample, sample_labeled_ratio, label_mask = dataset.most_labeled_sample
 
     # Open the scan and the label
     laser_scan.open_scan(dataset.scan_files[most_labeled_sample])
-    laser_scan.open_label(dataset.label_files[most_labeled_sample])
+    laser_scan.open_label(dataset.scan_files[most_labeled_sample])
 
     # visualize_cloud(laser_scan.points, laser_scan.color)
     # visualize_cloud(laser_scan.points, laser_scan.sem_label_color)
@@ -117,7 +116,7 @@ def log_most_labeled_sample(dataset: Dataset, laser_scan: LaserScan) -> None:
 
     # Open the label with the label mask
     laser_scan.open_scan(dataset.scan_files[most_labeled_sample])
-    laser_scan.open_label(dataset.label_files[most_labeled_sample], label_mask)
+    laser_scan.open_label(dataset.scan_files[most_labeled_sample], label_mask)
 
     # visualize_cloud(laser_scan.points, laser_scan.sem_label_color)
 

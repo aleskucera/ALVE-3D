@@ -11,7 +11,7 @@ from src.utils import set_paths
 from src.kitti360 import KITTI360Converter
 from src.semantickitti import SemanticKITTIConverter
 from src.learn import train_semantic_model, train_partition_model, \
-    train_semantic_active, train_partition_active, select_voxels, select_first_voxels
+    train_semantic_active, train_partition_active, select_voxels
 
 log = logging.getLogger(__name__)
 
@@ -37,8 +37,8 @@ def main(cfg: DictConfig):
         train_partition_active(cfg, device)
     elif cfg.action == 'select_voxels':
         select_voxels(cfg, device)
-    elif cfg.action == 'select_first_voxels':
-        select_first_voxels(cfg, device)
+    # elif cfg.action == 'select_first_voxels':
+    #     select_first_voxels(cfg, device)
     elif cfg.action == 'convert_dataset':
         if cfg.ds.name == 'KITTI-360':
             converter = KITTI360Converter(cfg)
