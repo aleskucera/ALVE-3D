@@ -7,7 +7,7 @@ from tqdm import tqdm
 from .ply import read_kitti360_ply
 from src.utils import transform_points, downsample_cloud, nearest_neighbors, \
     nearest_neighbors_2, connected_label_components, nn_graph, map_labels
-from src.utils.kitti360 import read_kitti360_scan
+from .utils import read_kitti360_scan
 
 log = logging.getLogger(__name__)
 

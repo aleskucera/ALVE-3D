@@ -18,6 +18,10 @@ class SemanticLoss(nn.Module):
         self.lovasz = LovaszSoftmax(ignore=ignore_index).to(device)
 
     def forward(self, logits, targets):
+        print(torch.unique(targets))
+        print(torch.unique(logits.argmax(dim=1)))
         loss = self.cross_entropy(logits, targets)
+        print('CE loss: ', loss.item())
         loss = loss + self.lovasz(logits, targets)
+        print('Total loss: ', loss.item())
         return loss

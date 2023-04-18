@@ -98,19 +98,3 @@ def get_disjoint_ranges(paths: list[str]) -> list[tuple[int, int]]:
 def names_from_ranges(window_ranges: list[tuple[int, int]]) -> list[str]:
     """ Create list of window names. """
     return [f'{start:06d}_{end:06d}' for start, end in window_ranges]
-
-# def get_list(ranges: list[tuple[int, int]]) -> list[int]:
-#     """ Create list of sorted values without duplicates. """
-#     values = []
-#     for start, end in ranges:
-#         values.extend(range(start, end))
-#     return sorted(set(values))
-
-
-# def split_indices(ranges: list[tuple[int, int]], all_indices: list) -> np.ndarray:
-#     """ Create list of sorted indices without duplicates. """
-#     values = []
-#     for start, end in ranges:
-#         values.extend(range(start, end))
-#     indices = sorted(set(values))
-#     return np.searchsorted(all_indices, indices)

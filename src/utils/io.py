@@ -17,63 +17,156 @@ def set_paths(cfg: DictConfig, output_dir: str) -> DictConfig:
     return cfg
 
 
-def load_scan_file(scan_file: str, project_name: str = None) -> dict:
-    ret = dict()
+class ScanInterface(object):
+    def __init__(self, project_name: str = None, label_map: dict = None):
+        self.label_map = label_map
+        self.project_name = project_name
 
-    with h5py.File(scan_file, 'r') as f:
-        ret['pose'] = np.asarray(f['pose'])
-        ret['points'] = np.asarray(f['points'])
-        # ret['colors'] = np.asarray(f['colors'])
-        ret['remissions'] = np.asarray(f['remissions'])
+    @staticmethod
+    def read_points(path: str):
+        with h5py.File(path, 'r') as f:
+            return np.asarray(f['points']).astype(np.float32)
 
-        ret['labels'] = np.asarray(f['labels']).flatten()
-        ret['voxel_map'] = np.asarray(f['voxel_map']).flatten()
+    def read_labels(self, path: str):
+        with h5py.File(path, 'r') as f:
+            if self.label_map is not None:
+                return map_labels(np.asarray(f['labels']).flatten().astype(np.int64), self.label_map)
+            return np.asarray(f['labels']).flatten().astype(np.int64)
 
-    if project_name is not None:
-        with h5py.File(scan_file.replace('sequences', project_name), 'r') as f:
-            print(f['selected_labels'].shape)
-            ret['selected_labels'] = np.asarray(f['selected_labels']).flatten()
-    return ret
+    @staticmethod
+    def read_remissions(path: str):
+        with h5py.File(path, 'r') as f:
+            return np.asarray(f['remissions']).flatten().astype(np.float32)
+
+    @staticmethod
+    def read_pose(path: str):
+        with h5py.File(path, 'r') as f:
+            return np.asarray(f['pose']).astype(np.float32)
+
+    @staticmethod
+    def read_voxel_map(path: str):
+        with h5py.File(path, 'r') as f:
+            return np.asarray(f['voxel_map']).flatten().astype(np.int64)
+
+    @staticmethod
+    def read_colors(path: str):
+        with h5py.File(path, 'r') as f:
+            if 'colors' in f:
+                return np.asarray(f['colors']).astype(np.float32)
+            return None
+
+    def read_selected_labels(self, path: str):
+        if self.project_name is None:
+            return None
+        with h5py.File(path.replace('sequences', self.project_name), 'r') as f:
+            return np.asarray(f['selected_labels']).flatten().astype(np.int64)
+
+    def read_scan(self, path: str):
+        ret = dict()
+        with h5py.File(path, 'r') as f:
+            ret['pose'] = np.asarray(f['pose']).astype(np.float32)
+            ret['points'] = np.asarray(f['points']).astype(np.float32)
+            ret['remissions'] = np.asarray(f['remissions']).astype(np.float32)
+            ret['voxel_map'] = np.asarray(f['voxel_map']).flatten().astype(np.int64)
+
+            if 'colors' in f:
+                ret['colors'] = np.asarray(f['colors']).astype(np.float32)
+            else:
+                ret['colors'] = None
+
+            if self.label_map is not None:
+                ret['labels'] = map_labels(np.asarray(f['labels']).flatten().astype(np.int64), self.label_map)
+            else:
+                ret['labels'] = np.asarray(f['labels']).flatten().astype(np.int64)
+
+        if self.project_name is not None:
+            with h5py.File(path.replace('sequences', self.project_name), 'r') as f:
+                ret['selected_labels'] = np.asarray(f['selected_labels']).flatten().astype(np.int64)
+        return ret
+
+    def select_voxels(self, path: str, voxels: np.ndarray):
+        voxel_map = self.read_voxel_map(path)
+        with h5py.File(path.replace('sequences', self.project_name), 'r+') as f:
+            f['selected_labels'][np.isin(voxel_map, voxels)] = 1
+            return np.sum(f['selected_labels']) > 0
 
 
-def load_cloud_file(cloud_file: str, project_name: str = None, label_map: dict = None,
-                    graph_data: bool = False) -> dict:
-    ret = dict()
+class CloudInterface(object):
+    def __init__(self, project_name: str = None, label_map: dict = None):
+        self.label_map = label_map
+        self.project_name = project_name
 
-    with h5py.File(cloud_file, 'r') as f:
-        ret['points'] = np.asarray(f['points'])
-        # ret['colors'] = np.asarray(f['colors'])
-        ret['labels'] = np.asarray(f['labels']).flatten().astype(np.int64)
-        ret['objects'] = np.asarray(f['objects']).flatten().astype(np.int64)
+    @staticmethod
+    def read_points(path: str):
+        with h5py.File(path, 'r') as f:
+            return np.asarray(f['points']).astype(np.float32)
 
-        if label_map is not None:
-            ret['labels'] = map_labels(ret['labels'], label_map)
+    @staticmethod
+    def read_colors(path: str):
+        with h5py.File(path, 'r') as f:
+            if 'colors' in f:
+                return np.asarray(f['colors']).astype(np.float32)
+            return None
 
-        if graph_data:
+    @staticmethod
+    def read_objects(path: str):
+        with h5py.File(path, 'r') as f:
+            if 'objects' in f:
+                return np.asarray(f['objects']).astype(np.float32)
+
+    def read_labels(self, path: str):
+        with h5py.File(path, 'r') as f:
+            if self.label_map is not None:
+                return map_labels(np.asarray(f['labels']).flatten().astype(np.int64), self.label_map)
+            return np.asarray(f['labels']).flatten().astype(np.int64)
+
+    def read_selected_labels(self, path: str):
+        if self.project_name is None:
+            return None
+        with h5py.File(path.replace('sequences', self.project_name), 'r') as f:
+            return np.asarray(f['selected_labels']).flatten().astype(np.int64)
+
+    def read_edges(self, path: str):
+        with h5py.File(path, 'r') as f:
+            return np.asarray(f['edge_sources']).astype(np.int64), np.asarray(f['edge_targets']).astype(np.int64)
+
+    def read_cloud(self, path: str):
+        ret = dict()
+        with h5py.File(path, 'r') as f:
+            ret['points'] = np.asarray(f['points'])
+            ret['labels'] = np.asarray(f['labels']).flatten().astype(np.int64)
+            ret['objects'] = np.asarray(f['objects']).flatten().astype(np.int64)
+
+            if 'colors' in f:
+                ret['colors'] = np.asarray(f['colors']).astype(np.float32)
+            else:
+                ret['colors'] = None
+
+            if self.label_map is not None:
+                ret['labels'] = map_labels(np.asarray(f['labels']).flatten().astype(np.int64), self.label_map)
+            else:
+                ret['labels'] = np.asarray(f['labels']).flatten().astype(np.int64)
+
             ret['edge_sources'] = np.asarray(f['edge_sources']).flatten().astype(np.int64)
             ret['edge_targets'] = np.asarray(f['edge_targets']).flatten().astype(np.int64)
             ret['local_neighbors'] = np.asarray(f['local_neighbors']).flatten().astype(np.int64)
 
-    if project_name is not None:
-        with h5py.File(cloud_file.replace('sequences', project_name), 'r') as f:
-            ret['selected_edges'] = np.asarray(f['selected_edges']).flatten().astype(bool)
-            ret['selected_labels'] = np.asarray(f['selected_labels']).flatten().astype(bool)
-            ret['selected_vertices'] = np.asarray(f['selected_vertices']).flatten().astype(bool)
-    return ret
+        if self.project_name is not None:
+            with h5py.File(path.replace('sequences', self.project_name), 'r') as f:
+                ret['selected_edges'] = np.asarray(f['selected_edges']).flatten().astype(bool)
+                ret['selected_labels'] = np.asarray(f['selected_labels']).flatten().astype(bool)
+                ret['selected_vertices'] = np.asarray(f['selected_vertices']).flatten().astype(bool)
+        return ret
 
+    def select_voxels(self, path: str, voxels: np.ndarray):
+        with h5py.File(path.replace('sequences', self.project_name), 'r+') as f:
+            f['selected_labels'][voxels] = 1
 
-def label_voxels_in_cloud(cloud_file: str, project_name: str, voxels: np.ndarray) -> bool:
-    with h5py.File(cloud_file.replace('sequences', project_name), 'r+') as f:
-        f['selected_labels'][voxels] = 1
-        return np.sum(f['selected_labels']) > 0
-
-
-def label_voxels_in_scan(label_file: str, project_name: str, voxels: np.ndarray) -> bool:
-    with h5py.File(label_file, 'r') as f:
-        voxel_map = np.asarray(f['voxel_map'])
-    with h5py.File(label_file.replace('sequences', project_name), 'r+') as f:
-        f['selected_labels'][np.isin(voxel_map, voxels)] = 1
-        return np.sum(f['selected_labels']) > 0
+    def select_graph(self, path: str, edges: np.ndarray, vertices: np.ndarray):
+        with h5py.File(path.replace('sequences', self.project_name), 'r+') as f:
+            f['selected_edges'][edges] = 1
+            f['selected_labels'][vertices] = 1
+            f['selected_vertices'][vertices] = 1
 
 
 def load_dataset(dataset_path: str, project_name: str, sequences: list, split: str,
@@ -126,7 +219,7 @@ def __initialize_dataset(scans: np.ndarray, clouds: np.ndarray, project_name: st
                          split: str, al_experiment: bool) -> None:
     for scan in tqdm(scans, desc=f'Initializing sequence scans'):
         with h5py.File(scan, 'r') as f:
-            labels = np.asarray(f['labels'], dtype=bool)
+            labels = np.asarray(f['labels'])
 
         with h5py.File(scan.replace('sequences', project_name), 'w') as f:
             if al_experiment and split == 'train':

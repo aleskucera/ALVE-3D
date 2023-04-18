@@ -6,8 +6,7 @@ from tqdm import tqdm
 from omegaconf import DictConfig
 from torch.utils.data import Dataset as TorchDataset
 
-from src.utils import load_dataset, load_cloud_file, load_scan_file, \
-    label_voxels_in_scan, label_voxels_in_cloud
+from src.utils import load_dataset, ScanInterface, CloudInterface
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +53,6 @@ class Dataset(TorchDataset):
 
         self.scan_files = None
         self.scan_id_map = None
-        # self.label_files = None
         self.scan_sequence_map = None
         self.scan_selection_mask = None
 
@@ -62,6 +60,9 @@ class Dataset(TorchDataset):
         self.cloud_id_map = None
         self.cloud_sequence_map = None
         self.cloud_selection_mask = None
+
+        self.SI = ScanInterface(self.project_name, self.label_map)
+        self.CI = CloudInterface(self.project_name, self.label_map)
 
         self.__initialize()
         self.__reduce_dataset()
@@ -91,13 +92,6 @@ class Dataset(TorchDataset):
         selected = np.where(self.scan_selection_mask == 1)[0]
         return self.scan_files[selected]
 
-    # @property
-    # def labels(self):
-    #     if self.selection_mode:
-    #         return self.label_files
-    #     selected = np.where(self.scan_selection_mask == 1)[0]
-    #     return self.label_files[selected]
-
     @property
     def num_clouds(self):
         if self.num_scans is None:
@@ -121,8 +115,8 @@ class Dataset(TorchDataset):
         labeled_class_counts = np.zeros(self.num_classes, dtype=np.long)
 
         for path in tqdm(self.clouds, desc='Calculating dataset statistics'):
-            data = load_cloud_file(path, self.project_name, self.label_map, graph_data=False)
-            labels, label_mask = data['labels'], data['selected_labels']
+            labels = self.CI.read_labels(path)
+            label_mask = self.CI.read_selected_labels(path)
 
             labels *= self.cloud_voxel_mask(path, len(labels))
             sel_labels = labels[label_mask]
@@ -147,8 +141,7 @@ class Dataset(TorchDataset):
         sample_label_mask = None
 
         for i, scan_file in enumerate(tqdm(self.scan_files, desc='Finding most labeled sample')):
-            data = load_scan_file(scan_file, self.project_name)
-            label_mask = data['selected_labels']
+            label_mask = self.SI.read_selected_labels(scan_file)
             label_ratio = np.sum(label_mask) / len(label_mask)
 
             if label_ratio > max_label_ratio:
@@ -162,6 +155,8 @@ class Dataset(TorchDataset):
         return np.where(self.cloud_files == cloud)[0][0]
 
     def is_scan_end_of_cloud(self, scan_idx: int) -> bool:
+        if scan_idx == len(self.scan_files) - 1:
+            return True
         cloud = self.cloud_map[scan_idx]
         return self.cloud_map[scan_idx + 1] != cloud
 
@@ -170,22 +165,20 @@ class Dataset(TorchDataset):
 
     def label_voxels(self, voxels: np.ndarray, cloud_path: str) -> None:
         scans = self.scan_files[np.where(self.cloud_map == cloud_path)[0]]
-        indices = self.sample_map[np.where(self.cloud_map == cloud_path)[0]]
+        indices = self.scan_id_map[np.where(self.cloud_map == cloud_path)[0]]
 
         for scan_file, sample_idx in tqdm(zip(scans, indices), total=len(scans), desc='Labeling voxels'):
-            self.scan_selection_mask[sample_idx] = label_voxels_in_scan(scan_file, self.project_name, voxels)
+            self.scan_selection_mask[sample_idx] = self.SI.select_voxels(scan_file, voxels)
 
         cloud_idx = self.cloud_index(cloud_path)
-        self.cloud_selection_mask[cloud_idx] = label_voxels_in_cloud(cloud_path, self.project_name, voxels)
+        self.cloud_selection_mask[cloud_idx] = self.CI.select_voxels(cloud_path, voxels)
 
     def cloud_voxel_mask(self, cloud_path: str, cloud_size: int) -> np.ndarray:
         voxel_mask = np.zeros(cloud_size, dtype=np.bool)
         sample_indices = self.scan_id_map[np.where(self.cloud_map == cloud_path)[0]]
 
         for scan_file in self.scan_files[sample_indices]:
-            data = load_scan_file(scan_file, self.project_name)
-            voxel_map = data['voxel_map'].flatten()
-            voxel_map = voxel_map[(voxel_map != -1)]
+            voxel_map = self.SI.read_voxel_map(scan_file)
             voxel_mask[voxel_map] = True
 
         return voxel_mask

@@ -11,8 +11,9 @@ from tqdm import tqdm
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src.utils import set_paths, visualize_global_cloud, visualize_cloud_values, map_labels, visualize_cloud
-from src.utils import plot, bar_chart, grouped_bar_chart, plot_confusion_matrix, map_colors, load_cloud_file
+from src.utils import set_paths, visualize_global_cloud, visualize_cloud_values, visualize_cloud
+from src.utils import plot, bar_chart, grouped_bar_chart, plot_confusion_matrix, map_colors, ScanInterface, \
+    CloudInterface
 from src.datasets import SemanticDataset, PartitionDataset, get_parser
 from src.kitti360 import KITTI360Converter, create_kitti360_config
 from src.laserscan import LaserScan, ScanVis
@@ -83,8 +84,7 @@ def test_model(cfg: DictConfig) -> None:
     model_name = artifact_path.split('/')[-1].split(':')[0]
     dataset = SemanticDataset(split='val', cfg=cfg.ds, dataset_path=cfg.ds.path,
                               project_name='demo', num_scans=None)
-    # loader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
-
+    
     with wandb.init(project='demo'):
         artifact_dir = wandb.use_artifact(artifact_path).download()
         model = torch.load(os.path.join(artifact_dir, f'{model_name}.pt'), map_location=device)
@@ -141,15 +141,14 @@ def visualize_dataset_clouds(cfg: DictConfig):
     # Create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
                               cfg=cfg.ds, split=split, num_scans=size, sequences=sequences)
+    cloud_interface = CloudInterface(project_name='demo', label_map=cfg.ds.learning_map)
 
-    cloud_file = dataset.clouds[0]
-    cloud = load_cloud_file(cloud_file)
-    points, labels = cloud['points'], cloud['labels']
+    for cloud_file in dataset.clouds:
+        points = cloud_interface.read_points(cloud_file)
+        labels = cloud_interface.read_labels(cloud_file)
 
-    labels = map_labels(labels, cfg.ds.learning_map)
-
-    colors = map_colors(labels, cfg.ds.color_map_train)
-    visualize_cloud(points, colors)
+        colors = map_colors(labels, cfg.ds.color_map_train)
+        visualize_cloud(points, colors)
 
 
 def visualize_sequence(cfg: DictConfig) -> None:

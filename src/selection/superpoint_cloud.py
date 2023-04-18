@@ -2,7 +2,7 @@ import torch
 from .base_cloud import Cloud
 
 from src.ply_c import libply_c
-from src.utils import load_cloud_file
+from src.utils import CloudInterface
 
 
 class SuperpointCloud(Cloud):
@@ -46,10 +46,9 @@ class SuperpointCloud(Cloud):
         self.cloud_ids = torch.full((self.num_superpoints,), self.id, dtype=torch.long)[valid_indices]
 
     def subgraph(self, size: int):
-        cloud_data = load_cloud_file(self.path, self.project_name)
-        points = cloud_data['points']
-        edge_sources = cloud_data['edge_sources']
-        edge_targets = cloud_data['edge_targets']
+        cloud_interface = CloudInterface(self.project_name)
+        points = cloud_interface.read_points(self.path)
+        edge_sources, edge_targets = cloud_interface.read_edges(self.path)
         selected_edg, selected_ver = libply_c.random_subgraph(points.shape[0], edge_sources.astype('uint32'),
                                                               edge_targets.astype('uint32'), size)
 

@@ -3,28 +3,24 @@ import logging
 
 import h5py
 import torch
-import wandb
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from omegaconf import DictConfig
 from mpl_toolkits.axes_grid1 import ImageGrid
 from sklearn.linear_model import RANSACRegressor
 
 from src.ply_c import libply_c
-from .ply import read_kitti360_ply
-from src.utils import project_points, colorize_instances, visualize_cloud, visualize_cloud_values
+from kitti360.ply import read_kitti360_ply
+from src.utils import project_points, visualize_cloud_values
 from src.utils import map_labels, map_colors
 from src.losses.crosspartition import compute_partition, compute_dist
-from src.models.pointnet_sp import LocalCloudEmbedder, STNkD, PointNet
+from src.models.pointnet_sp import LocalCloudEmbedder
 from src.utils import transform_points, downsample_cloud, nearest_neighbors, \
     nearest_neighbors_2, connected_label_components, nn_graph
-from src.utils.kitti360 import get_disjoint_ranges, read_kitti360_poses, read_kitti360_scan, get_window_range, \
+from kitti360.kitti360 import get_disjoint_ranges, read_kitti360_poses, read_kitti360_scan, get_window_range, \
     create_model, read_txt
-
-from src.old.kitti360_dataset import KITTI360Dataset
 
 log = logging.getLogger(__name__)
 

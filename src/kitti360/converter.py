@@ -11,7 +11,7 @@ from .ply import read_kitti360_ply
 from src.utils import project_points
 from src.utils import map_labels, map_colors
 from src.utils import transform_points, nearest_neighbors_2
-from src.utils.kitti360 import get_disjoint_ranges, read_kitti360_poses, \
+from .utils import get_disjoint_ranges, read_kitti360_poses, \
     read_kitti360_scan, get_window_range, read_txt
 
 from .convert import convert_sequence, STATIC_THRESHOLD

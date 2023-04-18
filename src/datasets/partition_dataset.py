@@ -3,7 +3,6 @@ from omegaconf import DictConfig
 from sklearn.linear_model import RANSACRegressor
 
 from .base_dataset import Dataset
-from src.utils import load_cloud_file
 
 
 class PartitionDataset(Dataset):
@@ -22,7 +21,7 @@ class PartitionDataset(Dataset):
                          sequences, al_experiment, selection_mode)
 
     def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray, np.ndarray, int, bool]:
-        cloud_data = load_cloud_file(self.clouds[idx], self.project_name, graph_data=True)
+        cloud_data = self.CI.read_cloud(self.clouds[idx])
         edge_sources, edge_targets = cloud_data['edge_sources'], cloud_data['edge_targets']
         points, colors, objects = cloud_data['points'], cloud_data['colors'], cloud_data['objects']
         edge_transitions, local_neighbors = cloud_data['edge_transitions'], cloud_data['local_neighbors']

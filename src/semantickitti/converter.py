@@ -82,6 +82,7 @@ class SemanticKITTIConverter:
 
                     global_points.append(transform_points(points, self.poses[j]))
                     global_labels.append(semantics)
+                    # Save the voxel map
 
                     # Write the scan to a file
                     with h5py.File(os.path.join(scans_dir, f'{j:06d}.h5'), 'w') as f:
@@ -89,6 +90,7 @@ class SemanticKITTIConverter:
                         f.create_dataset('labels', data=semantics, dtype=np.uint8)
                         f.create_dataset('pose', data=self.poses[j], dtype=np.float32)
                         f.create_dataset('remissions', data=remissions, dtype=np.float32)
+                        # Save the voxel map
 
             # Create global point cloud
             global_points = np.concatenate(global_points)
@@ -96,14 +98,25 @@ class SemanticKITTIConverter:
 
             # Downsample the point cloud
             voxel_points, voxel_labels = downsample_cloud(points=global_points, labels=global_labels, voxel_size=0.2)
+            voxel_mask = np.zeros(len(voxel_points), dtype=np.bool)
 
-            for j in tqdm(range(start, end + 1), desc=f'Creating voxel clouds {start} - {end}'):
+            for j in tqdm(range(start, end + 1), desc=f'Determining voxel map {start} - {end}'):
                 with h5py.File(os.path.join(scans_dir, f'{j:06d}.h5'), 'r+') as f:
                     points = np.asarray(f['points'])
                     transformed_points = transform_points(points, self.poses[j])
                     dists, voxel_indices = nearest_neighbors_2(voxel_points, transformed_points, k_nn=1)
                     f.create_dataset('voxel_map', data=voxel_indices.flatten(), dtype=np.int32)
+                    voxel_mask[voxel_indices] = True
 
+            filter_map = np.cumsum(voxel_mask) - 1
+            for j in tqdm(range(start, end + 1), desc=f'Changing voxel maps {start} - {end}'):
+                with h5py.File(os.path.join(scans_dir, f'{j:06d}.h5'), 'r+') as f:
+                    voxel_map = np.asarray(f['voxel_map'])
+                    f['voxel_map'][:] = filter_map[voxel_map]
+
+            voxel_points = voxel_points[voxel_mask]
+            voxel_labels = voxel_labels[voxel_mask]
+            
             local_neighbors, _ = nearest_neighbors(voxel_points, K_NN_LOCAL)
             edge_sources, edge_targets, distances = nn_graph(voxel_points, K_NN_ADJ)
             objects = connected_label_components(voxel_labels, edge_sources, edge_targets)
