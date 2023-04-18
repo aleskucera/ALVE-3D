@@ -1,5 +1,5 @@
 learning_rate: 0.001    # 1e-3
-batch_size: 32
+batch_size: 16
 dataset_size: null      # null means all
 
 patience: 10

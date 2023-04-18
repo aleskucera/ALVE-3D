@@ -14,7 +14,7 @@
 # Set default values for variables
 epochs="100"
 patience="20"
-batch_size="64"
+batch_size="16"
 model="salsanext"
 dataset="kitti-360"
 
