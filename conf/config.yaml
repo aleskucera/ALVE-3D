@@ -4,7 +4,7 @@ defaults:
   # Training and testing settings
   - ds: kitti-360
   - train: default
-  - model: deeplabv3_resnet101
+  - model: deeplabv3
   - active: default
 
   # Common settings

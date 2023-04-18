@@ -19,12 +19,11 @@ def train_semantic_model(cfg: DictConfig, device: torch.device) -> None:
     :param cfg: Config file
     :param device: Device to use for training
     """
-
+    dataset_name = cfg.ds.name
+    model_name = cfg.model.architecture
     # --------------------------------------------------------------------------------------------------
     # ========================================= Model Training =========================================
     # --------------------------------------------------------------------------------------------------
-    model_name = cfg.model.name
-    dataset_name = cfg.ds.name
     with wandb.init(project=f'Train {model_name} {dataset_name}'):
         train_ds = SemanticDataset(split='train', cfg=cfg.ds, dataset_path=cfg.ds.path,
                                    project_name='train_full', num_scans=cfg.train.dataset_size, al_experiment=False)
