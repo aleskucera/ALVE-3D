@@ -12,11 +12,14 @@ show_help_job() {
   echo "  --ntasks-per-node    Number of CPUs per node (default: 4)"
 }
 
-show_help_conversion () {
-  echo "Usage: convert.batch [options]"
+show_help_train () {
+  echo "Usage: train_semantic.batch [options]"
   echo "Options:"
+  echo "  -b, --batch-size      Batch size (default: 64)"
   echo "  -d, --dataset         Dataset name (default: kitti-360, options: kitti-360, semantic-kitti)"
-  echo "  -s, --sequence        Sequence to convert (default: 3)"
+  echo "  -e, --epochs          Number of epochs (default: 100)"
+  echo "  -m, --model           Model name (default: salsa_next, options: salsa_next, salsa_next_2)"
+  echo "  -p, --patience        Patience (default: 20)"
   echo "  -h, --help            Display this help and exit"
 }
 
@@ -24,14 +27,14 @@ show_help () {
   echo "Usage: help.sh [options]"
   echo "Options:"
   echo "  --job                 Display help for job"
-  echo "  --conversion             Display help for conversion"
+  echo "  --train_semantic      Display help for training semantic model"
   echo "  -h, --help            Display this help and exit"
 }
 
 
 while [ "$#" -gt 0 ]; do
   case $1 in
-    --conversion) show_help_conversion; exit 0 ;;
+    --train_semantic) show_help_train; exit 0 ;;
     --job) show_help_job; exit 0 ;;
     -h|--help) show_help; exit 0 ;;
     *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;

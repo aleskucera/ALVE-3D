@@ -65,7 +65,7 @@ def proj(points: np.ndarray, H: int, W: int, fov_up: float, fov_down: float) -> 
     :return: 2D image
     """
 
-    # Convert euclidean coordinates to spherical coordinates
+    # Convert Euclidean coordinates to spherical coordinates
     r, elev, azim = cart2sph(points)
 
     # Convert FOV to radian

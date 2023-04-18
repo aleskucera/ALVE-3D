@@ -59,7 +59,7 @@ class ScanInterface(object):
         if self.project_name is None:
             return None
         with h5py.File(path.replace('sequences', self.project_name), 'r') as f:
-            return np.asarray(f['selected_labels']).flatten().astype(np.int64)
+            return np.asarray(f['selected_labels']).flatten().astype(bool)
 
     def read_scan(self, path: str):
         ret = dict()
@@ -81,7 +81,7 @@ class ScanInterface(object):
 
         if self.project_name is not None:
             with h5py.File(path.replace('sequences', self.project_name), 'r') as f:
-                ret['selected_labels'] = np.asarray(f['selected_labels']).flatten().astype(np.int64)
+                ret['selected_labels'] = np.asarray(f['selected_labels']).flatten().astype(bool)
         return ret
 
     def select_voxels(self, path: str, voxels: np.ndarray):
@@ -124,9 +124,10 @@ class CloudInterface(object):
         if self.project_name is None:
             return None
         with h5py.File(path.replace('sequences', self.project_name), 'r') as f:
-            return np.asarray(f['selected_labels']).flatten().astype(np.int64)
+            return np.asarray(f['selected_labels']).flatten().astype(bool)
 
-    def read_edges(self, path: str):
+    @staticmethod
+    def read_edges(path: str):
         with h5py.File(path, 'r') as f:
             return np.asarray(f['edge_sources']).astype(np.int64), np.asarray(f['edge_targets']).astype(np.int64)
 

@@ -1,6 +1,6 @@
 learning_rate: 0.01    # 1e-3
 epochs: 50
-batch_size: 1
+batch_size: 2
 dataset_size: 128
 
 patience: 3

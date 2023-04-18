@@ -25,8 +25,6 @@ class SemanticDataset(Dataset):
         scan_data = self.SI.read_scan(self.scans[idx])
         points, colors, remissions = scan_data['points'], scan_data['colors'], scan_data['remissions']
         labels, voxel_map, label_mask = scan_data['labels'], scan_data['voxel_map'], scan_data['selected_labels']
-        print(f'Unique labels: {np.unique(labels)}')
-        print(f'Unique label mask: {np.unique(label_mask)}')
 
         if self.selection_mode:
             voxel_map[labels == self.ignore_index] = -1
@@ -34,7 +32,6 @@ class SemanticDataset(Dataset):
         # Augment data and apply label mask
         elif self.split == 'train':
             labels = labels[label_mask]
-            print(f'Unique labels after mask: {np.unique(labels)}')
             points, drop_mask = augment_points(points,
                                                drop_prob=0.5,
                                                flip_prob=0.5,

@@ -53,17 +53,44 @@
 # print(voxel_points)
 # print(voxel_map)
 
-def create_window_ranges(scans: list, window_size: int = 200):
-    """ Create a list of tuples containing the start and end indices of the windows.
-    Example with window_size = 200 and 1100 scans:
-    [(0, 199), (200, 399), (400, 599), (600, 799), (800, 999), (1000, 1099)]
-    """
-    window_ranges = []
-    for i in range(0, len(scans), window_size):
-        window_ranges.append((i, min(i + window_size - 1, len(scans) - 1)))
-    return window_ranges
+# def create_window_ranges(scans: list, window_size: int = 200):
+#     """ Create a list of tuples containing the start and end indices of the windows.
+#     Example with window_size = 200 and 1100 scans:
+#     [(0, 199), (200, 399), (400, 599), (600, 799), (800, 999), (1000, 1099)]
+#     """
+#     window_ranges = []
+#     for i in range(0, len(scans), window_size):
+#         window_ranges.append((i, min(i + window_size - 1, len(scans) - 1)))
+#     return window_ranges
+#
+#
+# scans = [i for i in range(1100)]
+# window_ranges = create_window_ranges(scans, window_size=200)
+# print(window_ranges)
+# import numpy as np
+#
+# arr = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+# mask = np.array([0, 1, 0, 1, 0, 1, 0, 1, 0, 1], dtype=np.int64)
+# print(arr[mask])
 
+import torch
+import torchvision.models as models
 
-scans = [i for i in range(1100)]
-window_ranges = create_window_ranges(scans, window_size=200)
-print(window_ranges)
+num_inputs = 2
+num_outputs = 10
+
+model = models.segmentation.deeplabv3_resnet101(num_classes=num_outputs)
+model.backbone.conv1 = torch.nn.Conv2d(num_inputs, 64, kernel_size=(7, 7),
+                                       stride=(2, 2), padding=(3, 3), bias=False)
+
+# Define a sample input tensor
+input_tensor = torch.randn((1, num_inputs, 64, 2048))
+
+# Print the input tensor shape
+print("Input tensor shape: ", input_tensor.shape)
+
+# Pass the input tensor through the model
+output = model(input_tensor)
+
+# Print the output tensor shape
+print("Output tensor shape: ", output["out"].shape)
