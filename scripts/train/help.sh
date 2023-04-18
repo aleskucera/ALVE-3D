@@ -18,7 +18,7 @@ show_help_train () {
   echo "  -b, --batch-size      Batch size (default: 64)"
   echo "  -d, --dataset         Dataset name (default: kitti-360, options: kitti-360, semantic-kitti)"
   echo "  -e, --epochs          Number of epochs (default: 100)"
-  echo "  -m, --model           Model name (default: salsa_next, options: salsa_next, salsa_next_2)"
+  echo "  -m, --model           Model name (default: salsanext, options: salsanext, deeplabv3)"
   echo "  -p, --patience        Patience (default: 20)"
   echo "  -h, --help            Display this help and exit"
 }
