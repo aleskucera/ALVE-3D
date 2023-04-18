@@ -66,10 +66,8 @@ class BaseTrainer(object):
 
             # Forward pass
             outputs = self.model(inputs)
-            print(type(outputs))
             if isinstance(outputs, dict) or isinstance(outputs, OrderedDict):
                 outputs = outputs['out']
-                print(type(outputs))
             loss = self.loss_fn(outputs, targets)
 
             # Backward pass
@@ -105,6 +103,8 @@ class BaseTrainer(object):
 
                 # Forward pass
                 outputs = self.model(inputs)
+                if isinstance(outputs, dict) or isinstance(outputs, OrderedDict):
+                    outputs = outputs['out']
                 loss = self.loss_fn(outputs, targets)
 
                 # Update the loss and metrics of the current batch
