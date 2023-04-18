@@ -69,6 +69,7 @@ class BaseTrainer(object):
             print(type(outputs))
             if isinstance(outputs, dict) or isinstance(outputs, OrderedDict):
                 outputs = outputs['out']
+                print(type(outputs))
             loss = self.loss_fn(outputs, targets)
 
             # Backward pass
