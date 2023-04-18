@@ -1,4 +1,5 @@
 import logging
+from collections import OrderedDict
 
 import torch
 import numpy as np
@@ -66,7 +67,7 @@ class BaseTrainer(object):
             # Forward pass
             outputs = self.model(inputs)
             print(type(outputs))
-            if isinstance(outputs, dict):
+            if isinstance(outputs, dict) or isinstance(outputs, OrderedDict):
                 outputs = outputs['out']
             loss = self.loss_fn(outputs, targets)
 
