@@ -4,5 +4,5 @@ defaults:
   - override /model: DeepLabV3
 
 train.patience: 20
-train.batch_size: 32
+train.batch_size: 64
 train.min_epochs: 100
