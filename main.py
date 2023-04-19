@@ -4,10 +4,12 @@ import logging
 
 import torch
 import hydra
+import wandb
+import omegaconf
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src.utils import set_paths
+from src.utils import set_paths, Experiment
 from src.kitti360 import KITTI360Converter
 from src.semantickitti import SemanticKITTIConverter
 from src.learn import train_semantic_model, train_partition_model, \
@@ -27,28 +29,30 @@ def main(cfg: DictConfig):
 
     log.info(f'Starting action: {cfg.action} using device {device}')
 
-    if cfg.action == 'train_semantic':
-        train_semantic_model(cfg, device)
-    elif cfg.action == 'train_partition':
-        train_partition_model(cfg, device)
-    elif cfg.action == 'train_semantic_active':
-        train_semantic_active(cfg, device)
-    elif cfg.action == 'train_partition_active':
-        train_partition_active(cfg, device)
-    elif cfg.action == 'select_voxels':
-        select_voxels(cfg, device)
-    # elif cfg.action == 'select_first_voxels':
-    #     select_first_voxels(cfg, device)
-    elif cfg.action == 'convert_dataset':
-        if cfg.ds.name == 'KITTI-360':
-            converter = KITTI360Converter(cfg)
-        elif cfg.ds.name == 'SemanticKITTI':
-            converter = SemanticKITTIConverter(cfg)
+    experiment = Experiment(cfg)
+    dict_config = omegaconf.OmegaConf.to_container(cfg, resolve=True)
+    with wandb.init(project=experiment.project, group=experiment.group,
+                    name=experiment.name, config=dict_config, job_type=experiment.job_type):
+        if cfg.action == 'train_semantic':
+            train_semantic_model(cfg, experiment, device)
+        elif cfg.action == 'train_partition':
+            train_partition_model(cfg, experiment, device)
+        elif cfg.action == 'train_semantic_active':
+            train_semantic_active(cfg, experiment, device)
+        elif cfg.action == 'train_partition_active':
+            train_partition_active(cfg, experiment, device)
+        elif cfg.action == 'select_voxels':
+            select_voxels(cfg, experiment, device)
+        elif cfg.action == 'convert_dataset':
+            if cfg.ds.name == 'KITTI-360':
+                converter = KITTI360Converter(cfg)
+            elif cfg.ds.name == 'SemanticKITTI':
+                converter = SemanticKITTIConverter(cfg)
+            else:
+                raise NotImplementedError(f'The dataset "{cfg.ds.name}" is not supported')
+            converter.convert()
         else:
-            raise NotImplementedError(f'The dataset "{cfg.ds.name}" is not supported')
-        converter.convert()
-    else:
-        log.error(f'The action "{cfg.action}" is not supported')
+            log.error(f'The action "{cfg.action}" is not supported')
 
     log.info(f'Finished action: {cfg.action}')
 

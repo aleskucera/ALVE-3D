@@ -17,6 +17,7 @@ patience="20"
 batch_size="16"
 model="salsanext"
 dataset="kitti-360"
+learning_rate="0.001"
 
 
 # Parse command line arguments
@@ -24,8 +25,9 @@ while [ "$#" -gt 0 ]; do
   case $1 in
     -b|--batch-size) batch_size="$2"; shift ;;
     -e|--epochs) epochs="$2"; shift ;;
-    -p|--patience) patience="$2"; shift ;;
+    -l|--learning-rate) learning_rate="$2"; shift ;;
     -m|--model) model="$2"; shift ;;
+    -p|--patience) patience="$2"; shift ;;
     -d|--dataset) dataset="$2"; shift ;;
     -h|--help) show_help; exit 0 ;;
     *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;
@@ -40,5 +42,6 @@ singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf960162
             model="$model" \
             train.min_epochs="$epochs" \
             train.patience="$patience" \
-            train.batch_size="$batch_size"
+            train.batch_size="$batch_size" \
+            train.learning_rate="$learning_rate"
 

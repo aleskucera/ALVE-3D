@@ -6,54 +6,36 @@ import wandb
 from omegaconf import DictConfig
 
 from .trainer import SemanticTrainer
-from src.datasets import SemanticDataset, PartitionDataset
+from src.datasets import SemanticDataset
 from src.selection import get_selector
 from src.utils import log_dataset_statistics, Experiment
 
 log = logging.getLogger(__name__)
 
 
-def train_semantic_model(cfg: DictConfig, device: torch.device) -> None:
-    """ Train model with fully labeled dataset.
+def train_semantic_model(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
+    train_ds = SemanticDataset(split='train', cfg=cfg.ds, dataset_path=cfg.ds.path,
+                               project_name=experiment.info, num_scans=cfg.train.dataset_size, al_experiment=False)
+    val_ds = SemanticDataset(split='val', cfg=cfg.ds, dataset_path=cfg.ds.path,
+                             project_name=experiment.info, num_scans=cfg.train.dataset_size, al_experiment=False)
 
-    :param cfg: Config file
-    :param device: Device to use for training
-    """
-    experiment = Experiment(cfg)
+    _, _, class_distribution, label_ratio = train_ds.statistics
+    weights = 1 / (class_distribution + 1e-6)
 
-    # --------------------------------------------------------------------------------------------------
-    # ========================================= Model Training =========================================
-    # --------------------------------------------------------------------------------------------------
-    with wandb.init(project=experiment.project, group=experiment.group, name=experiment.name):
-        train_ds = SemanticDataset(split='train', cfg=cfg.ds, dataset_path=cfg.ds.path,
-                                   project_name=experiment.info, num_scans=cfg.train.dataset_size, al_experiment=False)
-        val_ds = SemanticDataset(split='val', cfg=cfg.ds, dataset_path=cfg.ds.path,
-                                 project_name=experiment.info, num_scans=cfg.train.dataset_size, al_experiment=False)
+    if abs(label_ratio - 1) > 1e-6:
+        log.error(f'Label ratio is not 1: {label_ratio}')
+        raise ValueError
 
-        _, _, class_distribution, label_ratio = train_ds.statistics
-        weights = 1 / (class_distribution + 1e-6)
-
-        if abs(label_ratio - 1) > 1e-6:
-            log.error(f'Label ratio is not 1: {label_ratio}')
-            raise ValueError
-
-        trainer = SemanticTrainer(cfg=cfg, train_ds=train_ds, val_ds=val_ds, device=device, weights=weights,
-                                  model=None, model_name=experiment.model, history_name=experiment.history)
-        trainer.train()
+    trainer = SemanticTrainer(cfg=cfg, train_ds=train_ds, val_ds=val_ds, device=device, weights=weights,
+                              model=None, model_name=experiment.model, history_name=experiment.history)
+    trainer.train()
 
 
-def train_partition_model(cfg: DictConfig, device: torch.device) -> None:
+def train_partition_model(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
     raise NotImplementedError
 
 
-def train_semantic_active(cfg: DictConfig, device: torch.device) -> None:
-    """ Train model with active learning selection.
-
-    :param cfg: Config file
-    :param device: Device to use for training
-    """
-
-    experiment = Experiment(cfg)
+def train_semantic_active(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
     criterion = cfg.active.criterion
     selection_objects = cfg.active.selection_objects
 
@@ -62,47 +44,41 @@ def train_semantic_active(cfg: DictConfig, device: torch.device) -> None:
 
     load_model = cfg.load_model if 'load_model' in cfg else False
 
-    # --------------------------------------------------------------------------------------------------
-    # ========================================= Model Training =========================================
-    # --------------------------------------------------------------------------------------------------
+    # Load Datasets
+    train_ds = SemanticDataset(split='train', cfg=cfg.ds, dataset_path=cfg.ds.path, project_name=experiment.info,
+                               num_scans=cfg.train.dataset_size, al_experiment=True, selection_mode=False)
+    val_ds = SemanticDataset(split='val', cfg=cfg.ds, dataset_path=cfg.ds.path, project_name=experiment.info,
+                             num_scans=cfg.train.dataset_size, al_experiment=True, selection_mode=False)
 
-    with wandb.init(project=experiment.project, group=experiment.group, name=experiment.name):
+    # Load Selector for selecting labeled voxels
+    selector = get_selector(selection_objects=selection_objects, criterion=criterion,
+                            dataset_path=cfg.ds.path, project_name=experiment.info,
+                            cloud_paths=train_ds.clouds, device=device,
+                            batch_size=cfg.active.batch_size)
 
-        # Load Datasets
-        train_ds = SemanticDataset(split='train', cfg=cfg.ds, dataset_path=cfg.ds.path, project_name=experiment.info,
-                                   num_scans=cfg.train.dataset_size, al_experiment=True, selection_mode=False)
-        val_ds = SemanticDataset(split='val', cfg=cfg.ds, dataset_path=cfg.ds.path, project_name=experiment.info,
-                                 num_scans=cfg.train.dataset_size, al_experiment=True, selection_mode=False)
+    # Load selected voxels from W&B
+    artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
+    selected_voxels = torch.load(os.path.join(artifact_dir, f'{experiment.selection}.pt'))
 
-        # Load Selector for selecting labeled voxels
-        selector = get_selector(selection_objects=selection_objects, criterion=criterion,
-                                dataset_path=cfg.ds.path, project_name=experiment.info,
-                                cloud_paths=train_ds.clouds, device=device,
-                                batch_size=cfg.active.batch_size)
+    # Label train dataset
+    selector.load_voxel_selection(selected_voxels, train_ds)
 
-        # Load selected voxels from W&B
-        artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
-        selected_voxels = torch.load(os.path.join(artifact_dir, f'{experiment.selection}.pt'))
+    # Load model from W&B
+    if load_model:
+        artifact_dir = wandb.use_artifact(f'{experiment.model}:{model_version}').download()
+        model = torch.load(os.path.join(artifact_dir, f'{experiment.model}.pt'), map_location=device)
+    else:
+        model = None
 
-        # Label train dataset
-        selector.load_voxel_selection(selected_voxels, train_ds)
+    # Log dataset statistics and calculate the weights for the loss function from them
+    class_distribution = log_dataset_statistics(cfg=cfg, dataset=train_ds, artifact_name=experiment.dataset_stats)
+    weights = 1 / (class_distribution + 1e-6)
 
-        # Load model from W&B
-        if load_model:
-            artifact_dir = wandb.use_artifact(f'{experiment.model}:{model_version}').download()
-            model = torch.load(os.path.join(artifact_dir, f'{experiment.model}.pt'), map_location=device)
-        else:
-            model = None
-
-        # Log dataset statistics and calculate the weights for the loss function from them
-        class_distribution = log_dataset_statistics(cfg=cfg, dataset=train_ds, save_artifact=True)
-        weights = 1 / (class_distribution + 1e-6)
-
-        # Train model
-        trainer = SemanticTrainer(cfg=cfg, train_ds=train_ds, val_ds=val_ds, device=device, weights=weights,
-                                  model=model, model_name=experiment.model, history_name=experiment.history)
-        trainer.train()
+    # Train model
+    trainer = SemanticTrainer(cfg=cfg, train_ds=train_ds, val_ds=val_ds, device=device, weights=weights,
+                              model=model, model_name=experiment.model, history_name=experiment.history)
+    trainer.train()
 
 
-def train_partition_active(cfg: DictConfig, device: torch.device) -> None:
+def train_partition_active(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
     raise NotImplementedError

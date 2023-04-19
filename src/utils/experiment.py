@@ -29,11 +29,24 @@ class Experiment(object):
         elif self.cfg.action == 'train_partition':
             return self.cfg.ds.name
         elif self.cfg.action == 'train_semantic_active':
-            return f'{self.cfg.ds.name} - {self.cfg.model.architecture}'
+            return f'{self.cfg.ds.name}'
         elif self.cfg.action == 'train_partition_active':
-            return f'{self.cfg.ds.name} - {self.cfg.model.architecture}'
+            return f'{self.cfg.ds.name}'
         elif self.cfg.action == 'select_voxels':
-            return f'{self.cfg.ds.name} - {self.cfg.model.architecture}'
+            return f'{self.cfg.ds.name}'
+
+    @property
+    def job_type(self):
+        if self.cfg.action == 'train_semantic':
+            return None
+        elif self.cfg.action == 'train_partition':
+            return None
+        elif self.cfg.action == 'train_semantic_active':
+            return 'Training Semantic Model'
+        elif self.cfg.action == 'train_partition_active':
+            return 'Training Partition Model'
+        elif self.cfg.action == 'select_voxels':
+            return 'Selection'
 
     @property
     def name(self):
@@ -88,6 +101,7 @@ class Experiment(object):
         return f'\n\nExperiment: \n' \
                f'\t - Project: {self.project}\n' \
                f'\t - Group: {self.group}\n' \
+               f'\t - Job Type: {self.job_type}\n' \
                f'\t - Name: {self.name}\n' \
                f'\t - Info: {self.info}\n' \
                f'\t - Model: {self.model}\n' \

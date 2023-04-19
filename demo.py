@@ -6,6 +6,7 @@ import h5py
 import torch
 import wandb
 import hydra
+import omegaconf
 import numpy as np
 from tqdm import tqdm
 from omegaconf import DictConfig
@@ -88,40 +89,42 @@ def test_model(cfg: DictConfig) -> None:
     import time
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    artifact_path = cfg.artifact_path
-    model_name = artifact_path.split('/')[-1].split(':')[0]
-    dataset = SemanticDataset(split='val', cfg=cfg.ds, dataset_path=cfg.ds.path,
-                              project_name='demo', num_scans=None)
+    # artifact_path = cfg.artifact_path
+    # model_name = artifact_path.split('/')[-1].split(':')[0]
+    # dataset = SemanticDataset(split='val', cfg=cfg.ds, dataset_path=cfg.ds.path,
+    #                           project_name='demo', num_scans=None)
+    wandb_cfg = wandb.config = omegaconf.OmegaConf.to_container(cfg, resolve=True)
 
-    with wandb.init(project='demo'):
-        artifact_dir = wandb.use_artifact(artifact_path).download()
-        model = torch.load(os.path.join(artifact_dir, f'{model_name}.pt'), map_location=device)
-        model_state_dict = model['model_state_dict']
-        model = get_model(cfg=cfg, device=device)
-        model.load_state_dict(model_state_dict)
-
-        parser = get_parser('semantic', device)
-
-        model.eval()
-        with torch.no_grad():
-            for i, scan_file in enumerate(dataset.scans):
-                scan, label, _, _, _ = dataset[i]
-                scan = torch.from_numpy(scan).to(device).unsqueeze(0)
-                pred = model(scan)
-                pred = pred.argmax(dim=1)
-                pred = pred.cpu().numpy().squeeze()
-
-                label = map_colors(label, cfg.ds.color_map_train)
-                pred = map_colors(pred, cfg.ds.color_map_train)
-
-                # Plot labels and predictions
-                fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(10, 5))
-                ax[0].imshow(label)
-                ax[0].set_title("Labels")
-                ax[1].imshow(pred)
-                ax[1].set_title("Predictions")
-                plt.show()
-                # time.sleep(1)
+    with wandb.init(project='demo', config=wandb_cfg, job_type='test_model') as run:
+        pass
+        # artifact_dir = wandb.use_artifact(artifact_path).download()
+        # model = torch.load(os.path.join(artifact_dir, f'{model_name}.pt'), map_location=device)
+        # model_state_dict = model['model_state_dict']
+        # model = get_model(cfg=cfg, device=device)
+        # model.load_state_dict(model_state_dict)
+        #
+        # parser = get_parser('semantic', device)
+        #
+        # model.eval()
+        # with torch.no_grad():
+        #     for i, scan_file in enumerate(dataset.scans):
+        #         scan, label, _, _, _ = dataset[i]
+        #         scan = torch.from_numpy(scan).to(device).unsqueeze(0)
+        #         pred = model(scan)
+        #         pred = pred.argmax(dim=1)
+        #         pred = pred.cpu().numpy().squeeze()
+        #
+        #         label = map_colors(label, cfg.ds.color_map_train)
+        #         pred = map_colors(pred, cfg.ds.color_map_train)
+        #
+        #         # Plot labels and predictions
+        #         fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(10, 5))
+        #         ax[0].imshow(label)
+        #         ax[0].set_title("Labels")
+        #         ax[1].imshow(pred)
+        #         ax[1].set_title("Predictions")
+        #         plt.show()
+        #         # time.sleep(1)
 
 
 def visualize_dataset_scans(cfg: DictConfig):
