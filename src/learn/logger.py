@@ -6,7 +6,7 @@ import numpy as np
 from torchmetrics.classification import MulticlassAccuracy, \
     MulticlassJaccardIndex, MulticlassConfusionMatrix
 
-from src.utils.log import log_class_iou, log_class_accuracy, log_confusion_matrix
+from src.utils.log import log_class_iou, log_class_accuracy, log_confusion_matrix, log_gradient_flow
 
 log = logging.getLogger(__name__)
 
@@ -55,6 +55,8 @@ class SemanticLogger(object):
         self.conf_matrix = MulticlassConfusionMatrix(**metric_args, normalize='true').to(device)
 
         self.batch_loss_history = []
+        self.batch_avg_grad_history = []
+        self.batch_max_grad_history = []
 
         self.history = {
 
@@ -74,6 +76,10 @@ class SemanticLogger(object):
 
             # Confusion matrix
             'confusion_matrix': [],
+
+            # Gradients
+            'maximum_gradients': [],
+            'average_gradients': [],
         }
 
     def miou_converged(self, min_epochs: int = 30, patience: int = 10):
@@ -108,12 +114,13 @@ class SemanticLogger(object):
             log.info(f'MIoU not improved: {self.history["miou_val"][-1]}')
             return False
 
-    def update(self, loss: float, outputs: torch.Tensor, targets: torch.Tensor):
+    def update(self, loss: float, outputs: torch.Tensor, targets: torch.Tensor, named_params: dict = None):
         """ Update loss and metrics
 
         :param loss: Loss value
         :param outputs: Model outputs
         :param targets: Targets
+        :param named_params: Named parameters
         """
 
         self.batch_loss_history.append(loss)
@@ -125,6 +132,9 @@ class SemanticLogger(object):
         self.class_iou.update(outputs, targets)
 
         self.conf_matrix.update(outputs, targets)
+
+        if named_params is not None:
+            self.__update_gradients(named_params)
 
     def reset(self):
         self.acc.reset()
@@ -146,6 +156,9 @@ class SemanticLogger(object):
 
         self.history['confusion_matrix'] = []
 
+        self.history['average_gradients'] = []
+        self.history['maximum_gradients'] = []
+
     def log_train(self, epoch: int):
         """Log train metrics to W&B
 
@@ -156,6 +169,12 @@ class SemanticLogger(object):
         acc = self.acc.compute().cpu().item()
         iou = self.iou.compute().cpu().item()
         loss = sum(self.batch_loss_history) / len(self.batch_loss_history)
+
+        # Compute gradients
+        avg_batch_grads = np.array(self.batch_avg_grad_history)
+        max_batch_grads = np.array(self.batch_max_grad_history)
+        avg_grads = np.mean(avg_batch_grads, axis=0)
+        max_grads = np.mean(max_batch_grads, axis=0)
 
         # Log loss
         self.history[f'loss_train'].append(loss)
@@ -168,10 +187,17 @@ class SemanticLogger(object):
         self.history[f'accuracy_train'].append(acc)
         wandb.log({f"Accuracy Train": acc}, step=epoch)
 
+        # Log gradients
+        self.history['average_gradients'].append(avg_grads)
+        self.history['maximum_gradients'].append(max_grads)
+        log_gradient_flow(average_gradients=avg_grads, maximum_gradients=max_grads, step=epoch)
+
         # Reset batch loss and metrics
         self.iou.reset()
         self.acc.reset()
         self.batch_loss_history = []
+        self.batch_avg_grad_history = []
+        self.batch_max_grad_history = []
 
     def log_val(self, epoch: int):
         """Log val metrics to W&B
@@ -217,3 +243,14 @@ class SemanticLogger(object):
         self.class_iou.reset()
         self.conf_matrix.reset()
         self.batch_loss_history = []
+
+    def __update_gradients(self, named_params: dict):
+        avg_grads = []
+        max_grads = []
+        for n, p in named_params:
+            if p.requires_grad and ("bias" not in n):
+                avg_grads.append(p.grad.abs().mean().cpu())
+                max_grads.append(p.grad.abs().max().cpu())
+
+        self.batch_avg_grad_history.append(np.array(avg_grads))
+        self.batch_max_grad_history.append(np.array(max_grads))

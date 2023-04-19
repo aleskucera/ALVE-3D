@@ -95,7 +95,6 @@ def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, artifact_name: str
 
 def log_most_labeled_sample(dataset: Dataset, laser_scan: LaserScan) -> None:
     most_labeled_sample, sample_labeled_ratio, label_mask = dataset.most_labeled_sample
-    print(f"Most labeled sample: {most_labeled_sample} ({sample_labeled_ratio:.2f}%)")
 
     # Open the scan and the label
     laser_scan.open_scan(dataset.scan_files[most_labeled_sample])
@@ -184,3 +183,23 @@ def log_selection_metric_statistics(metric_statistics: dict, metric_statistics_n
                               description='Metric statistics for each epoch.')
     artifact.add_file(f'data/log/{metric_statistics_name}.pt')
     wandb.run.log_artifact(artifact)
+
+
+def log_gradient_flow(average_gradients: np.ndarray, maximum_gradients: np.ndarray, step: int) -> None:
+    fig = plt.figure(figsize=(10, 8))
+    fig.patch.set_facecolor('white')  # Set the figure face color to white
+    ax = fig.add_subplot(111)
+    ax.patch.set_facecolor('white')  # Set the axes face color to white
+
+    plt.bar(np.arange(len(maximum_gradients)), maximum_gradients, alpha=0.7, lw=1)
+    plt.bar(np.arange(len(average_gradients)), average_gradients, alpha=0.7, lw=1)
+    plt.xlim(left=0, right=len(average_gradients))
+    plt.ylim(bottom=0, top=0.02)  # zoom in on the lower gradient regions
+    plt.xlabel("Layers")
+    plt.ylabel("average gradient")
+    plt.title("Gradient flow")
+    leg = plt.legend(['max-gradient', 'mean-gradient'], loc='upper center')
+    leg.get_frame().set_facecolor('white')  # Set the legend face color to white
+
+    wandb.log({f"Gradient Flow": wandb.Image(plt)}, step=step)
+    plt.close()
