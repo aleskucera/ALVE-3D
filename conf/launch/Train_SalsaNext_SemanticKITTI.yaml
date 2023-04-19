@@ -3,6 +3,7 @@ defaults:
   - override /ds: SemanticKITTI
   - override /model: SalsaNext
 
-train.patience: 20
-train.batch_size: 32
-train.min_epochs: 100
+train:
+  batch_size: 32
+  patience: 20
+  min_epochs: 100

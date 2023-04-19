@@ -69,6 +69,8 @@ def show_hydra_config(cfg: DictConfig) -> None:
     for group in cfg.keys():
         print(f'\t{group}')
 
+    print(cfg.train.batch_size)
+
     print('\nPaths dynamically generated to DictConfig object:')
     for name, path in cfg.path.items():
         print(f'\t{name}: {path}')

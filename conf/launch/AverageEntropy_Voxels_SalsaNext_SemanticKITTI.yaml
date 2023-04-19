@@ -3,8 +3,10 @@ defaults:
   - override /ds: SemanticKITTI
   - override /model: SalsaNext
 
-train.batch_size: 32
-active.batch_size: 128
-active.criterion: AverageEntropy
-active.selection_objects: Voxels
-active.select_percentage: 0.1
+train:
+  batch_size: 32
+active:
+  batch_size: 128
+  criterion: AverageEntropy
+  selection_objects: Voxels
+  select_percentage: 0.1
