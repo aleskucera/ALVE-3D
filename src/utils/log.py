@@ -55,48 +55,42 @@ def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, artifact_name: str
     ignore_index = cfg.ds.ignore_index
     label_names = [v for k, v in cfg.ds.labels_train.items() if k != ignore_index]
 
-    class_dist, labeled_class_distribution, class_labeling_progress, labeled_ratio = dataset.statistics
+    stats = dataset.statistics
+    p = stats['labeled_ratio']
 
     # Log the dataset labeling progress
-    wandb.log({f'Dataset Labeling Progress': labeled_ratio}, step=0)
+    wandb.log({f'Dataset Labeling Progress': stats['labeled_ratio']}, step=0)
+    wandb.log({f'Labeled Voxels': stats['labeled_voxels']}, step=0)
 
     # Filter and log the dataset class distribution
-    class_dist = np.delete(class_dist, ignore_index)
+    class_dist = np.delete(stats['class_distribution'], ignore_index)
     data = [[name, value] for name, value in zip(label_names, class_dist)]
     table = wandb.Table(data=data, columns=["Class", "Distribution"])
-    wandb.log({f"Class Distribution - "
-               f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
+    wandb.log({f"Class Distribution - {p:.2f}%": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
 
     # Log the labeled class distribution
-    labeled_class_dist = np.delete(labeled_class_distribution, ignore_index)
+    labeled_class_dist = np.delete(stats['labeled_class_distribution'], ignore_index)
     data = [[name, value] for name, value in zip(label_names, labeled_class_dist)]
     table = wandb.Table(data=data, columns=["Class", "Distribution"])
-    wandb.log({f"Labeled Class Distribution - "
-               f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
+    wandb.log({f"Labeled Class Distribution - {p:.2f}%": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
 
     # Filter and log the class labeling progress
-    class_labeling_progress = np.delete(class_labeling_progress, ignore_index)
+    class_labeling_progress = np.delete(stats['class_labeling_progress'], ignore_index)
     data = [[name, value] for name, value in zip(label_names, class_labeling_progress)]
     table = wandb.Table(data=data, columns=["Class", "Labeling Progress"])
-    wandb.log({f"Class Labeling Progress - "
-               f"{labeled_ratio:.2f}%": wandb.plot.bar(table, "Class", "Labeling Progress")}, step=0)
+    wandb.log({f"Class Labeling Progress - {p:.2f}%": wandb.plot.bar(table, "Class", "Labeling Progress")}, step=0)
 
     if artifact_name is not None:
-        metadata = {'labeled_ratio': labeled_ratio}
-        dataset_statistics = {'class_distribution': class_dist,
-                              'labeled_class_distribution': labeled_class_dist,
-                              'class_labeling_progress': class_labeling_progress,
-                              'labeled_ratio': labeled_ratio}
-
-        torch.save(dataset_statistics, f'data/{artifact_name}.pt')
+        metadata = {'labeled_ratio': stats['labeled_ratio']}
+        torch.save(stats, f'data/log/{artifact_name}.pt')
         artifact = wandb.Artifact(artifact_name,
                                   type='statistics',
                                   metadata=metadata,
                                   description='Dataset statistics')
-        artifact.add_file(f'data/{artifact_name}.pt')
+        artifact.add_file(f'data/log/{artifact_name}.pt')
         wandb.run.log_artifact(artifact)
 
-    return labeled_class_distribution
+    return stats['labeled_class_distribution']
 
 
 def log_most_labeled_sample(dataset: Dataset, laser_scan: LaserScan) -> None:
@@ -106,9 +100,6 @@ def log_most_labeled_sample(dataset: Dataset, laser_scan: LaserScan) -> None:
     laser_scan.open_scan(dataset.scan_files[most_labeled_sample])
     laser_scan.open_label(dataset.scan_files[most_labeled_sample])
 
-    # visualize_cloud(laser_scan.points, laser_scan.color)
-    # visualize_cloud(laser_scan.points, laser_scan.sem_label_color)
-
     # Create the point cloud and the projection with fully labeled points
     cloud = np.concatenate([laser_scan.points, laser_scan.color * 255], axis=1)
     cloud_label_full = np.concatenate([laser_scan.points, laser_scan.sem_label_color * 255], axis=1)
@@ -117,8 +108,6 @@ def log_most_labeled_sample(dataset: Dataset, laser_scan: LaserScan) -> None:
     # Open the label with the label mask
     laser_scan.open_scan(dataset.scan_files[most_labeled_sample])
     laser_scan.open_label(dataset.scan_files[most_labeled_sample], label_mask)
-
-    # visualize_cloud(laser_scan.points, laser_scan.sem_label_color)
 
     # Create the point cloud and the projection with the most labeled points
     cloud_label = np.concatenate([laser_scan.points, laser_scan.sem_label_color * 255], axis=1)
@@ -139,7 +128,7 @@ def log_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer,
                   'model_state_dict': model.state_dict(),
                   'optimizer_state_dict': optimizer.state_dict()}
 
-    torch.save(state_dict, f'data/{model_name}.pt')
+    torch.save(state_dict, f'data/log/{model_name}.pt')
 
     # Create metadata for W&B artifact
     metadata = {'epoch': epoch}
@@ -150,23 +139,23 @@ def log_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer,
     artifact = wandb.Artifact(model_name, type='model', metadata=metadata,
                               description='Model state with optimizer state '
                                           'and metric history for each epoch.')
-    artifact.add_file(f'data/{model_name}.pt')
+    artifact.add_file(f'data/log/{model_name}.pt')
     wandb.run.log_artifact(artifact)
 
 
 def log_history(history: dict, history_name: str) -> None:
-    torch.save(history, f'data/{history_name}.pt')
+    torch.save(history, f'data/log/{history_name}.pt')
     artifact = wandb.Artifact(history_name, type='history',
                               description='Metric history for each epoch.')
-    artifact.add_file(f'data/{history_name}.pt')
+    artifact.add_file(f'data/log/{history_name}.pt')
     wandb.run.log_artifact(artifact)
 
 
 def log_selection(selection: dict, selection_name: str) -> None:
-    torch.save(selection, f'data/{selection_name}.pt')
+    torch.save(selection, f'data/log/{selection_name}.pt')
     artifact = wandb.Artifact(selection_name, type='selection',
                               description='The selected voxels for the first active learning iteration.')
-    artifact.add_file(f'data/{selection_name}.pt')
+    artifact.add_file(f'data/log/{selection_name}.pt')
     wandb.run.log_artifact(artifact)
 
 
@@ -189,8 +178,8 @@ def log_selection_metric_statistics(metric_statistics: dict, metric_statistics_n
 
     wandb.log({f"Selection Metric Statistics": wandb.Image(plt)}, step=0)
 
-    torch.save(metric_statistics, f'data/{metric_statistics_name}.pt')
+    torch.save(metric_statistics, f'data/log/{metric_statistics_name}.pt')
     artifact = wandb.Artifact(metric_statistics_name, type='statistics',
                               description='Metric statistics for each epoch.')
-    artifact.add_file(f'data/{metric_statistics_name}.pt')
+    artifact.add_file(f'data/log/{metric_statistics_name}.pt')
     wandb.run.log_artifact(artifact)

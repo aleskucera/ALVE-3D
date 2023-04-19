@@ -18,7 +18,7 @@ class Dataset(TorchDataset):
                  dataset_path: str,
                  project_name: str,
                  resume: bool = False,
-                 num_scans: int = None,
+                 num_clouds: int = None,
                  sequences: iter = None,
                  al_experiment: bool = False,
                  selection_mode: bool = False):
@@ -30,7 +30,7 @@ class Dataset(TorchDataset):
         self.resume = resume
         self.split = split
         self.path = dataset_path
-        self.num_scans = num_scans
+        self.num_clouds = num_clouds
         self.project_name = project_name
         self.al_experiment = al_experiment
         self.selection_mode = selection_mode
@@ -93,23 +93,22 @@ class Dataset(TorchDataset):
         return self.scan_files[selected]
 
     @property
-    def num_clouds(self):
-        if self.num_scans is None:
-            return None
-
-        sizes = np.zeros_like(self.cloud_files, dtype=np.int32)
-        for i, path in enumerate(self.cloud_files):
-            file_name = os.path.basename(path)
+    def num_scans(self):
+        size = 0
+        for cloud_file in self.clouds[:self.num_clouds]:
+            file_name = os.path.basename(cloud_file)
             bounds = file_name.split('.')[0].split('_')
-            sizes[i] = int(bounds[1]) - int(bounds[0]) + 1
-
-        cum_sizes = np.cumsum(sizes)
-        if np.where(cum_sizes >= self.num_scans)[0].size == 0:
-            return None
-        return np.where(cum_sizes >= self.num_scans)[0][0] + 1
+            size += int(bounds[1]) - int(bounds[0]) + 1
+        return size
 
     @property
-    def statistics(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
+    def statistics(self) -> dict:
+        stats = {'class_distribution': None,
+                 'dataset_labeled_ratio': None,
+                 'class_progress': None,
+                 'labeled_class_distribution': None,
+                 'labeled_voxels': None}
+
         counter, labeled_counter = 0, 0
         class_counts = np.zeros(self.num_classes, dtype=np.long)
         labeled_class_counts = np.zeros(self.num_classes, dtype=np.long)
@@ -126,12 +125,12 @@ class Dataset(TorchDataset):
                                                                       counter=labeled_counter,
                                                                       class_counts=labeled_class_counts)
 
-        class_distribution = class_counts / (counter + 1e-6)
-        dataset_labeled_ratio = labeled_counter / (counter + 1e-6)
-        class_progress = labeled_class_counts / (class_counts + 1e-6)
-        labeled_class_distribution = labeled_class_counts / (labeled_counter + 1e-6)
-
-        return class_distribution, labeled_class_distribution, class_progress, dataset_labeled_ratio
+        stats['labeled_voxels'] = labeled_counter
+        stats['labeled_ratio'] = labeled_counter / (counter + 1e-6)
+        stats['class_distribution'] = class_counts / (counter + 1e-6)
+        stats['class_progress'] = labeled_class_counts / (class_counts + 1e-6)
+        stats['labeled_class_distribution'] = labeled_class_counts / (labeled_counter + 1e-6)
+        return stats
 
     @property
     def most_labeled_sample(self) -> tuple[int, float, np.ndarray]:
@@ -171,16 +170,6 @@ class Dataset(TorchDataset):
         cloud_idx = self.cloud_index(cloud_path)
         self.CI.select_voxels(cloud_path, voxels)
         self.cloud_selection_mask[cloud_idx] = True
-
-    # def cloud_voxel_mask(self, cloud_path: str, cloud_size: int) -> np.ndarray:
-    #     voxel_mask = np.zeros(cloud_size, dtype=np.bool)
-    #     sample_indices = self.scan_id_map[np.where(self.cloud_map == cloud_path)[0]]
-    #
-    #     for scan_file in self.scan_files[sample_indices]:
-    #         voxel_map = self.SI.read_voxel_map(scan_file)
-    #         voxel_mask[voxel_map] = True
-    #
-    #     return voxel_mask
 
     def __initialize(self):
         load_args = (self.path, self.project_name, self.sequences, self.split, self.al_experiment, self.resume)

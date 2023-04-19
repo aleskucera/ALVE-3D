@@ -12,13 +12,13 @@ class SemanticDataset(Dataset):
                  dataset_path: str,
                  project_name: str,
                  resume: bool = False,
-                 num_scans: int = None,
+                 num_clouds: int = None,
                  sequences: iter = None,
                  al_experiment: bool = False,
                  selection_mode: bool = False):
 
         super().__init__(split, cfg, dataset_path,
-                         project_name, resume, num_scans,
+                         project_name, resume, num_clouds,
                          sequences, al_experiment, selection_mode)
 
     def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray, np.ndarray, int, bool]:

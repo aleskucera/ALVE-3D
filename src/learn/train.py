@@ -15,15 +15,15 @@ log = logging.getLogger(__name__)
 
 def train_semantic_model(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
     train_ds = SemanticDataset(split='train', cfg=cfg.ds, dataset_path=cfg.ds.path,
-                               project_name=experiment.info, num_scans=cfg.train.dataset_size, al_experiment=False)
+                               project_name=experiment.info, num_clouds=cfg.train.dataset_size, al_experiment=False)
     val_ds = SemanticDataset(split='val', cfg=cfg.ds, dataset_path=cfg.ds.path,
-                             project_name=experiment.info, num_scans=cfg.train.dataset_size, al_experiment=False)
+                             project_name=experiment.info, num_clouds=cfg.train.dataset_size, al_experiment=False)
 
-    _, _, class_distribution, label_ratio = train_ds.statistics
-    weights = 1 / (class_distribution + 1e-6)
+    stats = train_ds.statistics
+    weights = 1 / (stats['class_distribution'] + 1e-6)
 
-    if abs(label_ratio - 1) > 1e-6:
-        log.error(f'Label ratio is not 1: {label_ratio}')
+    if abs(stats['label_ratio'] - 1) > 1e-6:
+        log.error(f'Label ratio is not 1: {stats["label_ratio"]}')
         raise ValueError
 
     trainer = SemanticTrainer(cfg=cfg, train_ds=train_ds, val_ds=val_ds, device=device, weights=weights,
@@ -46,9 +46,9 @@ def train_semantic_active(cfg: DictConfig, experiment: Experiment, device: torch
 
     # Load Datasets
     train_ds = SemanticDataset(split='train', cfg=cfg.ds, dataset_path=cfg.ds.path, project_name=experiment.info,
-                               num_scans=cfg.train.dataset_size, al_experiment=True, selection_mode=False)
+                               num_clouds=cfg.train.dataset_size, al_experiment=True, selection_mode=False)
     val_ds = SemanticDataset(split='val', cfg=cfg.ds, dataset_path=cfg.ds.path, project_name=experiment.info,
-                             num_scans=cfg.train.dataset_size, al_experiment=True, selection_mode=False)
+                             num_clouds=cfg.train.dataset_size, al_experiment=True, selection_mode=False)
 
     # Load Selector for selecting labeled voxels
     selector = get_selector(selection_objects=selection_objects, criterion=criterion,

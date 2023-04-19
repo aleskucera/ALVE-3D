@@ -33,9 +33,9 @@ def main(cfg: DictConfig):
 
     log.info(f'Starting demo: {cfg.action}')
 
-    if cfg.action == 'config':
+    if cfg.action == 'config_object':
         show_hydra_config(cfg)
-    elif cfg.action == 'experiment':
+    elif cfg.action == 'experiment_object':
         show_experiment(cfg)
     elif cfg.action == 'test_model':
         test_model(cfg)
@@ -43,8 +43,6 @@ def main(cfg: DictConfig):
         visualize_dataset_scans(cfg)
     elif cfg.action == 'visualize_dataset_clouds':
         visualize_dataset_clouds(cfg)
-    elif cfg.action == 'visualize_sequence':
-        visualize_sequence(cfg)
     elif cfg.action == 'visualize_superpoints':
         visualize_superpoints(cfg)
     elif cfg.action == 'visualize_experiment':
@@ -134,12 +132,12 @@ def visualize_dataset_scans(cfg: DictConfig):
 
     # Create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
-                              cfg=cfg.ds, split=split, num_scans=size, sequences=sequences)
+                              cfg=cfg.ds, split=split, num_clouds=size, sequences=sequences)
 
     # Create scan object
     scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True,
-                     H=cfg.ds.projection.H,
-                     W=cfg.ds.projection.W, fov_up=cfg.ds.projection.fov_up, fov_down=cfg.ds.projection.fov_down)
+                     H=cfg.ds.projection.H, W=cfg.ds.projection.W, fov_up=cfg.ds.projection.fov_up,
+                     fov_down=cfg.ds.projection.fov_down)
 
     # Visualizer
     vis = ScanVis(scan=scan, scans=dataset.scan_files, labels=dataset.scan_files, raw_cloud=True, instances=False)
@@ -153,7 +151,7 @@ def visualize_dataset_clouds(cfg: DictConfig):
 
     # Create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
-                              cfg=cfg.ds, split=split, num_scans=size, sequences=sequences)
+                              cfg=cfg.ds, split=split, num_clouds=size, sequences=sequences)
     cloud_interface = CloudInterface(project_name='demo', label_map=cfg.ds.learning_map)
 
     for cloud_file in dataset.clouds:
@@ -162,45 +160,6 @@ def visualize_dataset_clouds(cfg: DictConfig):
 
         colors = map_colors(labels, cfg.ds.color_map_train)
         visualize_cloud(points, colors)
-
-
-def visualize_sequence(cfg: DictConfig) -> None:
-    """ Show how to use SemanticDataset.
-    :param cfg: Configuration object.
-    """
-
-    size = cfg.size if 'size' in cfg else None
-    sequence = cfg.sequence if 'sequence' in cfg else 3
-
-    # Create dataset
-    train_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
-                               cfg=cfg.ds, split='train', num_scans=size, sequences=[sequence])
-    val_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
-                             cfg=cfg.ds, split='val', num_scans=size, sequences=[sequence])
-
-    # Create scan object
-    scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
-
-    # Load the sequence
-    points, colors, poses = [], [], []
-    for i in tqdm(range(0, len(train_ds), 10), desc='Loading train sequence'):
-        scan.open_scan(train_ds.scan_files[i])
-        scan.open_label(train_ds.label_files[i])
-
-        points.append(scan.points)
-        colors.append(scan.sem_label_color)
-        poses.append(scan.pose)
-
-    for i in tqdm(range(0, len(val_ds), 10), desc='Loading val sequence'):
-        scan.open_scan(val_ds.scan_files[i])
-        scan.open_label(val_ds.label_files[i])
-
-        points.append(scan.points)
-        colors.append(scan.sem_label_color)
-        poses.append(scan.pose)
-
-    with wandb.init(project='Sequence Cloud Visualization', group=cfg.ds.name, name=f'Sequence {sequence}'):
-        visualize_global_cloud(points, colors, poses, voxel_size=2, log=True)
 
 
 def visualize_superpoints(cfg: DictConfig) -> None:

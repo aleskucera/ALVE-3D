@@ -22,7 +22,7 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
     selection_version = cfg.active.selection_version
 
     dataset = SemanticDataset(split='train', cfg=cfg.ds, dataset_path=cfg.ds.path, project_name=experiment.info,
-                              num_scans=cfg.train.dataset_size, al_experiment=True, selection_mode=True)
+                              num_clouds=cfg.train.dataset_size, al_experiment=True, selection_mode=True)
 
     if expected_percentage_labeled > 0:
         selector = get_selector(selection_objects=selection_objects, criterion=criterion,
@@ -66,42 +66,3 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
                      color_map=cfg.ds.color_map_train,
                      colorize=True)
     log_most_labeled_sample(dataset=dataset, laser_scan=scan)
-
-# def select_first_voxels(cfg: DictConfig, device: torch.device) -> None:
-#     """ Select the first voxels for active learning.
-#
-#     :param cfg: Config file
-#     :param device: Device to use for training
-#     """
-#
-#     # ================== Project Artifacts ==================
-#     selection_artifact = cfg.active.selection
-#
-#     # ================== Project ==================
-#     criterion = cfg.active.criterion
-#     selection_objects = cfg.active.selection_objects
-#     project_name = f'{criterion}_{selection_objects}'
-#     select_percentage = cfg.active.select_percentage
-#     percentage = f'{cfg.active.expected_percentage_labeled + cfg.active.select_percentage}%'
-#
-#     with wandb.init(project=f'AL - {project_name}', group='selection', name=f'First Selection - {percentage}'):
-#         dataset = SemanticDataset(split='train', cfg=cfg.ds, dataset_path=cfg.ds.path, project_name=project_name,
-#                                   num_scans=cfg.train.dataset_size, al_experiment=True, selection_mode=False)
-#         selector = get_selector(selection_objects=selection_objects, criterion='random',
-#                                 dataset_path=cfg.ds.path, project_name=project_name,
-#                                 cloud_paths=dataset.clouds, device=device,
-#                                 batch_size=cfg.active.batch_size)
-#
-#         selection, _ = selector.select(dataset=dataset, percentage=select_percentage)
-#
-#         # Save the selection to W&B
-#         log_selection(selection=selection, selection_name=selection_artifact.name)
-#
-#         # Log the results of the first selection
-#         selector.load_voxel_selection(voxel_selection=selection, dataset=dataset)
-#         log_dataset_statistics(cfg=cfg, dataset=dataset, save_artifact=False)
-#
-#         scan = LaserScan(label_map=cfg.ds.learning_map,
-#                          color_map=cfg.ds.color_map_train,
-#                          colorize=True)
-#         log_most_labeled_sample(dataset=dataset, laser_scan=scan)
