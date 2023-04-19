@@ -1,0 +1,6 @@
+# @package _global_
+defaults:
+  - override /ds: KITTI360
+  - override /model: SalsaNext
+
+train.batch_size: 32

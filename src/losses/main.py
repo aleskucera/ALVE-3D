@@ -19,5 +19,5 @@ class SemanticLoss(nn.Module):
 
     def forward(self, logits, targets):
         loss = self.cross_entropy(logits, targets)
-        loss = loss + self.lovasz(logits, targets)
+        loss = loss + 2 * self.lovasz(logits, targets)
         return loss
