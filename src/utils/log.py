@@ -75,7 +75,7 @@ def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, artifact_name: str
     wandb.log({f"Labeled Class Distribution - {p:.2f}%": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
 
     # Filter and log the class labeling progress
-    class_labeling_progress = np.delete(stats['class_labeling_progress'], ignore_index)
+    class_labeling_progress = np.delete(stats['class_progress'], ignore_index)
     data = [[name, value] for name, value in zip(label_names, class_labeling_progress)]
     table = wandb.Table(data=data, columns=["Class", "Labeling Progress"])
     wandb.log({f"Class Labeling Progress - {p:.2f}%": wandb.plot.bar(table, "Class", "Labeling Progress")}, step=0)
