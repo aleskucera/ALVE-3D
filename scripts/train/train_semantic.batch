@@ -12,23 +12,12 @@
 
 
 # Set default values for variables
-epochs="100"
-patience="20"
-batch_size="16"
-model="salsanext"
-dataset="kitti-360"
-learning_rate="0.001"
-
+launch="default"
 
 # Parse command line arguments
 while [ "$#" -gt 0 ]; do
   case $1 in
-    -b|--batch-size) batch_size="$2"; shift ;;
-    -e|--epochs) epochs="$2"; shift ;;
-    -l|--learning-rate) learning_rate="$2"; shift ;;
-    -m|--model) model="$2"; shift ;;
-    -p|--patience) patience="$2"; shift ;;
-    -d|--dataset) dataset="$2"; shift ;;
+    -l|--launch) launch="$2"; shift ;;
     -h|--help) show_help; exit 0 ;;
     *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;
   esac
@@ -38,10 +27,5 @@ done
 
 singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf96016298e59b1e030ae \
             singularity/alve-3d.sif python main.py action=train_semantic \
-            ds="$dataset" \
-            model="$model" \
-            train.min_epochs="$epochs" \
-            train.patience="$patience" \
-            train.batch_size="$batch_size" \
-            train.learning_rate="$learning_rate"
+            launch="$launch"
 

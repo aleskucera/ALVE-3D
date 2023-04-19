@@ -31,7 +31,7 @@ class SemanticDataset(Dataset):
 
         # Augment data and apply label mask
         elif self.split == 'train':
-            labels = labels[label_mask]
+            labels *= label_mask
             points, drop_mask = augment_points(points,
                                                drop_prob=0.5,
                                                flip_prob=0.5,

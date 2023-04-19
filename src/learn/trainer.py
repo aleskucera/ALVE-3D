@@ -30,6 +30,11 @@ class BaseTrainer(object):
         self.num_workers = torch.cuda.device_count() * 4 if device.type == 'cuda' else 4
 
         self.model = get_model(cfg, device)
+
+        # Print the number of parameters in the model
+        num_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        log.info(f'The model has {num_params} trainable parameters.')
+
         self.loss_fn = get_loss(cfg.model.type, torch.from_numpy(weights).type(torch.float32), device)
         self.parser = get_parser(cfg.model.type, device)
         self.logger = get_logger(cfg.model.type, cfg.ds.num_classes, cfg.ds.labels_train, device, cfg.ds.ignore_index)

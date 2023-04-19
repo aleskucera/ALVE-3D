@@ -94,7 +94,7 @@ class Dataset(TorchDataset):
     @property
     def num_scans(self):
         size = 0
-        for cloud_file in self.clouds[:self.num_clouds]:
+        for cloud_file in self.cloud_files[:self.num_clouds]:
             file_name = os.path.basename(cloud_file)
             bounds = file_name.split('.')[0].split('_')
             size += int(bounds[1]) - int(bounds[0]) + 1
@@ -103,7 +103,7 @@ class Dataset(TorchDataset):
     @property
     def statistics(self) -> dict:
         stats = {'class_distribution': None,
-                 'dataset_labeled_ratio': None,
+                 'labeled_ratio': None,
                  'class_progress': None,
                  'labeled_class_distribution': None,
                  'labeled_voxels': None}

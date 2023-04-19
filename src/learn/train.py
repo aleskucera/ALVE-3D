@@ -22,8 +22,8 @@ def train_semantic_model(cfg: DictConfig, experiment: Experiment, device: torch.
     stats = train_ds.statistics
     weights = 1 / (stats['class_distribution'] + 1e-6)
 
-    if abs(stats['label_ratio'] - 1) > 1e-6:
-        log.error(f'Label ratio is not 1: {stats["label_ratio"]}')
+    if abs(stats['labeled_ratio'] - 1) > 1e-6:
+        log.error(f'Label ratio is not 1: {stats["labeled_ratio"]}')
         raise ValueError
 
     trainer = SemanticTrainer(cfg=cfg, train_ds=train_ds, val_ds=val_ds, device=device, weights=weights,
@@ -53,7 +53,7 @@ def train_semantic_active(cfg: DictConfig, experiment: Experiment, device: torch
     # Load Selector for selecting labeled voxels
     selector = get_selector(selection_objects=selection_objects, criterion=criterion,
                             dataset_path=cfg.ds.path, project_name=experiment.info,
-                            cloud_paths=train_ds.clouds, device=device,
+                            cloud_paths=train_ds.cloud_files, device=device,
                             batch_size=cfg.active.batch_size)
 
     # Load selected voxels from W&B

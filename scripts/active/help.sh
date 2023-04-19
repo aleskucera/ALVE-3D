@@ -15,13 +15,9 @@ show_help_job() {
 show_help_selection () {
   echo "Usage: select.batch [options]"
   echo "Options:"
-  echo "  --first-selection     Select first voxels"
-  echo "  -b, --batch-size     Batch size (default: 64)"
-  echo "  -c, --criterion       Active learning criterion (default: random)"
   echo "  -e, --expected        Expected percentage of labeled data (default: 0)"
-  echo "  -o, --objects         Active learning objects (default: voxels)"
-  echo "  -p, --percentage      Percentage of dataset to select (default: 0.5)"
-  echo "  -s, --size            Dataset size (default: null)"
+  echo "  -l, --launch          Launch script name (default: default)"
+  echo "  -s, --size            Dataset size - in number of clouds (default: null)"
   echo "  -h, --help            Display this help and exit"
 }
 
@@ -29,29 +25,27 @@ show_help_train () {
   echo "Usage: train.batch [options]"
   echo "Options:"
   echo "  --from-scratch        Train from scratch, do not load model"
-  echo "  -c, --criterion       Active learning criterion (default: random)"
   echo "  -e, --expected        Expected percentage of labeled data (default: 0)"
-  echo "  -m, --model           Model type (default: semantic)"
-  echo "  -o, --objects         Active learning objects (default: voxels)"
-  echo "  -s, --size            Dataset size (default: null)"
+  echo "  -l, --launch          Launch script name (default: default)"
+  echo "  -s, --size            Dataset size - in number of clouds (default: null)"
   echo "  -h, --help            Display this help and exit"
 }
 
 show_help () {
   echo "Usage: help.sh [options]"
   echo "Options:"
-  echo "  --job                 Display help for job"
-  echo "  --selection           Display help for selection"
-  echo "  --train               Display help for training"
+  echo "  -j, --job                 Display help for job"
+  echo "  -s, --selection           Display help for selection"
+  echo "  -t, --train               Display help for training"
   echo "  -h, --help            Display this help and exit"
 }
 
 
 while [ "$#" -gt 0 ]; do
   case $1 in
-    --selection) show_help_selection; exit 0 ;;
-    --train) show_help_train; exit 0 ;;
-    --job) show_help_job; exit 0 ;;
+    -s|--selection) show_help_selection; exit 0 ;;
+    -t|--train) show_help_train; exit 0 ;;
+    -j|--job) show_help_job; exit 0 ;;
     -h|--help) show_help; exit 0 ;;
     *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;
   esac
