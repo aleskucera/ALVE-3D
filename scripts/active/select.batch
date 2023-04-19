@@ -15,13 +15,11 @@ objects="voxels"
 percentage="0.5"
 criterion="random"
 dataset_size="null"
-action="select_voxels"
 expected_percentage="0"
 
 # Parse command line arguments
 while [ "$#" -gt 0 ]; do
   case $1 in
-    --first-selection) action="select_first_voxels" ;;
     -b|--batch-size) batch_size="$2"; shift ;;
     -c|--criterion) criterion="$2"; shift ;;
     -e|--expected) expected_percentage="$2"; shift ;;
@@ -36,7 +34,7 @@ done
 
 singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf96016298e59b1e030ae \
                 singularity/alve-3d.sif python main.py \
-                action="$action" \
+                action=select_voxels \
                 active.criterion="$criterion" \
                 active.batch_size="$batch_size" \
                 train.dataset_size="$dataset_size" \
