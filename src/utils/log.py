@@ -95,6 +95,7 @@ def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, artifact_name: str
 
 def log_most_labeled_sample(dataset: Dataset, laser_scan: LaserScan) -> None:
     most_labeled_sample, sample_labeled_ratio, label_mask = dataset.most_labeled_sample
+    print(f"Most labeled sample: {most_labeled_sample} ({sample_labeled_ratio:.2f}%)")
 
     # Open the scan and the label
     laser_scan.open_scan(dataset.scan_files[most_labeled_sample])

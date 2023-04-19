@@ -50,7 +50,6 @@ class Dataset(TorchDataset):
         self.proj_fov_down = cfg.projection.fov_down
 
         self.cloud_map = None
-
         self.scan_files = None
         self.scan_id_map = None
         self.scan_sequence_map = None
