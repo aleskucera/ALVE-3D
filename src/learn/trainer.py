@@ -30,7 +30,7 @@ class BaseTrainer(object):
         self.num_workers = torch.cuda.device_count() * 4 if device.type == 'cuda' else 4
 
         self.model = get_model(cfg, device)
-        self.loss_fn = get_loss(cfg.model.type, torch.from_numpy(weights).type(torch.float32), device)
+        self.loss_fn = get_loss(cfg.train.loss, torch.from_numpy(weights).type(torch.float32), device)
         self.parser = get_parser(cfg.model.type, device)
         self.logger = get_logger(cfg.model.type, cfg.ds.num_classes, cfg.ds.labels_train, device, cfg.ds.ignore_index)
         self.optimizer = optim.Adam(self.model.parameters(), lr=cfg.train.learning_rate)
