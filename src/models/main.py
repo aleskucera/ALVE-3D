@@ -1,6 +1,7 @@
 import torch
 from omegaconf import DictConfig
 import torchvision.models.segmentation as tms
+from torchvision.models.segmentation import DeepLabV3_ResNet50_Weights
 
 from .pointnet import PointNet
 from .salsanext import SalsaNext
@@ -14,7 +15,8 @@ def get_model(cfg: DictConfig, device: torch.device):
     if cfg.model.architecture == 'SalsaNext':
         model = SalsaNext(num_inputs, num_outputs)
     elif cfg.model.architecture == 'DeepLabV3':
-        model = tms.deeplabv3_resnet101(num_classes=num_outputs)
+        weights = DeepLabV3_ResNet50_Weights.DEFAULT
+        model = tms.deeplabv3_resnet50(num_classes=num_outputs, weights=weights)
         model.backbone.conv1 = torch.nn.Conv2d(num_inputs, 64, kernel_size=(7, 7),
                                                stride=(2, 2), padding=(3, 3), bias=False)
     elif cfg.model.architecture == 'PointNet':
