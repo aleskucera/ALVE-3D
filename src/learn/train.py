@@ -63,8 +63,6 @@ def train_semantic_active(cfg: DictConfig, experiment: Experiment, device: torch
     # Label train dataset
     selector.load_voxel_selection(selected_voxels, train_ds)
 
-    print(train_ds)
-
     # Load model from W&B
     if load_model:
         artifact_dir = wandb.use_artifact(f'{experiment.model}:{model_version}').download()
