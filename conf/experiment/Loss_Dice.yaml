@@ -5,6 +5,6 @@ defaults:
 
 train:
   patience: 20
-  batch_size: 16
+  batch_size: 32
   min_epochs: 100
   loss: DiceLoss

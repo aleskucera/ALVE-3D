@@ -12,7 +12,7 @@ class Experiment(object):
     @property
     def project(self):
         if self.cfg.action == 'train_semantic':
-            return 'Train Semantic Model'
+            return 'Semantic Segmentation Losses Comparison'
         elif self.cfg.action == 'train_partition':
             return 'Train Partition Model'
         elif self.cfg.action == 'train_semantic_active':
@@ -51,7 +51,7 @@ class Experiment(object):
     @property
     def name(self):
         if self.cfg.action == 'train_semantic':
-            return self.cfg.model.architecture
+            return f'{self.cfg.model.architecture}_{self.cfg.train.loss}'
         elif self.cfg.action == 'train_partition':
             return self.cfg.model.architecture
         elif self.cfg.action == 'train_semantic_active':
