@@ -180,7 +180,7 @@ class Dataset(TorchDataset):
         self.scan_id_map = np.arange(len(self.scan_files), dtype=np.int32)
         self.cloud_id_map = np.arange(len(self.cloud_files), dtype=np.int32)
 
-        if self.al_experiment:
+        if self.al_experiment and self.split == 'train':
             self.scan_selection_mask = np.zeros_like(self.scan_files, dtype=bool)
             self.cloud_selection_mask = np.zeros_like(self.cloud_files, dtype=bool)
         else:
