@@ -80,7 +80,7 @@ class SemanticDataset(Dataset):
 
     def __str__(self):
         ret = f'\n\n{self.__class__.__name__} ({self.split}):' \
-              f'\n\t- Dataset size: {self.__len__()} / {self.scan_files}' \
+              f'\n\t- Dataset size: {self.__len__()} / {len(self.scan_files)}' \
               f'\n\t- Project name: {self.project_name}'
         if self.al_experiment:
             action = 'Selection' if self.selection_mode else 'Training'
