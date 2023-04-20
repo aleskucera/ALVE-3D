@@ -154,7 +154,7 @@ def visualize_dataset_clouds(cfg: DictConfig):
     # Create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
                               cfg=cfg.ds, split=split, num_clouds=size, sequences=sequences)
-    cloud_interface = CloudInterface(project_name='demo', label_map=cfg.ds.learning_map)
+    cloud_interface = CloudInterface()
 
     for cloud_file in dataset.clouds:
         points = cloud_interface.read_points(cloud_file)

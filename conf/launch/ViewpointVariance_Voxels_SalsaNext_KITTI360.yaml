@@ -3,8 +3,10 @@ defaults:
   - override /ds: KITTI360
   - override /model: SalsaNext
 
-train.batch_size: 32
-active.batch_size: 128
-active.criterion: ViewpointVariance
-active.selection_objects: Voxels
-active.select_percentage: 0.1
+train:
+  batch_size: 32
+active:
+  batch_size: 128
+  criterion: ViewpointVariance
+  selection_objects: Voxels
+  select_percentage: 0.1
