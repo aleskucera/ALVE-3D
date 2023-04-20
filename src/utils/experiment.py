@@ -64,7 +64,7 @@ class Experiment(object):
     @property
     def info(self):
         if self.cfg.action == 'train_semantic':
-            return f'{self.cfg.model.architecture}_{self.cfg.ds.name}'
+            return f'{self.cfg.model.architecture}_{self.cfg.ds.name}_{self.cfg.train.loss}'
         elif self.cfg.action == 'train_partition':
             return f'{self.cfg.model.architecture}_{self.cfg.ds.name}'
         elif self.cfg.action == 'train_semantic_active':
