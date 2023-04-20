@@ -64,7 +64,9 @@ class Dataset(TorchDataset):
         self.CI = CloudInterface(self.project_name, self.label_map)
 
         self.__initialize()
+        print(f'Cloud files: {self.cloud_files}')
         self.__reduce_dataset()
+        print(f'Cloud files: {self.cloud_files}')
         log.info(self.__repr__())
 
     def __getitem__(self, item):
@@ -148,6 +150,7 @@ class Dataset(TorchDataset):
 
     def cloud_id_of_scan(self, scan_idx: int) -> int:
         cloud = self.cloud_map[scan_idx]
+        print(f'Cloud files: {self.cloud_files}')
         return np.where(self.cloud_files == cloud)[0][0]
 
     def is_scan_end_of_cloud(self, scan_idx: int) -> bool:
