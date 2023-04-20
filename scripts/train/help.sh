@@ -16,7 +16,6 @@ show_help_train () {
   echo "Usage: train_semantic.batch [options]"
   echo "Options:"
   echo "  -e, --experiment      Experiment name (default: default)"
-  echo "  -l, --loss            Loss function (default: CrossEntropyLoss)"
   echo "  -h, --help            Display this help and exit"
 }
 
