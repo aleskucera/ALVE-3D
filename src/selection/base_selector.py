@@ -57,7 +57,6 @@ class Selector(object):
             for batch in tqdm(loader, desc=f'Calculating {criterion}'):
                 scan_batch, _, voxel_map_batch, cloud_id_batch, end_batch = batch
                 scan_batch = scan_batch.to(self.device)
-                print(scan_batch.shape)
 
                 data = self._get_batch_data(voxel_map_batch, cloud_id_batch, end_batch)
                 cloud_ids, split_sizes, voxel_maps, valid_indices, end_indicators = data
