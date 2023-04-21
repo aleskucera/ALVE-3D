@@ -11,7 +11,7 @@
 #SBATCH --mail-type=BEGIN,END,FAIL                  # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
 # Set default values for variables
-launch="default"
+experiment="default"
 dataset_size="null"
 expected_percentage="0"
 load_model_arg="+load_model=True"
@@ -20,8 +20,8 @@ load_model_arg="+load_model=True"
 while [ "$#" -gt 0 ]; do
   case $1 in
     --from-scratch) load_model_arg="+load_model=False" ;;
-    -e|--expected) expected_percentage="$2"; shift ;;
-    -l|--launch) launch="$2"; shift ;;
+    -e|--experiment) experiment="$2"; shift ;;
+    -p|--expected-percentage) expected_percentage="$2"; shift ;;
     -s|--size) dataset_size="$2"; shift ;;
     -h|--help) show_help; exit 0 ;;
     *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;
@@ -30,8 +30,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf96016298e59b1e030ae \
-            singularity/alve-3d-smp.sif python main.py action=train_semantic_active \
-            launch="$launch" \
-            "$load_model_arg" \
+            singularity/alve-3d-smp.sif python main.py action=train_semantic_active "$load_model_arg" \
+            experiment="$experiment" \
             train.dataset_size="$dataset_size" \
             active.expected_percentage_labeled="$expected_percentage"
