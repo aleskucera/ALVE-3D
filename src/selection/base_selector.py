@@ -39,6 +39,10 @@ class Selector(object):
         return int(self.num_voxels * percentage / 100)
 
     def load_voxel_selection(self, voxel_selection: dict, dataset: Dataset = None) -> None:
+        print(f'Loading voxel selection into clouds')
+        print(f'Voxel selection keys: {voxel_selection.keys()}')
+        print(f'Dataset clouds: {dataset.cloud_files}')
+        print(f'Selector clouds: {self.cloud_paths}')
         for cloud_name, label_mask in voxel_selection.items():
             cloud = self.get_cloud(cloud_name)
             voxels = torch.nonzero(label_mask).squeeze(1)
