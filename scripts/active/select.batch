@@ -29,6 +29,6 @@ done
 
 singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf96016298e59b1e030ae \
                 singularity/alve-3d-smp.sif python main.py action=select_voxels \
-                launch="$experiment" \
+                experiment="$experiment" \
                 train.dataset_size="$dataset_size" \
                 active.expected_percentage_labeled="$expected_percentage"
