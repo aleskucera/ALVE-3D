@@ -202,9 +202,6 @@ class Dataset(TorchDataset):
         self.cloud_sequence_map = self.cloud_sequence_map[:self.num_clouds]
         self.cloud_selection_mask = self.cloud_selection_mask[:self.num_clouds]
 
-        print(f'Cloud files: {self.cloud_files}')
-        print(f'Cloud map: {self.cloud_map[0]}')
-
     def __reduce_arrays(self, arrays: tuple) -> list:
         return [array[:self.num_scans] for array in arrays]
 
