@@ -9,3 +9,5 @@ train:
   patience: 20
   min_epochs: 100
   loss: CrossEntropyLoss
+
+# sbatch --output=Train_SalsaNext_SemanticKITTI.out --error=Train_SalsaNext_SemanticKITTI.out scripts/train/train_semantic.batch --experiment Train_SalsaNext_SemanticKITTI

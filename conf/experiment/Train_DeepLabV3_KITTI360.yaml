@@ -9,3 +9,5 @@ train:
   patience: 20
   min_epochs: 100
   loss: CrossEntropyLoss
+
+# sbatch --output=Train_DeepLabV3_KITTI360.out --error=Train_DeepLabV3_KITTI360.out scripts/train/train_semantic.batch --experiment Train_DeepLabV3_KITTI360
