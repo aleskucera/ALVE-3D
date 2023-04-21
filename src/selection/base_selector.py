@@ -47,7 +47,7 @@ class Selector(object):
     def _calculate_values(self, model: nn.Module, dataset: Dataset, criterion: str, mc_dropout: bool) -> None:
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=4)
 
-        model.eval()
+        model.eval() if not mc_dropout else model.train()
         model.to(self.device)
         with torch.no_grad():
             for batch in tqdm(loader, desc=f'Calculating {criterion}'):
@@ -64,17 +64,14 @@ class Selector(object):
                     model_outputs = [torch.tensor([], device=self.device) for _ in range(batch_num_clouds)]
 
                     for j in range(5):
-                        model_outputs_it = self._get_model_predictions(model, scan_batch,
-                                                                       split_sizes, valid_indices)
+                        model_outputs_it = self._get_model_predictions(model, scan_batch, split_sizes, valid_indices)
                         model_outputs_it = [x.unsqueeze(0) for x in model_outputs_it]
-
                         for i, model_output in enumerate(model_outputs_it):
                             model_outputs[i] = torch.cat((model_outputs[i], model_output), dim=0)
 
                 for cloud_id, model_output, voxel_map, end in zip(cloud_ids, model_outputs, voxel_maps, end_indicators):
                     cloud = self.get_cloud(cloud_id)
                     cloud.add_predictions(model_output.cpu(), voxel_map, mc_dropout=mc_dropout)
-
                     if end:
                         self._calculate_cloud_values(cloud, criterion)
 
@@ -134,3 +131,47 @@ class Selector(object):
                              'left_values': left_values.tolist()}
 
         return metric_statistics
+
+# def compute_variance_and_std(model_outputs):
+#     import matplotlib.pyplot as plt
+#
+#     print(model_outputs.shape)
+#     if model_outputs.shape[0] > 1:
+#         if torch.eq(model_outputs[0], model_outputs[1]).all():
+#             print('All predictions are equal')
+#
+#     # compute mean over the multiple predictions
+#     mean = torch.mean(model_outputs, dim=0)
+#
+#     # compute variance over the multiple predictions
+#     variance = torch.var(model_outputs, dim=0, unbiased=False)
+#
+#     # compute standard deviation over the multiple predictions
+#     std = torch.std(model_outputs, dim=0, unbiased=False)
+#
+#     # Calculate the mean of the variances
+#     mean_variance = torch.mean(variance, dim=0)
+#
+#     # Calculate the maximum variance
+#     max_variance = torch.max(variance, dim=0)
+#
+#     # Calculate the minimum variance
+#     min_variance = torch.min(variance, dim=0)
+#
+#     # Calculate the mean of the standard deviations
+#     mean_std = torch.mean(std, dim=0)
+#
+#     # Calculate the maximum standard deviation
+#     max_std = torch.max(std, dim=0)
+#
+#     # Calculate the minimum standard deviation
+#     min_std = torch.min(std, dim=0)
+#
+#     print('Mean of the variances: ', mean_variance)
+#     print('Maximum variance: ', max_variance[0])
+#     print('Minimum variance: ', min_variance[0])
+#     print('Mean of the standard deviations: ', mean_std)
+#     print('Maximum standard deviation: ', max_std[0])
+#     print('Minimum standard deviation: ', min_std[0])
+#
+#     return mean, variance, std

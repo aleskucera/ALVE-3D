@@ -47,7 +47,7 @@ class VoxelSelector(Selector):
         values = torch.tensor([], dtype=torch.float32)
         voxel_map = torch.tensor([], dtype=torch.long)
         cloud_map = torch.tensor([], dtype=torch.long)
-        selection_size = self.get_selection_size(dataset, percentage)
+        selection_size = self.get_selection_size(percentage)
 
         self._calculate_values(model, dataset, self.criterion, self.mc_dropout)
 

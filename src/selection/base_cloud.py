@@ -61,8 +61,6 @@ class Cloud(object):
     def label_voxels(self, voxels: torch.Tensor, dataset: Dataset = None) -> None:
         self.label_mask[voxels] = True
         if dataset is not None:
-            # with h5py.File(self.path.replace('sequences', dataset.project_name), 'w') as f:
-            #     f.create_dataset('label_mask', data=self.label_mask.numpy())
             dataset.label_voxels(voxels.numpy(), self.path)
 
     def calculate_average_entropies(self) -> None:
