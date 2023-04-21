@@ -198,6 +198,7 @@ class Dataset(TorchDataset):
         self.scan_selection_mask = self.scan_selection_mask[:self.num_scans]
 
         print(f'Cloud files: {self.cloud_files}')
+        print(f'Sorted cloud files: {np.sort(self.cloud_files)}')
 
         self.cloud_files = self.cloud_files[:self.num_clouds]
         self.cloud_id_map = self.cloud_id_map[:self.num_clouds]
