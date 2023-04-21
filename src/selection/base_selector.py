@@ -16,7 +16,7 @@ class Selector(object):
         self.cloud_paths = cloud_paths
         self.dataset_path = dataset_path
         self.project_name = project_name
-        self.batch_size = batch_size if device == 'gpu' else 1
+        self.batch_size = batch_size if device == 'cuda' else 1
 
         self.clouds = []
         self.num_voxels = 0
