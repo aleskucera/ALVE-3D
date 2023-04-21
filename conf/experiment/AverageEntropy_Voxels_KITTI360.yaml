@@ -6,6 +6,8 @@ defaults:
 train:
   batch_size: 32
   loss: FocalLoss
+  patience: 20
+  min_epochs: 50
 active:
   batch_size: 128
   criterion: AverageEntropy

@@ -3,7 +3,7 @@ criterion: 'AverageEntropy'
 selection_objects: 'Voxels'
 
 select_percentage: 0.5
-expected_percentage_labeled: 0.5
+expected_percentage_labeled: 0
 
 model_version: 'latest'
 history_version: 'latest'
