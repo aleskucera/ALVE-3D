@@ -32,7 +32,7 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
         artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
         selection = torch.load(os.path.join(artifact_dir, f'{experiment.selection}.pt'))
 
-        selector.load_voxel_selection(selection)
+        selector.load_voxel_selection(selection, dataset)
 
         # Load model from W&B
         artifact_dir = wandb.use_artifact(f'{experiment.model}:{model_version}').download()
