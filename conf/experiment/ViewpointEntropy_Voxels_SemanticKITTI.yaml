@@ -13,3 +13,5 @@ active:
   criterion: ViewpointEntropy
   selection_objects: Voxels
   select_percentage: 0.1
+
+# sbatch --output=ViewpointEntropy_Voxels_SemanticKITTI.out --error=ViewpointEntropy_Voxels_SemanticKITTI.out scripts/active/{action}.batch --expected-percentage {p} --experiment ViewpointEntropy_Voxels_SemanticKITTI

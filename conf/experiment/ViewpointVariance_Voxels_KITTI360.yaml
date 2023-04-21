@@ -13,3 +13,5 @@ active:
   criterion: ViewpointVariance
   selection_objects: Voxels
   select_percentage: 0.1
+
+# sbatch --output=ViewpointVariance_Voxels_KITTI360.out --error=ViewpointVariance_Voxels_KITTI360.out scripts/active/{action}.batch --expected-percentage {p} --experiment ViewpointVariance_Voxels_KITTI360
