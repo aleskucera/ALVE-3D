@@ -1,7 +1,7 @@
 # @package _global_
 defaults:
   - override /ds: SemanticKITTI
-  - override /model: SalsaNext
+  - override /model: DeepLabV3
 
 train:
   patience: 20
