@@ -27,7 +27,7 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
     if expected_percentage_labeled > 0:
         selector = get_selector(selection_objects=selection_objects, criterion=criterion,
                                 dataset_path=cfg.ds.path, project_name=experiment.info,
-                                cloud_paths=dataset.clouds, device=device, batch_size=cfg.active.batch_size)
+                                cloud_paths=dataset.cloud_files, device=device, batch_size=cfg.active.batch_size)
 
         artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
         selection = torch.load(os.path.join(artifact_dir, f'{experiment.selection}.pt'))
