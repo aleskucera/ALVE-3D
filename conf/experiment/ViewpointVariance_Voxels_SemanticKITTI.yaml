@@ -5,6 +5,7 @@ defaults:
 
 train:
   batch_size: 32
+  loss: FocalLoss
 active:
   batch_size: 128
   criterion: ViewpointVariance
