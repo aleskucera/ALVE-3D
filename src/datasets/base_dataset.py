@@ -148,6 +148,9 @@ class Dataset(TorchDataset):
 
     def cloud_id_of_scan(self, scan_idx: int) -> int:
         cloud = self.cloud_map[scan_idx]
+        print(f'Cloud of scan {scan_idx} is {cloud}')
+        print(f'Equal {self.cloud_files == cloud}')
+        print(f'Where {np.where(self.cloud_files == cloud)}')
         return np.where(self.cloud_files == cloud)[0][0]
 
     def is_scan_end_of_cloud(self, scan_idx: int) -> bool:
