@@ -30,13 +30,13 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
                                 cloud_paths=dataset.clouds, device=device, batch_size=cfg.active.batch_size)
 
         artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
-        selection = torch.load(os.path.join(artifact_dir, f'{experiment.selection}'))
+        selection = torch.load(os.path.join(artifact_dir, f'{experiment.selection}.pt'))
 
         selector.load_voxel_selection(selection)
 
         # Load model from W&B
         artifact_dir = wandb.use_artifact(f'{experiment.model}:{model_version}').download()
-        model = torch.load(os.path.join(artifact_dir, f'{experiment.model}'), map_location=device)
+        model = torch.load(os.path.join(artifact_dir, f'{experiment.model}.pt'), map_location=device)
         model_state_dict = model['model_state_dict']
         model = get_model(cfg=cfg, device=device)
         model.load_state_dict(model_state_dict)
