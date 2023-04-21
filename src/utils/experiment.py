@@ -25,7 +25,7 @@ class Experiment(object):
     @property
     def group(self):
         if self.cfg.action == 'train_semantic':
-            return self.cfg.ds.name
+            return f'{self.cfg.ds.name} - 2'
         elif self.cfg.action == 'train_partition':
             return self.cfg.ds.name
         elif self.cfg.action == 'train_semantic_active':
