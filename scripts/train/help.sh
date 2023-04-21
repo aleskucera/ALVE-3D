@@ -24,7 +24,7 @@ show_help () {
   echo "Options:"
   echo "  -j, --job                 Display help for job"
   echo "  -t, --train_semantic      Display help for training semantic model"
-  echo "  -h, --help            Display this help and exit"
+  echo "  -h, --help                Display this help and exit"
 }
 
 

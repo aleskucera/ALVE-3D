@@ -16,7 +16,7 @@ show_help_selection () {
   echo "Usage: select.batch [options]"
   echo "Options:"
   echo "  -p, --expected-percentage     Expected percentage of labeled data (default: 0)"
-  echo "  -e, --experiment              Launch script name (default: default)"
+  echo "  -e, --experiment              Experiment name (default: default)"
   echo "  -s, --size                    Dataset size - in number of clouds (default: null)"
   echo "  -h, --help                    Display this help and exit"
 }
@@ -26,7 +26,7 @@ show_help_train () {
   echo "Options:"
   echo "  --from-scratch                Train from scratch, do not load model"
   echo "  -p, --expected-percentage     Expected percentage of labeled data (default: 0)"
-  echo "  -e, --experiment              Launch script name (default: default)"
+  echo "  -e, --experiment              Experiment name (default: default)"
   echo "  -s, --size                    Dataset size - in number of clouds (default: null)"
   echo "  -h, --help                    Display this help and exit"
 }
@@ -37,7 +37,7 @@ show_help () {
   echo "  -j, --job                 Display help for job"
   echo "  -s, --selection           Display help for selection"
   echo "  -t, --train               Display help for training"
-  echo "  -h, --help            Display this help and exit"
+  echo "  -h, --help                Display this help and exit"
 }
 
 
