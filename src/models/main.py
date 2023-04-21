@@ -15,11 +15,6 @@ def get_model(cfg: DictConfig, device: torch.device):
     if cfg.model.architecture == 'SalsaNext':
         model = SalsaNext(num_inputs, num_outputs)
     elif cfg.model.architecture == 'DeepLabV3':
-        # model = tms.deeplabv3_resnet50(num_classes=num_outputs)
-        # model.backbone.conv1 = torch.nn.Conv2d(num_inputs, 64, kernel_size=(7, 7),
-        #                                        stride=(2, 2), padding=(3, 3), bias=False)
-
-        # create segmentation model with pretrained encoder
         model = smp.DeepLabV3Plus(
             encoder_name='resnet50',
             encoder_weights='imagenet',

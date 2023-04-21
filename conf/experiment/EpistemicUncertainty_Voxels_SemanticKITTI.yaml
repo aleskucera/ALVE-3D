@@ -1,12 +1,12 @@
 # @package _global_
 defaults:
   - override /ds: SemanticKITTI
-  - override /model: DeepLabV3
+  - override /model: SalsaNext
 
 train:
   batch_size: 32
 active:
   batch_size: 128
-  criterion: AverageEntropy
+  criterion: EpistemicUncertainty
   selection_objects: Voxels
   select_percentage: 0.1

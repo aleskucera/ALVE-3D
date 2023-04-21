@@ -12,7 +12,9 @@ class Experiment(object):
     @property
     def project(self):
         if self.cfg.action == 'train_semantic':
-            return 'Semantic Segmentation Losses Comparison'
+            if 'project' in self.cfg:
+                return self.cfg.project
+            return 'Train Semantic Model'
         elif self.cfg.action == 'train_partition':
             return 'Train Partition Model'
         elif self.cfg.action == 'train_semantic_active':
@@ -25,7 +27,7 @@ class Experiment(object):
     @property
     def group(self):
         if self.cfg.action == 'train_semantic':
-            return f'{self.cfg.ds.name} - 2'
+            return self.cfg.ds.name
         elif self.cfg.action == 'train_partition':
             return self.cfg.ds.name
         elif self.cfg.action == 'train_semantic_active':
@@ -51,7 +53,7 @@ class Experiment(object):
     @property
     def name(self):
         if self.cfg.action == 'train_semantic':
-            return f'{self.cfg.model.architecture} - {self.cfg.train.loss}'
+            return f'{self.cfg.model.architecture}'
         elif self.cfg.action == 'train_partition':
             return self.cfg.model.architecture
         elif self.cfg.action == 'train_semantic_active':
@@ -64,7 +66,7 @@ class Experiment(object):
     @property
     def info(self):
         if self.cfg.action == 'train_semantic':
-            return f'{self.cfg.model.architecture}_{self.cfg.ds.name}_{self.cfg.train.loss}'
+            return f'{self.cfg.model.architecture}_{self.cfg.ds.name}'
         elif self.cfg.action == 'train_partition':
             return f'{self.cfg.model.architecture}_{self.cfg.ds.name}'
         elif self.cfg.action == 'train_semantic_active':

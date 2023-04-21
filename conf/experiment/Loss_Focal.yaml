@@ -1,8 +1,9 @@
 # @package _global_
 defaults:
   - override /ds: SemanticKITTI
-  - override /model: DeepLabV3
+  - override /model: SalsaNext
 
+project: Semantic Segmentation Losses Comparison
 train:
   patience: 20
   batch_size: 32

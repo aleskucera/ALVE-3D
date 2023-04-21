@@ -4,7 +4,7 @@ defaults:
   - override /model: SalsaNext
 
 train:
-  batch_size: 16
+  batch_size: 32
 active:
   batch_size: 128
   criterion: AverageEntropy

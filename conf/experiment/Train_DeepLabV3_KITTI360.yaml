@@ -3,7 +3,9 @@ defaults:
   - override /ds: KITTI360
   - override /model: DeepLabV3
 
+project: Semantic Segmentation Models Comparison
 train:
   batch_size: 40
   patience: 20
   min_epochs: 100
+  loss: CrossEntropyLoss
