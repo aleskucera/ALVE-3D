@@ -190,7 +190,7 @@ def load_dataset(dataset_path: str, project_name: str, sequences: list, split: s
 
         with h5py.File(info_path, 'r') as f:
             split_samples = np.asarray(f[split]).astype(np.str_)
-            seq_clouds = np.asarray(f[f'{split}_clouds']).astype(np.str_)
+            seq_clouds = np.sort(np.asarray(f[f'{split}_clouds']).astype(np.str_))
             seq_cloud_map = __create_cloud_map(seq_clouds)
 
         seq_scans = np.array([os.path.join(scans_dir, t) for t in split_samples], dtype=np.str_)
