@@ -10,14 +10,15 @@
 
 Checklist
 
-- [ ] Start the experiment 'Comparison of model architectures'
+- [x] Start the experiment 'Comparison of model architectures'
     - 4 runs - 2 models and 2 datasets
     - 200 epochs each, CrossEntropyLoss, Adam, lr=1e-3, batch_size=32
-- [ ] Visualize the Epistemic Uncertainty of the model
+- [x] Visualize the Epistemic Uncertainty of the model
     - Visualize the max, min, mean, std of the epistemic uncertainty
-- [ ] Start the active learning experiments
+- [x] Start the active learning experiments
+- [ ] Create random active learning experiment
 - [ ] Change the LaserScan class
-- [ ] Start the experiment 'SalsaNext of SemanticKITTI'
+- [ ] Start the experiment 'SalsaNext on SemanticKITTI'
 - [ ] Add the demo which logs the statistics of the dataset, random sample
 
 
