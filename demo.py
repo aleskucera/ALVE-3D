@@ -137,12 +137,13 @@ def visualize_dataset_scans(cfg: DictConfig):
                               cfg=cfg.ds, split=split, num_clouds=size, sequences=sequences)
 
     # Create scan object
-    scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True,
-                     H=cfg.ds.projection.H, W=cfg.ds.projection.W, fov_up=cfg.ds.projection.fov_up,
-                     fov_down=cfg.ds.projection.fov_down)
+    laser_scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True,
+                           H=cfg.ds.projection.H, W=cfg.ds.projection.W, fov_up=cfg.ds.projection.fov_up,
+                           fov_down=cfg.ds.projection.fov_down)
 
     # Visualizer
-    vis = ScanVis(scan=scan, scans=dataset.scan_files, labels=dataset.scan_files, raw_cloud=True, instances=False)
+    vis = ScanVis(laser_scan=laser_scan, scans=dataset.scan_files, labels=dataset.scan_files,
+                  raw_scan=True)
     vis.run()
 
 

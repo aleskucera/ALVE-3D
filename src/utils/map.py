@@ -30,8 +30,8 @@ def colorize_instances(data: np.ndarray, max_inst_id=100000, ignore: tuple = (0,
     return color_map[data]
 
 
-def colorize(data: np.ndarray, color_map: str = 'viridis', data_range: tuple = (0, 19),
-             ignore: tuple = (0,)) -> np.ndarray:
+def colorize_values(data: np.ndarray, color_map: str = 'viridis', data_range: tuple = (0, 19),
+                    ignore: tuple = (0,)) -> np.ndarray:
     """Colorize data using a color map
 
     :param data: Data to colorize

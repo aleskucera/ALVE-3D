@@ -4,54 +4,28 @@ try:
 except ImportError:
     app = None
 
+import h5py
+import numpy as np
 from .scan import LaserScan
 from .scene import Scene, CloudWidget, ImageWidget, Counter
 
 
 class ScanVis:
-    """ Visualize a sequence of scans.
+    def __init__(self, laser_scan: LaserScan, scans: iter, labels: iter = None, predictions: iter = None,
+                 projection: bool = True, raw_scan: bool = True, offset: int = 0):
 
-    :param scan: LaserScan object.
-    :param scans: Iterable of scans. (file paths or numpy arrays)
-    :param scan_colors: Iterable of scan colors. (file paths or numpy arrays)
-    :param labels: Iterable of labels. (file paths or numpy arrays)
-    :param superpoints: Iterable of superpoints. (file paths or numpy arrays)
-    :param predictions: Iterable of predictions. (file paths or numpy arrays)
-    :param entropies: Iterable of entropies. (file paths or numpy arrays)
-    :param offset: Offset for the scan index - from which index should visualization start. (default: 0)
-    :param raw_cloud: Visualize raw cloud. (default: False)
-    :param semantics: Visualize semantics. (default: True)
-    :param instances: Visualize instances. (default: False)
-    :param projection: Visualize projection. (default: True)
-    """
-
-    def __init__(self, scan: LaserScan, scans: iter, scan_colors: iter = None, labels: iter = None,
-                 superpoints: iter = None, predictions: iter = None, entropies: iter = None, offset: int = 0,
-                 raw_cloud: bool = False, semantics: bool = True, instances: bool = False, projection: bool = True):
-
-        self.scan = scan
-        assert scan.colorize, "Scan must be colorized"
+        assert laser_scan.colorize, "Scan must be colorized"
+        self.laser_scan = laser_scan
 
         self.scans = scans
-        self.scan_colors = scan_colors
-
         self.labels = labels
-        self.entropies = entropies
-        self.predictions = predictions
-        self.superpoints = superpoints
+        self.pred = predictions
 
-        self.total = len(scans)
         self.offset = offset
+        self.total = len(scans)
 
-        self.raw_cloud = raw_cloud
+        self.raw_scan = raw_scan
         self.projection = projection
-
-        if labels is not None:
-            self.semantics = semantics
-            self.instances = instances
-        else:
-            self.semantics = False
-            self.instances = False
 
         # ================= VISUALIZATION SCENES =================
 
@@ -62,7 +36,7 @@ class ScanVis:
         # Image Scene
         self.img_scene = None
         if self.projection:
-            self.img_scene = Scene(size=(scan.proj_W, scan.proj_H * self.num_widgets))
+            self.img_scene = Scene(size=(laser_scan.proj_W, laser_scan.proj_H * self.num_widgets))
             self.img_scene.connect(self.key_press, self.draw)
 
         # ================= VISUALIZATION WIDGETS (WINDOWS) =================
@@ -70,40 +44,22 @@ class ScanVis:
         c = Counter()
 
         # Raw Cloud
-        if self.raw_cloud:
+        if self.raw_scan:
             idx = next(c)
             self.scan_w = CloudWidget(scene=self.scene, pos=(0, idx))
-            self.img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
+            self.scan_img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
 
-        # Semantics
-        if self.semantics:
+        # Labels
+        if self.labels is not None:
             idx = next(c)
-            self.sem_w = CloudWidget(scene=self.scene, pos=(0, idx))
-            self.sem_img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
-
-        # Instances
-        if self.instances:
-            idx = next(c)
-            self.inst_w = CloudWidget(scene=self.scene, pos=(0, idx))
-            self.inst_img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
-
-        # Entropy
-        if self.entropies is not None:
-            idx = next(c)
-            self.entropy_w = CloudWidget(scene=self.scene, pos=(0, idx))
-            self.entropy_img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
+            self.label_w = CloudWidget(scene=self.scene, pos=(0, idx))
+            self.label_img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
 
         # Predictions
-        if self.predictions is not None:
+        if self.pred is not None:
             idx = next(c)
             self.pred_w = CloudWidget(scene=self.scene, pos=(0, idx))
             self.pred_img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
-
-        # Superpoints
-        if self.superpoints is not None:
-            idx = next(c)
-            self.superpoint_w = CloudWidget(scene=self.scene, pos=(0, idx))
-            self.superpoint_img_w = ImageWidget(scene=self.img_scene, pos=(idx, 0))
 
         self.update_scan()
 
@@ -118,63 +74,35 @@ class ScanVis:
 
         # ======================== SCAN ========================
 
-        color = self.scan_colors[self.offset] if self.scan_colors is not None else None
         if isinstance(self.scans[0], str):
-            self.scan.open_scan(self.scans[self.offset])
+            self.laser_scan.open_scan(self.scans[self.offset])
         else:
-            self.scan.set_scan(self.scans[self.offset], color=color)
+            self.laser_scan.set_scan(self.scans[self.offset])
 
-        if self.raw_cloud:
-            self.scan_w.set_data(self.scan.points, self.scan.color)
-            self.img_w.set_data(self.scan.proj_color)
+        if self.raw_scan:
+            self.scan_w.set_data(self.laser_scan.points, self.laser_scan.color)
+            self.scan_img_w.set_data(self.laser_scan.proj_color)
 
         # ======================== LABELS ========================
 
         if self.labels is not None:
             if isinstance(self.labels[0], str):
-                self.scan.open_label(self.labels[self.offset])
+                self.laser_scan.open_label(self.labels[self.offset])
             else:
-                self.scan.set_label(self.labels[self.offset])
+                self.laser_scan.set_label(self.labels[self.offset])
 
-            if self.semantics:
-                self.sem_w.set_data(self.scan.points, self.scan.sem_label_color[..., ::-1])
-                self.sem_img_w.set_data(self.scan.proj_sem_color[..., ::-1])
-            if self.instances:
-                self.inst_w.set_data(self.scan.points, self.scan.inst_label_color[..., ::-1])
-                self.inst_img_w.set_data(self.scan.proj_inst_color[..., ::-1])
-
-        # ======================== SUPERPOINTS ========================
-
-        if self.superpoints is not None:
-            if isinstance(self.superpoints[0], str):
-                self.scan.open_superpoints(self.superpoints[self.offset])
-            else:
-                self.scan.set_superpoints(self.superpoints[self.offset])
-
-            self.superpoint_w.set_data(self.scan.points, self.scan.superpoints_color)
-            self.superpoint_img_w.set_data(self.scan.proj_superpoints_color)
-
-        # ======================== ENTROPY ========================
-
-        if self.entropies is not None:
-            if isinstance(self.entropies[0], str):
-                self.scan.open_entropy(self.entropies[self.offset])
-            else:
-                self.scan.set_entropy(self.entropies[self.offset])
-
-            self.entropy_w.set_data(self.scan.points, self.scan.entropy_color[..., ::-1])
-            self.entropy_img_w.set_data(self.scan.proj_entropy_color[..., ::-1])
+            self.label_w.set_data(self.laser_scan.points, self.laser_scan.label_color)
+            self.label_img_w.set_data(self.laser_scan.proj_label_color)
 
         # ======================== PREDICTIONS ========================
-
-        if self.predictions is not None:
-            if isinstance(self.predictions[0], str):
-                self.scan.open_prediction(self.predictions[self.offset])
+        if self.pred is not None:
+            if isinstance(self.pred[0], str):
+                self.laser_scan.open_prediction(self.pred[self.offset])
             else:
-                self.scan.set_prediction(self.predictions[self.offset])
+                self.laser_scan.set_prediction(self.pred[self.offset])
 
-                self.pred_w.set_data(self.scan.points, self.scan.pred_color[..., ::-1])
-                self.pred_img_w.set_data(self.scan.proj_pred_color[..., ::-1])
+            self.pred_w.set_data(self.laser_scan.points, self.laser_scan.pred_color)
+            self.pred_img_w.set_data(self.laser_scan.proj_pred_color)
 
     def key_press(self, event):
         self.scene.canvas.events.key_press.block()
@@ -203,15 +131,9 @@ class ScanVis:
     @property
     def num_widgets(self):
         num = 0
-        if self.raw_cloud:
+        if self.raw_scan:
             num += 1
-        if self.semantics:
-            num += 1
-        if self.instances:
-            num += 1
-        if self.entropies is not None:
-            num += 1
-        if self.predictions is not None:
+        if self.labels is not None:
             num += 1
         return num
 

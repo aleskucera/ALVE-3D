@@ -1,6 +1,6 @@
 from .project import project_points
 from .experiment import Experiment
-from .map import colorize, map_labels, map_colors, colorize_instances
+from .map import colorize_values, map_labels, map_colors, colorize_instances
 from .io import set_paths, load_dataset, ScanInterface, CloudInterface
 from .visualize import plot, bar_chart, grouped_bar_chart, plot_confusion_matrix
 from .cloud import transform_points, downsample_cloud, nearest_neighbors, nearest_neighbors_2, \

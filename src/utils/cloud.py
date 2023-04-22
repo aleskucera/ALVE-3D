@@ -9,7 +9,7 @@ from scipy.spatial.transform import Rotation as R
 
 import wandb
 from src.ply_c import libply_c
-from src.utils.map import colorize, colorize_instances
+from src.utils.map import colorize_values, colorize_instances
 
 
 def visualize_cloud(points: np.ndarray, colors: np.ndarray):
@@ -23,7 +23,7 @@ def visualize_cloud_values(points: np.ndarray, values: np.ndarray, random_colors
     if random_colors:
         colors = colorize_instances(values, max_inst_id=np.max(values) + 1)
     else:
-        colors = colorize(values, color_map='viridis', data_range=(np.min(values), np.max(values)))
+        colors = colorize_values(values, color_map='viridis', data_range=(np.min(values), np.max(values)))
     visualize_cloud(points, colors)
 
 

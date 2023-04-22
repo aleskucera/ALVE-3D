@@ -33,8 +33,8 @@ class Widget:
     """
 
     def __init__(self, scene: Scene, pos: tuple, color_map='viridis', border_color='white'):
-        self.scene = scene
         self.pos = pos
+        self.scene = scene
 
         self.color_map = color_map
         self.view_box_keywords = dict(border_color=border_color)
