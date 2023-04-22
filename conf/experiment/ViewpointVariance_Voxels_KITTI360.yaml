@@ -4,7 +4,7 @@ defaults:
   - override /model: SalsaNext
 
 train:
-  batch_size: 22 # 32
+  batch_size: 32
   loss: FocalLoss
   patience: 20
   min_epochs: 50
