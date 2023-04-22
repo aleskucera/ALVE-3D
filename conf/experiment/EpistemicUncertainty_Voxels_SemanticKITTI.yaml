@@ -9,7 +9,7 @@ train:
   patience: 20
   min_epochs: 50
 active:
-  batch_size: 128
+  batch_size: 64
   criterion: EpistemicUncertainty
   selection_objects: Voxels
   select_percentage: 0.1
