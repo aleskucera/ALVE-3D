@@ -102,16 +102,16 @@ def log_most_labeled_sample(dataset: Dataset, laser_scan: LaserScan) -> None:
 
     # Create the point cloud and the projection with fully labeled points
     cloud = np.concatenate([laser_scan.points, laser_scan.color * 255], axis=1)
-    cloud_label_full = np.concatenate([laser_scan.points, laser_scan.sem_label_color * 255], axis=1)
-    projection_label_full = laser_scan.proj_sem_color
+    cloud_label_full = np.concatenate([laser_scan.points, laser_scan.label_color * 255], axis=1)
+    projection_label_full = laser_scan.proj_label_color
 
     # Open the label with the label mask
     laser_scan.open_scan(dataset.scan_files[most_labeled_sample])
     laser_scan.open_label(dataset.scan_files[most_labeled_sample], label_mask)
 
     # Create the point cloud and the projection with the most labeled points
-    cloud_label = np.concatenate([laser_scan.points, laser_scan.sem_label_color * 255], axis=1)
-    projection_label = laser_scan.proj_sem_color
+    cloud_label = np.concatenate([laser_scan.points, laser_scan.label_color * 255], axis=1)
+    projection_label = laser_scan.proj_label_color
 
     wandb.log({'Point Cloud': wandb.Object3D(cloud),
                'Point Cloud Label - Full': wandb.Object3D(cloud_label_full),

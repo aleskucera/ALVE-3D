@@ -1,0 +1,11 @@
+# @package _global_
+defaults:
+  - override /ds: SemanticKITTI
+  - override /model: SalsaNext
+
+project: SalsaNext SemanticKITTI (Original)
+train:
+  patience: 20
+  batch_size: 32
+  min_epochs: 200
+  loss: CombinedLoss
