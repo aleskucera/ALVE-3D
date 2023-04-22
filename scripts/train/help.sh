@@ -15,8 +15,8 @@ show_help_job() {
 show_help_train () {
   echo "Usage: train_semantic.batch [options]"
   echo "Options:"
+  echo "  -b, --batch-size      Batch size (default: 32)"
   echo "  -e, --experiment      Experiment name (default: default)"
-  echo "  -h, --help            Display this help and exit"
 }
 
 show_help () {

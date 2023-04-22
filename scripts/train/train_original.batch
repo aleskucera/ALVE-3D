@@ -17,6 +17,7 @@ experiment="default"
 # Parse command line arguments
 while [ "$#" -gt 0 ]; do
   case $1 in
+    -b|--batch-size) batch_size="$2"; shift ;;
     -e|--experiment) experiment="$2"; shift ;;
     -h|--help) show_help; exit 0 ;;
     *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;
@@ -27,4 +28,5 @@ done
 
 singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf96016298e59b1e030ae \
             singularity/alve-3d-smp.sif python main.py action=train_semantickitti_original \
-            experiment="$experiment"
+            experiment="$experiment" \
+            train.batch_size="$batch_size"
