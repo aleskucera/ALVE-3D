@@ -20,6 +20,7 @@ class SemanticDataset(Dataset):
         super().__init__(split, cfg, dataset_path,
                          project_name, resume, num_clouds,
                          sequences, al_experiment, selection_mode)
+        self.parser_type = 'semantic'
 
     def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray, np.ndarray, int, bool]:
         scan_data = self.SI.read_scan(self.scans[idx])

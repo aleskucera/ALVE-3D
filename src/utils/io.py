@@ -90,6 +90,12 @@ class ScanInterface(object):
             f['selected_labels'][np.isin(voxel_map, voxels)] = 1
             return np.sum(f['selected_labels']) > 0
 
+    def add_prediction(self, path: str, prediction: np.ndarray):
+        with h5py.File(path.replace('sequences', self.project_name), 'r+') as f:
+            if 'prediction' in f:
+                del f['prediction']
+            f.create_dataset('prediction', data=prediction.astype(np.int64))
+
 
 class CloudInterface(object):
     def __init__(self, project_name: str = None, label_map: dict = None):

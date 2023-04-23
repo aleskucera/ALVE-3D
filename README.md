@@ -16,10 +16,9 @@ Checklist
 - [x] Visualize the Epistemic Uncertainty of the model
     - Visualize the max, min, mean, std of the epistemic uncertainty
 - [x] Start the active learning experiments
-- [ ] Create random active learning experiment
+- [x] Create random active learning experiment
 - [ ] Change the LaserScan class
 - [ ] Start the experiment 'SalsaNext on SemanticKITTI'
-- [ ] Add the demo which logs the statistics of the dataset, random sample
 
 
 

@@ -13,7 +13,7 @@ from src.utils import set_paths, Experiment
 from src.kitti360 import KITTI360Converter
 from src.semantickitti import SemanticKITTIConverter
 from src.learn import train_semantic_model, train_partition_model, \
-    train_semantic_active, train_partition_active, select_voxels
+    train_semantic_active, train_partition_active, select_voxels, train_semantickitti_original
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +37,8 @@ def main(cfg: DictConfig):
             train_semantic_model(cfg, experiment, device)
         elif cfg.action == 'train_partition':
             train_partition_model(cfg, experiment, device)
+        elif cfg.action == 'train_semantickitti_original':
+            train_semantickitti_original(cfg, experiment, device)
         elif cfg.action == 'train_semantic_active':
             train_semantic_active(cfg, experiment, device)
         elif cfg.action == 'train_partition_active':

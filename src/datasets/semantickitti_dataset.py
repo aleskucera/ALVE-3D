@@ -5,36 +5,33 @@ import numpy as np
 from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
-from semantickitti.utils import open_sequence
+from src.semantickitti.utils import open_sequence
 from src.laserscan import LaserScan
 
 log = logging.getLogger(__name__)
 
 
 class SemanticKITTIDataset(Dataset):
-    def __init__(self, dataset_path: str, cfg: DictConfig, split: str, sequences: list = None):
+    def __init__(self, cfg: DictConfig, split: str):
 
         self.cfg = cfg
         self.split = split
-        self.path = dataset_path
+        self.path = cfg.path
 
-        split_sequences = cfg.split[split]
-        if sequences is None:
-            self.sequences = split_sequences
-        else:
-            self.sequences = [s for s in sequences if s in split_sequences]
+        splits = {'val': [8], 'train': [0, 1, 2, 3, 4, 5, 6, 7, 9, 10]}
+        self.sequences = splits[split]
 
         self.scans = []
         self.labels = []
 
         self.poses = []
-        self.sequence_indices = []
 
         self.mean = np.array(cfg.mean, dtype=np.float32)
         self.std = np.array(cfg.std, dtype=np.float32)
 
         self.laser_scan = LaserScan(label_map=cfg.learning_map, colorize=False, color_map=cfg.color_map_train)
 
+        self.parser_type = 'semantic_kitti'
         self._init()
 
     def __getitem__(self, index):
@@ -52,8 +49,8 @@ class SemanticKITTIDataset(Dataset):
                                     # self.laser_scan.proj_xyz.transpose(2, 0, 1),
                                     self.laser_scan.proj_remission[np.newaxis, ...]], axis=0)
 
-        proj_scan = (proj_scan - self.mean[:, np.newaxis, np.newaxis]) / self.std[:, np.newaxis, np.newaxis]
-        proj_label = self.laser_scan.proj_sem_label.astype(np.long)
+        # proj_scan = (proj_scan - self.mean[:, np.newaxis, np.newaxis]) / self.std[:, np.newaxis, np.newaxis]
+        proj_label = self.laser_scan.proj_label.astype(np.long)
         return proj_scan, proj_label
 
     def __len__(self):
@@ -62,7 +59,7 @@ class SemanticKITTIDataset(Dataset):
     def _init(self):
         log.info(f"INFO: Initializing dataset (split: {self.split}) from path {self.path}")
 
-        path = os.path.join(self.path, 'sequences')
+        path = os.path.join(self.path, 'sequences_kitti')
         for seq in self.sequences:
             seq_path = os.path.join(path, f"{seq:02d}")
             points, labels, poses = open_sequence(seq_path)
@@ -70,7 +67,6 @@ class SemanticKITTIDataset(Dataset):
             self.scans += points
             self.labels += labels
             self.poses += poses
-            self.sequence_indices += [seq] * len(points)
 
         assert len(self.scans) == len(self.labels), "Number of points and labels must be equal"
         log.info(f"INFO: Dataset initialized with {len(self.scans)} samples")

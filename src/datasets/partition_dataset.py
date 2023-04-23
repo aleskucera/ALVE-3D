@@ -19,6 +19,7 @@ class PartitionDataset(Dataset):
         super().__init__(split, cfg, dataset_path,
                          project_name, resume, num_clouds,
                          sequences, al_experiment, selection_mode)
+        self.parser_type = 'partition'
 
     def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray, np.ndarray, int, bool]:
         cloud_data = self.CI.read_cloud(self.clouds[idx])

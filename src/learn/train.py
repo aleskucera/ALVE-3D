@@ -3,10 +3,11 @@ import logging
 
 import torch
 import wandb
+import numpy as np
 from omegaconf import DictConfig
 
 from .trainer import SemanticTrainer
-from src.datasets import SemanticDataset
+from src.datasets import SemanticDataset, SemanticKITTIDataset
 from src.selection import get_selector
 from src.utils import log_dataset_statistics, Experiment
 
@@ -82,3 +83,23 @@ def train_semantic_active(cfg: DictConfig, experiment: Experiment, device: torch
 
 def train_partition_active(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
     raise NotImplementedError
+
+
+def train_semantickitti_original(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
+    train_ds = SemanticKITTIDataset(cfg.ds, 'train')
+    val_ds = SemanticKITTIDataset(cfg.ds, 'val')
+
+    weights = calculate_weights(cfg.ds.content, cfg.ds.learning_map)
+
+    trainer = SemanticTrainer(cfg=cfg, train_ds=train_ds, val_ds=val_ds, device=device, weights=weights,
+                              model=None, model_name=experiment.model, history_name=experiment.history)
+    trainer.train()
+
+
+def calculate_weights(content: dict, mapping: dict):
+    train_labels = np.unique(np.array(list(mapping.values())))
+    sums = np.zeros((len(train_labels)), dtype=np.float32)
+    for key, value in content.items():
+        sums[mapping[key]] += value
+    weights = 1 / (sums + 1e-6)
+    return weights

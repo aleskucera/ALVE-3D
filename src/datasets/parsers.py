@@ -35,6 +35,15 @@ class PartitionParser(Parser):
         return (clouds, clouds_global), (objects, edge_sources, edge_targets, edge_transitions)
 
 
+class SemanticKITTIParser(Parser):
+    def __init__(self, device: torch.device):
+        super().__init__(device)
+
+    def parse_batch(self, batch: tuple) -> tuple:
+        proj_images, proj_labels = batch
+        return proj_images.to(self.device), proj_labels.to(self.device)
+
+
 def get_parser(parser_type: str, device: torch.device) -> Parser:
     """ Get the parser for the dataset. Parser is used to parse the data from the dataset
     __getitem__ method to the format that the training function expects.
@@ -47,5 +56,7 @@ def get_parser(parser_type: str, device: torch.device) -> Parser:
         return SemanticParser(device)
     elif parser_type == 'partition':
         return PartitionParser(device)
+    elif parser_type == 'semantic_kitti':
+        return SemanticKITTIParser(device)
     else:
         raise ValueError(f'Unknown parser: {parser_type}')

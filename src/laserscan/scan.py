@@ -232,7 +232,7 @@ class LaserScan:
 
         # Read prediction from file
         with h5py.File(filename, 'r') as f:
-            prediction = np.asarray(f['pred']).flatten()
+            prediction = np.asarray(f['prediction'])
 
         # Set attributes
         self.set_prediction(prediction)
@@ -251,28 +251,4 @@ class LaserScan:
         # Colorize prediction
         if self.colorize:
             self.pred_color = map_colors(self.pred, self.sem_color_map)
-            self.proj_pred_color = map_colors(self.pred, self.sem_color_map)
-
-    # def get_colors(self, data: np.ndarray, mapping: dict = None) -> tuple[np.ndarray, np.ndarray]:
-    #
-    #     if data.shape[-1] != 3 and mapping is None:
-    #         data_range = (np.min(data), np.max(data))
-    #         data = colorize_values(data, color_map='turbo', data_range=data_range)
-    #     elif data.shape[-1] != 3 and mapping is not None:
-    #         data = map_colors(data, mapping)
-    #
-    #     if len(data.shape) == 2 and data.shape[1] == 3:
-    #         color = data
-    #         proj_color = np.zeros((self.proj_H, self.proj_W, 3), dtype=np.float32)
-    #         proj_color[self.proj_mask] = data[self.proj_idx[self.proj_mask]]
-    #     elif len(data.shape) == 3 and data.shape[0] == self.proj_H and data.shape[1] == self.proj_W:
-    #         proj_color = data
-    #         color = np.zeros((self.points.shape[0], 3), dtype=np.float32)
-    #         color[self.proj_idx[self.proj_mask]] = data[self.proj_mask]
-    #     else:
-    #         raise ValueError('Invalid data shape')
-    #
-    #     color[self.label == 0] = [0, 0, 0]
-    #     proj_color[self.proj_label == 0] = [0, 0, 0]
-    #
-    #     return color, proj_color
+            self.proj_pred_color = map_colors(self.proj_pred, self.sem_color_map)
