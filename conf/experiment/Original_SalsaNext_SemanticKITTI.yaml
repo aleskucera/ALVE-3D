@@ -9,3 +9,5 @@ train:
   batch_size: 32
   min_epochs: 200
   loss: CombinedLoss
+
+# sbatch --output=Original_SalsaNext_SemanticKITTI.out --error=Original_SalsaNext_SemanticKITTI.out scripts/active/train_original.batch --experiment Original_SalsaNext_SemanticKITTI
