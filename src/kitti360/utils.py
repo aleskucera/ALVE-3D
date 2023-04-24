@@ -7,7 +7,7 @@ from src.models.pointnet_sp import STNkD, PointNet
 
 
 def create_model(args):
-    """ Creates model """
+    """ Creates partitioning model """
     model = torch.nn.Module()
     if args.learned_embeddings and 'ptn' in args.ptn_embedding and args.ptn_nfeat_stn > 0:
         model.stn = STNkD(args.ptn_nfeat_stn, args.ptn_widths_stn[0], args.ptn_widths_stn[1],

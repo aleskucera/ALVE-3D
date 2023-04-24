@@ -12,6 +12,24 @@ log = logging.getLogger(__name__)
 
 
 class Dataset(TorchDataset):
+    """ Base class for all datasets used in active learning experiments. The class is responsible for
+    loading the dataset and providing the necessary functionality to the trainer.
+    Core functionalities are:
+        - Load the dataset information from the disk and provide the necessary
+          interface to the Trainer and to the Selector.
+        - Calculate the statistics of the selected labels in the dataset.
+
+    :param split: The split of the dataset to be used. Can be either 'train' or 'val'.
+    :param cfg: The configuration object containing the dataset parameters.
+    :param dataset_path: The path to the dataset.
+    :param project_name: The name of the project.
+    :param resume: Whether to initialize the dataset from scratch or to resume from a previous state.
+    :param num_clouds: The number of clouds to be used in the dataset. If None, all clouds will be used.
+    :param sequences: The sequences to be used in the dataset. If None, all sequences will be used.
+    :param al_experiment: Whether the dataset is used in an active learning experiment.
+    :param selection_mode: Whether the dataset is used for the selection.
+    """
+
     def __init__(self,
                  split: str,
                  cfg: DictConfig,
@@ -148,9 +166,6 @@ class Dataset(TorchDataset):
 
     def cloud_id_of_scan(self, scan_idx: int) -> int:
         cloud = self.cloud_map[scan_idx]
-        # print(f'Cloud of scan {scan_idx} is {cloud}')
-        # print(f'Equal {self.cloud_files == cloud}')
-        # print(f'Where {np.where(self.cloud_files == cloud)}')
         return np.where(self.cloud_files == cloud)[0][0]
 
     def is_scan_end_of_cloud(self, scan_idx: int) -> bool:

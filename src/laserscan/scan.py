@@ -10,17 +10,21 @@ from src.utils.map import colorize_values, map_colors, map_labels
 
 class LaserScan:
     """ LaserScan class to store and manipulate 3D point clouds.
-    The class can be used to load point clouds from SemanticKITTI format.
-    It also provides methods to project the point cloud into a 2D image, and
-    it can be used in ScanVis to visualize the point cloud.
+    The class can be used to load the data from the SemanticKITTI format
+    and also form the Active Learning format. It also automatically projects
+    the point cloud to an image and maps the labels to the projected image.
+
+    The class is designed to be used mainly for visualization purposes.
 
     :param label_map: Dictionary with label map for training.
-    :param color_map: Dictionary with color map for semantic labels mapped to training labels.
-    :param colorize: If True, the point cloud will be colored according to the corresponding color maps.
-    :param H: Height of the projected image.
-    :param W: Width of the projected image.
-    :param fov_up: Field of view up in degrees.
-    :param fov_down: Field of view down in degrees.
+    :param color_map: Dictionary with color map for semantic labels mapped to
+                      training labels. (default: None)
+    :param colorize: If True, the point cloud will be colored according
+                     to the corresponding color maps. (default: False)
+    :param H: Height of the projected image. (default: 64)
+    :param W: Width of the projected image. (default: 1024)
+    :param fov_up: Field of view up in degrees. (default: 3.0)
+    :param fov_down: Field of view down in degrees. (default: -25.0)
     """
 
     def __init__(self, label_map: dict, color_map: dict = None, colorize: bool = False, H=64, W=1024, fov_up=3.0,

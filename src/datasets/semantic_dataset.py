@@ -6,6 +6,19 @@ from src.utils import project_points, augment_points
 
 
 class SemanticDataset(Dataset):
+    """ Dataset class for semantic segmentation experiments.
+
+    :param split: The split of the dataset to be used. Can be either 'train' or 'val'.
+    :param cfg: The configuration object containing the dataset parameters.
+    :param dataset_path: The path to the dataset.
+    :param project_name: The name of the project.
+    :param resume: Whether to initialize the dataset from scratch or to resume from a previous state.
+    :param num_clouds: The number of clouds to be used in the dataset. If None, all clouds will be used.
+    :param sequences: The sequences to be used in the dataset. If None, all sequences will be used.
+    :param al_experiment: Whether the dataset is used in an active learning experiment.
+    :param selection_mode: Whether the dataset is used for the selection.
+    """
+
     def __init__(self,
                  split: str,
                  cfg: DictConfig,

@@ -24,9 +24,6 @@ class BaseLogger(object):
     def __init__(self):
         pass
 
-    def load_history(self, history: dict):
-        raise NotImplementedError
-
     def update(self, loss, outputs, targets):
         raise NotImplementedError
 
@@ -34,9 +31,6 @@ class BaseLogger(object):
         raise NotImplementedError
 
     def log_val(self, epoch):
-        raise NotImplementedError
-
-    def log_dataset_statistics(self, dataset, epoch):
         raise NotImplementedError
 
 
@@ -83,9 +77,11 @@ class SemanticLogger(object):
         }
 
     def miou_converged(self, min_epochs: int = 30, patience: int = 10):
-        """ Check if IoU has converged. If the IoU has
-        not improved for 10 epochs, the training is stopped.
+        """ Check if IoU converged. Convergence is defined as no improvement in the last {{ patience }} epochs.
+        :param min_epochs: Minimum number of epochs before convergence check.
+        :param patience: Number of epochs without improvement before convergence.
         """
+
         if len(self.history['miou_val']) < min_epochs:
             log.info(f'Skipping convergence check, not enough epochs: {len(self.history["miou_val"])}')
             return False
@@ -100,10 +96,12 @@ class SemanticLogger(object):
             return False
 
     def miou_improved(self):
-        """ Check if IoU improvement was greater than 1%.
+        """ Check if MIoU improvement was greater than 1%. (on validation set)
+        This is used to determine if the model should be saved.
         """
 
         if len(self.history['miou_val']) < 2:
+            log.info(f'Skipping improvement check, not enough epochs: {len(self.history["miou_val"])}')
             return False
 
         last_miou = self.history['miou_val'][-1]
@@ -112,27 +110,13 @@ class SemanticLogger(object):
         log.info(f'Last miou: {last_miou}, max miou: {max_miou}, improvement: {improvement}')
         return improvement >= 0.01
 
-        # if last_miou > max_miou + 0.01:
-        #
-        #
-        # if len(self.history['miou_val']) < min_epochs:
-        #     log.info(f'Skipping improvement check, not enough epochs: {len(self.history["miou_val"])}')
-        #     return False
-        #
-        # if len(self.history['miou_val']) - np.argmax(self.history['miou_val']) == 1:
-        #     log.info(f'MIoU improved: {self.history["miou_val"][-1]}')
-        #     return True
-        # else:
-        #     log.info(f'MIoU not improved: {self.history["miou_val"][-1]}')
-        #     return False
-
     def update(self, loss: float, outputs: torch.Tensor, targets: torch.Tensor, named_params: dict = None):
         """ Update loss and metrics
 
         :param loss: Loss value
-        :param outputs: Model outputs
-        :param targets: Targets
-        :param named_params: Named parameters
+        :param outputs: Model outputs (predictions)
+        :param targets: Targets (ground truth)
+        :param named_params: Named parameters of the model
         """
 
         self.batch_loss_history.append(loss)
@@ -172,7 +156,7 @@ class SemanticLogger(object):
         self.history['maximum_gradients'] = []
 
     def log_train(self, epoch: int):
-        """Log train metrics to W&B
+        """Log train metrics to W&B and save to history.
 
         :param epoch: Current epoch
         """
@@ -212,7 +196,7 @@ class SemanticLogger(object):
         self.batch_max_grad_history = []
 
     def log_val(self, epoch: int):
-        """Log val metrics to W&B
+        """Log val metrics to W&B and save to history.
 
         :param epoch: Current epoch
         """

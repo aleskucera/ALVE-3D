@@ -12,6 +12,11 @@ log = logging.getLogger(__name__)
 
 
 class SemanticKITTIDataset(Dataset):
+    """ SemanticKITTI dataset for semantic segmentation.
+    :param cfg: The configuration object containing the dataset parameters.
+    :param split: The split of the dataset to be used. Can be either 'train' or 'val'.
+    """
+    
     def __init__(self, cfg: DictConfig, split: str):
 
         self.cfg = cfg

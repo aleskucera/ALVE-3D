@@ -13,6 +13,22 @@ from src.utils import Experiment
 
 
 def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
+    """ Selects the voxels to be labeled for the next training iteration.
+    The function executes the following steps:
+        1. Load the dataset.
+        2. Create a Selector object. If the expected percentage of labeled voxels is equal to 0, the selector will be a
+           RandomSelector. Otherwise, it will be a selector based on the criterion specified in the configuration file.
+        3. If the expected percentage of labeled voxels is greater than 0, load the voxel selection from W&B
+           and use it to tell the selector which voxels are already labeled. Then, load the model from W&B
+           and use it to select the voxels to be labeled.
+        4. Upload the voxel selection to W&B with the statistics of the selection.
+        5. Upload the most labeled sample to W&B.
+
+    :param cfg: The configuration object containing the dataset parameters.
+    :param experiment: The experiment object containing the names of the artifacts to be used.
+    :param device: The device to be used for the selection.
+    """
+
     criterion = cfg.active.criterion
     selection_objects = cfg.active.selection_objects
     select_percentage = cfg.active.select_percentage

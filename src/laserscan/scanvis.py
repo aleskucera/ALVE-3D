@@ -11,6 +11,17 @@ from .scene import Scene, CloudWidget, ImageWidget, Counter
 
 
 class ScanVis:
+    """Visualize scans and labels in 3D and 2D.
+
+    :param laser_scan: LaserScan object.
+    :param scans: List of scans to visualize.
+    :param labels: List of labels to visualize. If None, no labels will be visualized. (Default: None)
+    :param predictions: List of predictions to visualize. If None, no predictions will be visualized. (Default: None)
+    :param projection: Whether to project the scans and labels. (Default: True)
+    :param raw_scan: Whether to visualize the raw scan. (Default: True)
+    :param offset: Offset of the scan in the dataset. (Default: 0)
+    """
+
     def __init__(self, laser_scan: LaserScan, scans: iter, labels: iter = None, predictions: iter = None,
                  projection: bool = True, raw_scan: bool = True, offset: int = 0):
 

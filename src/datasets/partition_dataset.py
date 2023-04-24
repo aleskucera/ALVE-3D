@@ -6,6 +6,19 @@ from .base_dataset import Dataset
 
 
 class PartitionDataset(Dataset):
+    """ Dataset class for the training the partitioning the point cloud into the superpoints.
+
+    :param split: The split of the dataset. Can be 'train', 'val' or 'test'.
+    :param cfg: The configuration of the dataset.
+    :param dataset_path: The path to the dataset.
+    :param project_name: The name of the project.
+    :param resume: Whether to resume from a previous state.
+    :param num_clouds: The number of clouds to be used in the dataset. If None, all clouds will be used.
+    :param sequences: The sequences to be used in the dataset. If None, all sequences will be used.
+    :param al_experiment: Whether the dataset is used in an active learning experiment.
+    :param selection_mode: Whether the dataset is used for the selection.
+    """
+
     def __init__(self,
                  split: str,
                  cfg: DictConfig,

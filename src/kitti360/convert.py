@@ -30,6 +30,19 @@ def convert_sequence(sequence_path: str,
                      window_ranges: list[tuple[int, int]],
                      label_map: dict[int, int],
                      ignore_index: int):
+    """ Convert a KITTI360 sequence to a format for active learning experiments.
+    The conversion includes the following steps:
+        1. Read the static and dynamic windows of the sequence.
+        2. Remove the points that will be mapped in the training labels to the ignore index.
+        3. Compute the voxel clouds from the static windows.
+        4. Remove dynamic points form scans using nearest neighbors from the dynamic windows.
+        5. Add RGB information to the scans using nearest neighbors from the static window.
+        6. Add the labels to the scans using nearest neighbors from the voxel clouds.
+        7. Map each point of the scan to the voxel in the voxel cloud.
+        8. Compute necessary features for the superpoint partitioning of the voxel clouds.
+
+    """
+
     # Velodyne directory
     scans_dir = os.path.join(sequence_path, 'velodyne')
     os.makedirs(scans_dir, exist_ok=True)

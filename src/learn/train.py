@@ -15,6 +15,13 @@ log = logging.getLogger(__name__)
 
 
 def train_semantic_model(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
+    """ Trains a semantic segmentation model of the full dataset.
+
+    :param cfg: The configuration object containing the dataset parameters.
+    :param experiment: The experiment object containing the names of the artifacts to be used.
+    :param device: The device to be used for the training.
+    """
+
     train_ds = SemanticDataset(split='train', cfg=cfg.ds, dataset_path=cfg.ds.path,
                                project_name=experiment.info, num_clouds=cfg.train.dataset_size, al_experiment=False)
     val_ds = SemanticDataset(split='val', cfg=cfg.ds, dataset_path=cfg.ds.path,
@@ -37,6 +44,21 @@ def train_partition_model(cfg: DictConfig, experiment: Experiment, device: torch
 
 
 def train_semantic_active(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
+    """ Trains a semantic segmentation model using active learning. This function executes only one iteration of the
+    training. The training is executed in the following steps:
+        1. Load the model and the history from the artifacts.
+        2. Load the dataset and initialize all labels to unlabeled.
+        3. Create a Selector object.
+        4. Download the information about the labeled voxels from the artifact and using Selector,
+           label the voxels that has been previously selected.
+        5. Train the model.
+        6. Save the model during the training and the history of the training to the artifact.
+
+    :param cfg: The configuration object containing the dataset parameters.
+    :param experiment: The experiment object containing the names of the artifacts to be used.
+    :param device: The device to be used for the training.
+    """
+
     criterion = cfg.active.criterion
     selection_objects = cfg.active.selection_objects
 
@@ -86,6 +108,13 @@ def train_partition_active(cfg: DictConfig, experiment: Experiment, device: torc
 
 
 def train_semantickitti_original(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
+    """ Trains a semantic segmentation model of the original SemanticKITTI dataset.
+
+    :param cfg: The configuration object containing the dataset parameters.
+    :param experiment: The experiment object containing the names of the artifacts to be used.
+    :param device: The device to be used for the training.
+    """
+    
     train_ds = SemanticKITTIDataset(cfg.ds, 'train')
     val_ds = SemanticKITTIDataset(cfg.ds, 'val')
 

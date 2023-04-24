@@ -20,6 +20,12 @@ log = logging.getLogger(__name__)
 
 
 class KITTI360Converter:
+    """ Converter for the KITTI-360 dataset.
+    The object provides the following functionalities:
+        - Convert a sequence to a format for active learning experiments.
+        - Visualize the conversion of a sequence.
+    """
+
     def __init__(self, cfg: DictConfig):
 
         # ----------------- KITTI-360 structure attributes -----------------
