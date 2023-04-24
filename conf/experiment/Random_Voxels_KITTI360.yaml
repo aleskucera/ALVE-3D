@@ -12,6 +12,6 @@ active:
   batch_size: 128
   criterion: Random
   selection_objects: Voxels
-  select_percentage: 0.1
+  select_percentage: 0.2
 
 # sbatch --output=Random_Voxels_KITTI360.out --error=Random_Voxels_KITTI360.out scripts/active/{action}.batch --expected-percentage {p} --experiment Random_Voxels_KITTI360

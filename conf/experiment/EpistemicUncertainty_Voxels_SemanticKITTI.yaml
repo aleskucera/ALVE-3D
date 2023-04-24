@@ -12,6 +12,6 @@ active:
   batch_size: 64
   criterion: EpistemicUncertainty
   selection_objects: Voxels
-  select_percentage: 0.1
+  select_percentage: 0.2
 
 # sbatch --output=EpistemicUncertainty_Voxels_SemanticKITTI.out --error=EpistemicUncertainty_Voxels_SemanticKITTI.out scripts/active/{action}.batch --expected-percentage {p} --experiment EpistemicUncertainty_Voxels_SemanticKITTI

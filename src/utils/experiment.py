@@ -23,6 +23,8 @@ class Experiment(object):
             return f'AL - {self.cfg.active.criterion} {self.cfg.active.selection_objects}'
         elif self.cfg.action == 'select_voxels':
             return f'AL - {self.cfg.active.criterion} {self.cfg.active.selection_objects}'
+        elif self.cfg.action == 'train_semantickitti_original':
+            return 'Train SemanticKITTI Original'
 
     @property
     def group(self):
@@ -36,6 +38,8 @@ class Experiment(object):
             return f'{self.cfg.ds.name} {self.cfg.model.architecture}'
         elif self.cfg.action == 'select_voxels':
             return f'{self.cfg.ds.name} {self.cfg.model.architecture}'
+        elif self.cfg.action == 'train_semantickitti_original':
+            return None
 
     @property
     def job_type(self):
@@ -49,6 +53,8 @@ class Experiment(object):
             return 'Training Partition Model'
         elif self.cfg.action == 'select_voxels':
             return 'Selection'
+        elif self.cfg.action == 'train_semantickitti_original':
+            return None
 
     @property
     def name(self):
@@ -62,6 +68,8 @@ class Experiment(object):
             return f'Training Partition - {self.cfg.active.expected_percentage_labeled}%'
         elif self.cfg.action == 'select_voxels':
             return f'Selection - {self.cfg.active.expected_percentage_labeled + self.cfg.active.select_percentage}%'
+        elif self.cfg.action == 'train_semantickitti_original':
+            return f'{self.cfg.model.architecture}'
 
     @property
     def info(self):
@@ -78,6 +86,8 @@ class Experiment(object):
         elif self.cfg.action == 'select_voxels':
             return f'{self.cfg.active.criterion}_{self.cfg.active.selection_objects}' \
                    f'_{self.cfg.model.architecture}_{self.cfg.ds.name}'
+        elif self.cfg.action == 'train_semantickitti_original':
+            return f'{self.cfg.model.architecture}_SemanticKITTI_Original'
 
     @property
     def model(self):

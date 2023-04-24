@@ -12,6 +12,6 @@ active:
   batch_size: 128
   criterion: AverageEntropy
   selection_objects: Voxels
-  select_percentage: 0.1
+  select_percentage: 0.2
 
 # sbatch --output=AverageEntropy_Voxels_SemanticKITTI.out --error=AverageEntropy_Voxels_SemanticKITTI.out scripts/active/{action}.batch --expected-percentage {p} --experiment AverageEntropy_Voxels_SemanticKITTI
