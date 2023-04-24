@@ -6,8 +6,8 @@ defaults:
 train:
   batch_size: 32
   loss: FocalLoss
-  patience: 20
-  min_epochs: 50
+  patience: 25
+  min_epochs: 25
 active:
   batch_size: 64
   criterion: EpistemicUncertainty

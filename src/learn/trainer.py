@@ -115,7 +115,7 @@ class BaseTrainer(object):
 
     def load_model(self, model: dict):
         self.model.load_state_dict(model['model_state_dict'])
-        self.optimizer.load_state_dict(model['optimizer_state_dict'])
+        # self.optimizer.load_state_dict(model['optimizer_state_dict'])
 
 
 class SemanticTrainer(BaseTrainer):
@@ -126,7 +126,7 @@ class SemanticTrainer(BaseTrainer):
     def train(self):
         while not self.logger.miou_converged(self.min_epochs, self.patience):
             self.train_epoch(validate=True)
-            if self.logger.miou_improved(self.min_epochs // 2):
+            if self.logger.miou_improved():
                 log_model(model=self.model, optimizer=self.optimizer,
                           history=self.logger.history, epoch=self.epoch, model_name=self.model_name)
             self.epoch += 1

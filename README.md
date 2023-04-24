@@ -17,7 +17,8 @@ Checklist
     - Visualize the max, min, mean, std of the epistemic uncertainty
 - [x] Start the active learning experiments
 - [x] Create random active learning experiment
-- [ ] Change the LaserScan class
+- [x] Change the LaserScan class
+- [ ] Change the saving of the model
 - [ ] Start the experiment 'SalsaNext on SemanticKITTI'
 
 

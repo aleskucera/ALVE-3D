@@ -99,20 +99,32 @@ class SemanticLogger(object):
                      f'{len(self.history["miou_val"]) - np.argmax(self.history["miou_val"])}')
             return False
 
-    def miou_improved(self, min_epochs: int = 15):
-        """ Check if IoU has improved. If the last IoU
-        is the maximum, the model is saved.
+    def miou_improved(self):
+        """ Check if IoU improvement was greater than 1%.
         """
-        if len(self.history['miou_val']) < min_epochs:
-            log.info(f'Skipping improvement check, not enough epochs: {len(self.history["miou_val"])}')
-            return False
 
-        if len(self.history['miou_val']) - np.argmax(self.history['miou_val']) == 1:
-            log.info(f'MIoU improved: {self.history["miou_val"][-1]}')
+        if len(self.history['miou_val']) == 0:
             return True
-        else:
-            log.info(f'MIoU not improved: {self.history["miou_val"][-1]}')
-            return False
+
+        last_miou = self.history['miou_val'][-1]
+        max_miou = max(self.history['miou_val'][:-1])
+        improvement = last_miou - max_miou
+        log.info(f'Last miou: {last_miou}, max miou: {max_miou}, improvement: {improvement}')
+        return improvement >= 0.01
+
+        # if last_miou > max_miou + 0.01:
+        #
+        #
+        # if len(self.history['miou_val']) < min_epochs:
+        #     log.info(f'Skipping improvement check, not enough epochs: {len(self.history["miou_val"])}')
+        #     return False
+        #
+        # if len(self.history['miou_val']) - np.argmax(self.history['miou_val']) == 1:
+        #     log.info(f'MIoU improved: {self.history["miou_val"][-1]}')
+        #     return True
+        # else:
+        #     log.info(f'MIoU not improved: {self.history["miou_val"][-1]}')
+        #     return False
 
     def update(self, loss: float, outputs: torch.Tensor, targets: torch.Tensor, named_params: dict = None):
         """ Update loss and metrics
