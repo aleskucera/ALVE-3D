@@ -103,8 +103,8 @@ class SemanticLogger(object):
         """ Check if IoU improvement was greater than 1%.
         """
 
-        if len(self.history['miou_val']) == 0:
-            return True
+        if len(self.history['miou_val']) < 2:
+            return False
 
         last_miou = self.history['miou_val'][-1]
         max_miou = max(self.history['miou_val'][:-1])
