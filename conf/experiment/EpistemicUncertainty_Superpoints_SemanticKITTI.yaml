@@ -9,7 +9,7 @@ train:
   patience: 25
   min_epochs: 25
   learning_rate: 0.05
-  lr_rate_decay: 0.9
+  lr_decay: 0.9
 active:
   batch_size: 128
   criterion: EpistemicUncertainty

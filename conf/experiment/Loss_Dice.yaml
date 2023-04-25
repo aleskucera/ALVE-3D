@@ -10,4 +10,4 @@ train:
   min_epochs: 100
   loss: DiceLoss
   learning_rate: 0.05
-  lr_rate_decay: 0.95
+  lr_decay: 0.9
