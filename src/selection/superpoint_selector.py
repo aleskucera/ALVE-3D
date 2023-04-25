@@ -25,7 +25,7 @@ class SuperpointSelector(Selector):
             colors = cloud_interface.read_colors(cloud_path)
             edge_sources, edge_targets = cloud_interface.read_edges(cloud_path)
             _, superpoint_map = partition_cloud(points, edge_sources, edge_targets, colors)
-            superpoint_map = torch.from_numpy(superpoint_map).dtype(torch.long)
+            superpoint_map = torch.from_numpy(superpoint_map)
             self.num_voxels += points.shape[0]
             self.clouds.append(SuperpointCloud(cloud_path, self.project_name,
                                                points.shape[0], cloud_id, superpoint_map))

@@ -41,6 +41,10 @@ class Cloud(object):
 
     @property
     def num_classes(self) -> int:
+        """ Returns the number of semantic classes in the cloud. If the cloud does not contain predictions
+        for semantic classes, -1 is returned.
+        """
+
         if self.predictions.shape != torch.Size([0]):
             return self.predictions.shape[1]
         else:
@@ -48,15 +52,41 @@ class Cloud(object):
 
     @property
     def percentage_labeled(self) -> float:
+        """ Returns the percentage of labeled voxels in the cloud.
+        """
+
         return torch.sum(self.label_mask).item() / self.size
 
     @property
     def selection_key(self) -> str:
+        """ Returns the key that is used to identify the cloud in the selection dictionary. Each cloud has a
+        unique path, but the path can change with different devices. Therefore, the key is created by taking the
+        last three parts of the path and joining them with a slash.
+
+        Example:
+            self.path = /home/user/dataset/sequences/03/voxel_clouds/000131_000634.h5
+            key = 03/voxel_clouds/000131_000634.h5
+        """
+
         split = self.path.split('/')
         key = '/'.join(split[-3:])
         return key
 
     def add_predictions(self, predictions: torch.Tensor, voxel_map: torch.Tensor, mc_dropout: bool = False) -> None:
+        """ Adds the predictions of the model to the cloud. The predictions are mapped to the voxels and the
+        predictions of the voxels that are already labeled are removed.
+
+        :param predictions: Predictions of the model. The expected shape is (N, C) where N is the number of voxels
+                            and C is the number of semantic classes. The other option is (M, N, C) where M is the
+                            number of predictions (e.g. for MC dropout) and N and C are the same as before. In this
+                            case, the information stored for future calculations is the mean of the predictions and
+                            the variance. (must be specified with mc_dropout)
+        :param voxel_map: Mapping of the voxels to the point cloud. The expected shape is (N,) where N is the number
+                            of voxels. The values of the tensor are the indices of the points in the point cloud.
+        :param mc_dropout: If True, the predictions are assumed to be the result of MC dropout and the mean and
+                            variance are calculated.
+        """
+
         if mc_dropout:
             variances = predictions.var(dim=0)
             predictions = predictions.mean(dim=0)
@@ -77,27 +107,42 @@ class Cloud(object):
             self.variances = torch.cat((self.variances, unlabeled_variances), dim=0)
 
     def label_voxels(self, voxels: torch.Tensor, dataset: Dataset = None) -> None:
+        """ Labels the voxels in the cloud.
+
+        :param voxels: Indices of the voxels that should be labeled.
+        :param dataset: Dataset that contains the point cloud. If specified, the voxels are also labeled in the dataset and
+                written to the disk.
+        """
+
         self.label_mask[voxels] = True
         if dataset is not None:
             dataset.label_voxels(voxels.numpy(), self.path)
 
     def calculate_average_entropies(self) -> None:
-        self.__calculate_values(self.predictions, self.__average_entropy)
+        self.__calculate_metric(self.predictions, self.__average_entropy)
         self.__reset()
 
     def calculate_viewpoint_entropies(self) -> None:
-        self.__calculate_values(self.predictions, self.__viewpoint_entropy)
+        self.__calculate_metric(self.predictions, self.__viewpoint_entropy)
         self.__reset()
 
     def calculate_viewpoint_variances(self) -> None:
-        self.__calculate_values(self.predictions, self.__variance)
+        self.__calculate_metric(self.predictions, self.__variance)
         self.__reset()
 
     def calculate_epistemic_uncertainties(self) -> None:
-        self.__calculate_values(self.variances, torch.mean)
+        self.__calculate_metric(self.variances, torch.mean)
         self.__reset()
 
-    def __calculate_values(self, items: torch.Tensor, function: callable):
+    def __calculate_metric(self, items: torch.Tensor, function: callable):
+        """ Calculates the metric for the voxels in the cloud specified by the function argument.
+
+        :param items: Items that should be used to calculate the metric.
+                      The expected shape is (N, C) where N is the number
+        :param function: Function that is used to calculate the metric. The function must take a tensor
+                         of shape (N, C) and return a scalar value.
+        """
+
         values = torch.full((self.size,), float('nan'), dtype=torch.float32)
 
         order = torch.argsort(self.voxel_map)
