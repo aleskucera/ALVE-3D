@@ -32,7 +32,7 @@ def partition_cloud(points: np.ndarray, edge_sources: np.ndarray, edge_targets: 
                                                  REG_STRENGTH,
                                                  cutoff=CP_CUTOFF, spatial=1,
                                                  weight_decay=0.2)
-    return np.array(components), np.array(component_map)
+    return np.array(components).astype(np.int64), np.array(component_map).astype(np.int64)
 
 
 def calculate_features(points: np.ndarray) -> dict:
