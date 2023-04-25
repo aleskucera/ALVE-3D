@@ -59,15 +59,14 @@ def log_dataset_statistics(cfg: DictConfig, dataset: Dataset,
     p = stats['labeled_ratio']
 
     if val:
-        if p < 1.0:
-            raise ValueError(f"Validation dataset is not fully labeled.")
-
+        if abs(stats['labeled_ratio'] - 1.0) > 1e-5:
+            raise ValueError(f"Validation dataset is not fully labeled. Labeled ratio: {stats['labeled_ratio']}")
         class_dist = np.delete(stats['class_distribution'], ignore_index)
         data = [[name, value] for name, value in zip(label_names, class_dist)]
         table = wandb.Table(data=data, columns=["Class", "Distribution"])
         wandb.log({f"Val Class Distribution": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
         return stats['class_distribution']
-    
+
     # Log the dataset labeling progress
     wandb.log({f'Dataset Labeling Progress': stats['labeled_ratio']}, step=0)
     wandb.log({f'Labeled Voxels': stats['labeled_voxels']}, step=0)
