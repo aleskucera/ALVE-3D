@@ -13,8 +13,7 @@ from src.selection import select_voxels
 from src.kitti360 import KITTI360Converter
 from src.utils.experiment import Experiment
 from src.semantickitti import SemanticKITTIConverter
-from src.learn import train_semantic_model, train_semantic_active, \
-    train_semantickitti_original
+from src.learn import train_model, train_model_active, train_semantickitti_original
 
 log = logging.getLogger(__name__)
 
@@ -34,12 +33,12 @@ def main(cfg: DictConfig):
     dict_config = omegaconf.OmegaConf.to_container(cfg, resolve=True)
     with wandb.init(project=experiment.project, group=experiment.group,
                     name=experiment.name, config=dict_config, job_type=experiment.job_type):
-        if cfg.action == 'train_semantic':
-            train_semantic_model(cfg, experiment, device)
+        if cfg.action == 'train_model':
+            train_model(cfg, experiment, device)
         elif cfg.action == 'train_semantickitti_original':
             train_semantickitti_original(cfg, experiment, device)
-        elif cfg.action == 'train_semantic_active':
-            train_semantic_active(cfg, experiment, device)
+        elif cfg.action == 'train_model_active':
+            train_model_active(cfg, experiment, device)
         elif cfg.action == 'select_voxels':
             select_voxels(cfg, experiment, device)
         elif cfg.action == 'convert_dataset':

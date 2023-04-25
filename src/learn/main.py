@@ -15,7 +15,7 @@ from src.datasets import SemanticDataset, SemanticKITTIDataset
 log = logging.getLogger(__name__)
 
 
-def train_semantic_model(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
+def train_model(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
     """ Trains a semantic segmentation model of the full dataset.
 
     :param cfg: The configuration object containing the dataset parameters.
@@ -40,7 +40,7 @@ def train_semantic_model(cfg: DictConfig, experiment: Experiment, device: torch.
     trainer.train()
 
 
-def train_semantic_active(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
+def train_model_active(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
     """ Trains a semantic segmentation model using active learning. This function executes only one iteration of the
     training. The training is executed in the following steps:
         1. Load the model and the history from the artifacts.
