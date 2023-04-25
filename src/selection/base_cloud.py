@@ -4,6 +4,24 @@ from src.datasets import Dataset
 
 
 class Cloud(object):
+    """ Base class for clouds. The clouds are used to select voxels from the dataset.
+    The object provides following functionalities:
+        - Add predictions of the model and map them to the voxels
+        - Label selected voxels
+        - Calculate the following metrics for each voxel:
+            - Average entropy
+            - Viewpoint entropy
+            - Viewpoint variance
+            - Epistemic uncertainty
+
+    After calculating the metrics for the voxels, the calculated values are saved in the
+    cloud and all other information is deleted. This is done to save memory.
+
+    :param path: Path to the cloud
+    :param size: Number of voxels in the cloud
+    :param cloud_id: Unique id of the cloud
+    """
+
     def __init__(self, path: str, size: int, cloud_id: int):
         self.eps = 1e-6  # Small value to avoid division by zero
         self.path = path

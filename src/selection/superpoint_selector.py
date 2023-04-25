@@ -5,9 +5,9 @@ from tqdm import tqdm
 from torch.utils.data import Dataset
 
 from .base_selector import Selector
-from .superpoint_cloud import SuperpointCloud
-from src.superpoints import partition_cloud
 from src.utils.io import CloudInterface
+from src.superpoints import partition_cloud
+from .superpoint_cloud import SuperpointCloud
 
 
 class SuperpointSelector(Selector):
@@ -52,16 +52,6 @@ class SuperpointSelector(Selector):
             superpoint_sizes = torch.cat((superpoint_sizes, cloud_superpoint_sizes))
 
         return self._choose_voxels(superpoint_map, superpoint_sizes, cloud_map, selection_size)
-
-    # def _select_random_graphs(self, dataset: Dataset, percentage: float) -> tuple:
-    #     selection_size = self.get_selection_size(percentage)
-    #     print(selection_size)
-    #     subgraph_size = max(10000, selection_size // 10)
-    #     sizes = [subgraph_size] * (selection_size // subgraph_size)
-    #     sizes.append(selection_size % subgraph_size)
-    #     print(sizes)
-    #
-    #     raise NotImplementedError()
 
     def _select_by_criterion(self, dataset: Dataset, model: nn.Module, percentage: float) -> tuple:
         values = torch.tensor([], dtype=torch.float32)
