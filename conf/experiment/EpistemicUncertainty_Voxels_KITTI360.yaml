@@ -9,9 +9,9 @@ train:
   patience: 25
   min_epochs: 25
 active:
-  batch_size: 64
+  batch_size: 128
   criterion: EpistemicUncertainty
   selection_objects: Voxels
-  select_percentage: 0.1
+  select_percentage: 0.2
 
 # sbatch --output=EpistemicUncertainty_Voxels_KITTI360.out --error=EpistemicUncertainty_Voxels_KITTI360.out scripts/active/{action}.batch --expected-percentage {p} --experiment EpistemicUncertainty_Voxels_KITTI360
