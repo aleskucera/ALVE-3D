@@ -6,7 +6,7 @@ from tqdm import tqdm
 from omegaconf import DictConfig
 from hydra.utils import to_absolute_path
 
-from .map import map_labels
+from src.utils.map import map_labels
 
 
 def set_paths(cfg: DictConfig, output_dir: str) -> DictConfig:

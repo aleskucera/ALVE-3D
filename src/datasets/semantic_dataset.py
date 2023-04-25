@@ -2,7 +2,8 @@ import numpy as np
 from omegaconf import DictConfig
 
 from .base_dataset import Dataset
-from src.utils import project_points, augment_points
+from src.utils.cloud import augment_points
+from src.utils.project import project_points
 
 
 class SemanticDataset(Dataset):

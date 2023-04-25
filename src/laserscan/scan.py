@@ -4,7 +4,7 @@ import h5py
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from src.utils import project_points
+from src.utils.project import project_points
 from src.utils.map import colorize_values, map_colors, map_labels
 
 

@@ -4,9 +4,10 @@ import torch
 import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 
 from .base_cloud import Cloud
+from src.datasets import Dataset
 
 
 class Selector(object):
@@ -135,47 +136,3 @@ class Selector(object):
                              'left_values': left_values.tolist()}
 
         return metric_statistics
-
-# def compute_variance_and_std(model_outputs):
-#     import matplotlib.pyplot as plt
-#
-#     print(model_outputs.shape)
-#     if model_outputs.shape[0] > 1:
-#         if torch.eq(model_outputs[0], model_outputs[1]).all():
-#             print('All predictions are equal')
-#
-#     # compute mean over the multiple predictions
-#     mean = torch.mean(model_outputs, dim=0)
-#
-#     # compute variance over the multiple predictions
-#     variance = torch.var(model_outputs, dim=0, unbiased=False)
-#
-#     # compute standard deviation over the multiple predictions
-#     std = torch.std(model_outputs, dim=0, unbiased=False)
-#
-#     # Calculate the mean of the variances
-#     mean_variance = torch.mean(variance, dim=0)
-#
-#     # Calculate the maximum variance
-#     max_variance = torch.max(variance, dim=0)
-#
-#     # Calculate the minimum variance
-#     min_variance = torch.min(variance, dim=0)
-#
-#     # Calculate the mean of the standard deviations
-#     mean_std = torch.mean(std, dim=0)
-#
-#     # Calculate the maximum standard deviation
-#     max_std = torch.max(std, dim=0)
-#
-#     # Calculate the minimum standard deviation
-#     min_std = torch.min(std, dim=0)
-#
-#     print('Mean of the variances: ', mean_variance)
-#     print('Maximum variance: ', max_variance[0])
-#     print('Minimum variance: ', min_variance[0])
-#     print('Mean of the standard deviations: ', mean_std)
-#     print('Maximum standard deviation: ', max_std[0])
-#     print('Minimum standard deviation: ', min_std[0])
-#
-#     return mean, variance, std

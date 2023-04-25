@@ -21,7 +21,7 @@ from torch.utils.data import DataLoader
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
-from src.superpoints.pointnet import PointNet
+from src.models.pointnet import PointNet
 from src.superpoints.graph import compute_sp_graph, create_s3dis_datasets, graph_collate
 from src.superpoints.provider import perfect_prediction, write_spg
 
@@ -257,6 +257,7 @@ def main(args: argparse.Namespace):
 
                 # Compute embeddings
                 embeddings = model(clouds, clouds_global)
+                print(f'embedding shape: {embeddings.shape}')
 
                 # Compute loss
                 diff = compute_dist(embeddings, edg_source, edg_target, args.dist_type)

@@ -7,7 +7,6 @@ from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
 from src.laserscan import LaserScan
-from .cloud import visualize_cloud, visualize_cloud_values
 
 
 def log_class_iou(class_iou: torch.Tensor, labels: list[str],
@@ -51,13 +50,24 @@ def log_confusion_matrix(confusion_matrix: torch.Tensor, labels: list[str],
     plt.close()
 
 
-def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, artifact_name: str = None) -> np.ndarray:
+def log_dataset_statistics(cfg: DictConfig, dataset: Dataset,
+                           artifact_name: str = None, val: bool = False) -> np.ndarray:
     ignore_index = cfg.ds.ignore_index
     label_names = [v for k, v in cfg.ds.labels_train.items() if k != ignore_index]
 
     stats = dataset.statistics
     p = stats['labeled_ratio']
 
+    if val:
+        if p < 1.0:
+            raise ValueError(f"Validation dataset is not fully labeled.")
+
+        class_dist = np.delete(stats['class_distribution'], ignore_index)
+        data = [[name, value] for name, value in zip(label_names, class_dist)]
+        table = wandb.Table(data=data, columns=["Class", "Distribution"])
+        wandb.log({f"Val Class Distribution": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
+        return stats['class_distribution']
+    
     # Log the dataset labeling progress
     wandb.log({f'Dataset Labeling Progress': stats['labeled_ratio']}, step=0)
     wandb.log({f'Labeled Voxels': stats['labeled_voxels']}, step=0)
@@ -66,7 +76,7 @@ def log_dataset_statistics(cfg: DictConfig, dataset: Dataset, artifact_name: str
     class_dist = np.delete(stats['class_distribution'], ignore_index)
     data = [[name, value] for name, value in zip(label_names, class_dist)]
     table = wandb.Table(data=data, columns=["Class", "Distribution"])
-    wandb.log({f"Class Distribution - {p:.2f}%": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
+    wandb.log({f"Train Class Distribution": wandb.plot.bar(table, "Class", "Distribution")}, step=0)
 
     # Log the labeled class distribution
     labeled_class_dist = np.delete(stats['labeled_class_distribution'], ignore_index)

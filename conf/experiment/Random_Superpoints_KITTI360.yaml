@@ -12,8 +12,8 @@ train:
   lr_rate_decay: 0.9
 active:
   batch_size: 128
-  criterion: AverageEntropy
-  selection_objects: Voxels
+  criterion: Random
+  selection_objects: Superpoints
   select_percentage: 0.2
 
-# sbatch --output=AverageEntropy_Voxels_KITTI360.out --error=AverageEntropy_Voxels_KITTI360.out scripts/active/{action}.batch --expected-percentage {p} --experiment AverageEntropy_Voxels_KITTI360
+# sbatch --output=Random_Superpoints_KITTI360.out --error=Random_Superpoints_KITTI360.out scripts/active/{action}.batch --expected-percentage {p} --experiment Random_Superpoints_KITTI360

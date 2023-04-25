@@ -24,7 +24,7 @@ class Experiment(object):
         elif self.cfg.action == 'select_voxels':
             return f'AL - {self.cfg.active.criterion} {self.cfg.active.selection_objects}'
         elif self.cfg.action == 'train_semantickitti_original':
-            return 'Train SemanticKITTI Original'
+            return 'Train SemanticKITTI Original 2'
 
     @property
     def group(self):

@@ -6,8 +6,9 @@ from tqdm import tqdm
 from omegaconf import DictConfig
 
 from .utils import open_sequence
-from src.utils import transform_points, downsample_cloud, nearest_neighbors_2, nearest_neighbors, nn_graph, \
-    connected_label_components, map_labels
+from src.utils.map import map_labels
+from src.utils.cloud import transform_points, downsample_cloud, nearest_neighbors_2, \
+    nearest_neighbors, nn_graph, connected_label_components
 
 K_NN_ADJ = 5
 K_NN_LOCAL = 20
@@ -116,7 +117,7 @@ class SemanticKITTIConverter:
 
             voxel_points = voxel_points[voxel_mask]
             voxel_labels = voxel_labels[voxel_mask]
-            
+
             local_neighbors, _ = nearest_neighbors(voxel_points, K_NN_LOCAL)
             edge_sources, edge_targets, distances = nn_graph(voxel_points, K_NN_ADJ)
             objects = connected_label_components(voxel_labels, edge_sources, edge_targets)

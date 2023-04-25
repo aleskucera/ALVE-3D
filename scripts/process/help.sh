@@ -17,14 +17,13 @@ show_help_conversion () {
   echo "Options:"
   echo "  -d, --dataset         Dataset name (default: kitti-360, options: kitti-360, semantic-kitti)"
   echo "  -s, --sequence        Sequence to convert (default: 3)"
-  echo "  -h, --help            Display this help and exit"
 }
 
 show_help () {
   echo "Usage: help.sh [options]"
   echo "Options:"
   echo "  --job                 Display help for job"
-  echo "  --conversion             Display help for conversion"
+  echo "  --conversion          Display help for conversion"
   echo "  -h, --help            Display this help and exit"
 }
 

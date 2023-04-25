@@ -7,9 +7,10 @@ import numpy as np
 from omegaconf import DictConfig
 
 from .trainer import SemanticTrainer
-from src.datasets import SemanticDataset, SemanticKITTIDataset
 from src.selection import get_selector
-from src.utils import log_dataset_statistics, Experiment
+from src.utils.experiment import Experiment
+from src.utils.log import log_dataset_statistics
+from src.datasets import SemanticDataset, SemanticKITTIDataset
 
 log = logging.getLogger(__name__)
 
@@ -37,10 +38,6 @@ def train_semantic_model(cfg: DictConfig, experiment: Experiment, device: torch.
     trainer = SemanticTrainer(cfg=cfg, train_ds=train_ds, val_ds=val_ds, device=device, weights=weights,
                               model=None, model_name=experiment.model, history_name=experiment.history)
     trainer.train()
-
-
-def train_partition_model(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
-    raise NotImplementedError
 
 
 def train_semantic_active(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
@@ -95,16 +92,13 @@ def train_semantic_active(cfg: DictConfig, experiment: Experiment, device: torch
 
     # Log dataset statistics and calculate the weights for the loss function from them
     class_distribution = log_dataset_statistics(cfg=cfg, dataset=train_ds, artifact_name=experiment.dataset_stats)
+    _ = log_dataset_statistics(cfg=cfg, dataset=val_ds, val=True)
     weights = 1 / (class_distribution + 1e-6)
 
     # Train model
     trainer = SemanticTrainer(cfg=cfg, train_ds=train_ds, val_ds=val_ds, device=device, weights=weights,
                               model=model, model_name=experiment.model, history_name=experiment.history)
     trainer.train()
-
-
-def train_partition_active(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
-    raise NotImplementedError
 
 
 def train_semantickitti_original(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:
@@ -114,7 +108,7 @@ def train_semantickitti_original(cfg: DictConfig, experiment: Experiment, device
     :param experiment: The experiment object containing the names of the artifacts to be used.
     :param device: The device to be used for the training.
     """
-    
+
     train_ds = SemanticKITTIDataset(cfg.ds, 'train')
     val_ds = SemanticKITTIDataset(cfg.ds, 'val')
 

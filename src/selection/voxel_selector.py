@@ -3,8 +3,8 @@ import torch
 import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
-from torch.utils.data import Dataset
 
+from src.datasets import Dataset
 from .base_selector import Selector
 from .voxel_cloud import VoxelCloud
 

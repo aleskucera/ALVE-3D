@@ -4,8 +4,6 @@ try:
 except ImportError:
     app = None
 
-import h5py
-import numpy as np
 from .scan import LaserScan
 from .scene import Scene, CloudWidget, ImageWidget, Counter
 

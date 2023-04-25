@@ -7,7 +7,9 @@ project: SalsaNext SemanticKITTI (Original)
 train:
   patience: 20
   batch_size: 32
-  min_epochs: 200
+  min_epochs: 100
   loss: CombinedLoss
+  learning_rate: 0.01
+  lr_rate_decay: 0.98
 
 # sbatch --output=Original_SalsaNext_SemanticKITTI.out --error=Original_SalsaNext_SemanticKITTI.out scripts/train/train_original.batch --experiment Original_SalsaNext_SemanticKITTI

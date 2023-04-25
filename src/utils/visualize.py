@@ -3,7 +3,8 @@ import seaborn as sn
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-cmap = cm.get_cmap('tab20')
+cmap_small = cm.get_cmap('tab10')
+cmap_large = cm.get_cmap('tab20')
 
 
 def bar_chart(values: np.ndarray, labels: list, value_label: str, title: str = None, save_path: str = None):
@@ -39,7 +40,7 @@ def grouped_bar_chart(values: dict, labels: list, value_label: str, title: str =
     # Create a bar plot for each key in labeled_distributions
     for i, (key, vals) in enumerate(values.items()):
         offset = i - (len(vals) - 1) / 2
-        rects = ax.barh(y + offset * width, vals, width, label=key, color=cmap(i / len(vals)))
+        rects = ax.barh(y + offset * width, vals, width, label=key, color=cmap(i))
         # bar_labels = [f"{val:.1e}" if val >= 0.00001 else "" for val in vals]
         # ax.bar_label(rects, labels=bar_labels, padding=10)
 
@@ -65,9 +66,15 @@ def grouped_bar_chart(values: dict, labels: list, value_label: str, title: str =
 
 def plot(values: dict, x_label: str, y_label: str, title: str = None, save_path: str = None):
     fig, ax = plt.subplots()
+    cmap = cmap_small if len(values) <= 10 else cmap_large
 
     for i, (key, values) in enumerate(values.items()):
-        ax.plot(values, label=key, color=cmap(i / len(values)), marker='o', markersize=5, linewidth=2)
+        if isinstance(values, dict):
+            for j, (key2, values2) in enumerate(values.items()):
+                ax.plot(values2, label=f'{key} {key2}', linewidth=1.5,
+                        linestyle=['-', '--', '-.'][j], color=cmap(i))
+        else:
+            ax.plot(values, label=key, linewidth=1.5, color=cmap(i))
 
     if title is not None:
         ax.set_title(title)

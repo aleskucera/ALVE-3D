@@ -5,8 +5,8 @@ import numpy as np
 from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
-from src.semantickitti.utils import open_sequence
 from src.laserscan import LaserScan
+from src.semantickitti.utils import open_sequence
 
 log = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class SemanticKITTIDataset(Dataset):
     :param cfg: The configuration object containing the dataset parameters.
     :param split: The split of the dataset to be used. Can be either 'train' or 'val'.
     """
-    
+
     def __init__(self, cfg: DictConfig, split: str):
 
         self.cfg = cfg

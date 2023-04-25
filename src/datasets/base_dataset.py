@@ -6,7 +6,7 @@ from tqdm import tqdm
 from omegaconf import DictConfig
 from torch.utils.data import Dataset as TorchDataset
 
-from src.utils import load_dataset, ScanInterface, CloudInterface
+from src.utils.io import load_dataset, ScanInterface, CloudInterface
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +66,8 @@ class Dataset(TorchDataset):
         self.proj_H = cfg.projection.H
         self.proj_fov_up = cfg.projection.fov_up
         self.proj_fov_down = cfg.projection.fov_down
+
+        self.parser_type = None
 
         self.cloud_map = None
         self.scan_files = None

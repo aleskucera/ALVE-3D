@@ -6,13 +6,13 @@ import numpy as np
 from tqdm import tqdm
 import torch.optim as optim
 from omegaconf import DictConfig
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 
 from .logger import get_logger
 from src.losses import get_loss
 from src.models import get_model
-from src.datasets import get_parser
-from src.utils import log_model, log_history
+from src.datasets import Dataset, get_parser
+from src.utils.log import log_model, log_history
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +34,7 @@ class BaseTrainer(object):
         self.parser = get_parser(train_ds.parser_type, device)
         self.logger = get_logger(cfg.model.type, cfg.ds.num_classes, cfg.ds.labels_train, device, cfg.ds.ignore_index)
         self.optimizer = optim.Adam(self.model.parameters(), lr=cfg.train.learning_rate)
+        self.scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=cfg.train.lr_decay)
 
         self.epoch = 0
         self.min_epochs = cfg.train.min_epochs
@@ -79,6 +80,9 @@ class BaseTrainer(object):
 
             # Update the weights
             self.optimizer.step()
+
+            # Update the learning rate
+            self.scheduler.step()
 
         # Calculate the loss and metrics of the current epoch and log them
         with torch.no_grad():

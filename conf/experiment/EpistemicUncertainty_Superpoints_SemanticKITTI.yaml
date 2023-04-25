@@ -13,7 +13,7 @@ train:
 active:
   batch_size: 128
   criterion: EpistemicUncertainty
-  selection_objects: Voxels
+  selection_objects: Superpoints
   select_percentage: 0.2
 
-# sbatch --output=EpistemicUncertainty_Voxels_SemanticKITTI.out --error=EpistemicUncertainty_Voxels_SemanticKITTI.out scripts/active/{action}.batch --expected-percentage {p} --experiment EpistemicUncertainty_Voxels_SemanticKITTI
+# sbatch --output=EpistemicUncertainty_Superpoints_SemanticKITTI.out --error=EpistemicUncertainty_Superpoints_SemanticKITTI.out scripts/active/{action}.batch --expected-percentage {p} --experiment EpistemicUncertainty_Superpoints_SemanticKITTI

@@ -1,6 +1,5 @@
 import torch
 from omegaconf import DictConfig
-import torchvision.models.segmentation as tms
 import segmentation_models_pytorch as smp
 
 from .pointnet import PointNet

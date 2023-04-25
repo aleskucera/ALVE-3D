@@ -19,7 +19,6 @@ while [ "$#" -gt 0 ]; do
   case $1 in
     -d|--dataset) dataset="$2"; shift ;;
     -s|--sequence) sequence="$2"; shift ;;
-    -h|--help) show_help; exit 0 ;;
     *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;
   esac
   shift

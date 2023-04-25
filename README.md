@@ -18,8 +18,13 @@ Checklist
 - [x] Start the active learning experiments
 - [x] Create random active learning experiment
 - [x] Change the LaserScan class
-- [ ] Change the saving of the model
-- [ ] Start the experiment 'SalsaNext on SemanticKITTI'
+- [x] Change the saving of the model
+- [x] Start the experiment 'SalsaNext on SemanticKITTI'
+- [x] Determine, how to use jakteristics in singularity
+- [X] Create a function that partitions the voxel cloud to the superpoints
+- [ ] Create a new datasets
+    - SemanticKITTI: [0, 2]
+    - KITTI-360: [0, 2]
 
 
 

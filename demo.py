@@ -2,7 +2,6 @@
 import os
 import logging
 
-import h5py
 import torch
 import wandb
 import hydra
@@ -10,17 +9,15 @@ import numpy as np
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src.utils import set_paths, visualize_global_cloud, visualize_cloud_values, visualize_cloud
-from src.utils import plot, bar_chart, grouped_bar_chart, plot_confusion_matrix, map_colors, ScanInterface, \
-    CloudInterface, Experiment
-from src.datasets import SemanticDataset, PartitionDataset, get_parser
-from src.kitti360 import KITTI360Converter, create_kitti360_config
-from src.laserscan import LaserScan, ScanVis
 from src.models import get_model
-
-import matplotlib
-
-# matplotlib.use('Qt5Agg')
+from src.datasets import SemanticDataset
+from src.utils.cloud import visualize_cloud
+from src.laserscan import LaserScan, ScanVis
+from src.superpoints import partition_cloud, calculate_features
+from src.utils.io import set_paths, ScanInterface, CloudInterface
+from src.kitti360 import KITTI360Converter, create_kitti360_config
+from src.utils.map import map_colors, colorize_values, colorize_instances
+from src.utils.visualize import plot, bar_chart, grouped_bar_chart, plot_confusion_matrix
 
 log = logging.getLogger(__name__)
 
@@ -33,20 +30,20 @@ def main(cfg: DictConfig):
 
     if cfg.action == 'config_object':
         show_hydra_config(cfg)
-    elif cfg.action == 'experiment_object':
-        show_experiment(cfg)
-    elif cfg.action == 'test_model':
-        test_model(cfg)
     elif cfg.action == 'visualize_dataset_scans':
         visualize_dataset_scans(cfg)
     elif cfg.action == 'visualize_dataset_clouds':
         visualize_dataset_clouds(cfg)
+    elif cfg.action == 'visualize_feature':
+        visualize_feature(cfg)
     elif cfg.action == 'visualize_superpoints':
         visualize_superpoints(cfg)
-    elif cfg.action == 'visualize_experiment':
-        visualize_experiment(cfg)
-    elif cfg.action == 'log_sequence':
-        log_sequence(cfg)
+    elif cfg.action == 'test_model':
+        test_model(cfg)
+    elif cfg.action == 'visualize_model_training':
+        visualize_model_training(cfg)
+    elif cfg.action == 'visualize_model_experiment':
+        visualize_model_experiment(cfg)
     elif cfg.action == 'create_kitti360_config':
         create_kitti360_config()
     elif cfg.action == 'visualize_kitti360_conversion':
@@ -73,12 +70,6 @@ def show_hydra_config(cfg: DictConfig) -> None:
     for name, path in cfg.path.items():
         print(f'\t{name}: {path}')
     print('')
-
-
-def show_experiment(cfg: DictConfig) -> None:
-    cfg.action = 'train_semantic_active'
-    experiment = Experiment(cfg)
-    print(experiment)
 
 
 def test_model(cfg: DictConfig) -> None:
@@ -159,21 +150,137 @@ def visualize_dataset_clouds(cfg: DictConfig):
         visualize_cloud(points, colors)
 
 
+def visualize_feature(cfg: DictConfig) -> None:
+    size = cfg.size if 'size' in cfg else None
+    split = cfg.split if 'split' in cfg else 'train'
+    feature = cfg.feature if 'feature' in cfg else 'planarity'
+    sequences = [cfg.sequence] if 'sequence' in cfg else None
+
+    # Create dataset
+    dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
+                              cfg=cfg.ds, split=split, num_clouds=size, sequences=sequences)
+    cloud_interface = CloudInterface()
+
+    for cloud_file in dataset.clouds:
+        points = cloud_interface.read_points(cloud_file)
+
+        # Compute features
+        feature = calculate_features(points)[feature]
+
+        # Visualize feature
+        log.info(f'{feature} max: {np.max(feature)}, {feature} min: {np.min(feature[feature != -1])}')
+        feature_colors = colorize_values(feature, color_map='viridis', data_range=(0, np.max(feature)), ignore=(-1,))
+        visualize_cloud(points, feature_colors)
+
+
 def visualize_superpoints(cfg: DictConfig) -> None:
-    sequence = cfg.sequence if 'sequence' in cfg else 3
+    size = cfg.size if 'size' in cfg else None
+    split = cfg.split if 'split' in cfg else 'train'
+    sequences = [cfg.sequence] if 'sequence' in cfg else None
 
-    cloud_dir = os.path.join(cfg.ds.path, 'sequences', f'{sequence:02d}', 'voxel_clouds')
-    cloud_files = sorted([os.path.join(cloud_dir, f) for f in os.listdir(cloud_dir) if f.endswith('.h5')])
+    # Create dataset
+    dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
+                              cfg=cfg.ds, split=split, num_clouds=size, sequences=sequences)
+    cloud_interface = CloudInterface()
 
-    for cloud in cloud_files:
-        with h5py.File(cloud, 'r') as f:
-            points = np.asarray(f['points'])
-            superpoints = np.asarray(f['superpoints'])
+    for cloud_file in dataset.clouds:
+        points = cloud_interface.read_points(cloud_file)
+        colors = cloud_interface.read_colors(cloud_file)
+        edge_sources, edge_targets = cloud_interface.read_edges(cloud_file)
 
-            visualize_cloud_values(points, superpoints, random_colors=True)
+        # Compute features
+        components, component_map = partition_cloud(points=points, colors=colors,
+                                                    edge_sources=edge_sources, edge_targets=edge_targets)
+
+        # Visualize feature
+        superpoint_colors = colorize_instances(component_map)
+        visualize_cloud(points, superpoint_colors)
 
 
-def visualize_experiment(cfg: DictConfig) -> None:
+def visualize_model_training(cfg: DictConfig) -> None:
+    ignore_index = cfg.ds.ignore_index
+    label_names = [v for k, v in cfg.ds.labels_train.items() if k != ignore_index]
+    history_artifact = 'aleskucera/Semantic Segmentation Models Comparison/History_SalsaNext_SemanticKITTI:v0'
+    history_file = history_artifact.split('/')[-1].split(':')[0]
+
+    api = wandb.Api()
+    history = api.artifact(history_artifact)
+    history_path = os.path.join(history.download(), f'{history_file}.pt')
+    history = torch.load(history_path)
+    plot({'Loss Train': history['loss_train'], 'Loss Val': history['loss_val']}, 'Epoch', 'Value', 'Loss')
+    plot({'Accuracy Train': history['accuracy_train'], 'Accuracy Val': history['accuracy_val']},
+         'Epoch', 'Value', 'Accuracy')
+    plot({'MIoU Train': history['miou_train'], 'IoU Val': history['miou_val']}, 'Epoch', 'Value', 'MIoU')
+
+    class_iou_dict = {}
+    class_ious = np.stack([t.numpy() for t in history['class_iou']])
+    class_ious = np.delete(class_ious, ignore_index, axis=-1)
+    for i, label_name in enumerate(label_names):
+        class_iou_dict[label_name] = class_ious[:, i]
+    plot(class_iou_dict, 'Epoch', 'Value', 'Class IoU')
+
+    # TODO: Add confusion matrix of the best epoch
+    # TODO: Add gradient flow of the last epoch
+
+
+def visualize_model_experiment(cfg: DictConfig) -> None:
+    ignore_index = cfg.ds.ignore_index
+    label_names = [v for k, v in cfg.ds.labels_train.items() if k != ignore_index]
+    histories = {'SalsaNext': 'aleskucera/Semantic Segmentation Models Comparison/History_SalsaNext_SemanticKITTI:v0',
+                 'DeepLabV3+': 'aleskucera/Semantic Segmentation Models Comparison/History_DeepLabV3_SemanticKITTI:v0'}
+
+    files = {model_name: history_artifact.split('/')[-1].split(':')[0] for model_name, history_artifact in
+             histories.items()}
+
+    api = wandb.Api()
+    histories = {model_name: torch.load(os.path.join(api.artifact(history_artifact).download(), f'{file}.pt'))
+                 for (model_name, history_artifact), file in zip(histories.items(), files.values())}
+    losses = dict()
+    for model_name, history in histories.items():
+        losses[f'{model_name} Loss'] = {'Train': history['loss_train'], 'Val': history['loss_val']}
+
+    mious = dict()
+    for model_name, history in histories.items():
+        mious[f'{model_name} MIoU'] = {'Train': history['miou_train'], 'Val': history['miou_val']}
+
+    accuracies = dict()
+    for model_name, history in histories.items():
+        accuracies[f'{model_name} Accuracy'] = {'Train': history['accuracy_train'], 'Val': history['accuracy_val']}
+
+    class_ious = dict()
+    for model_name, history in histories.items():
+        class_ious[model_name] = np.stack([t.numpy() for t in history['class_iou']])
+        class_ious[model_name] = np.delete(class_ious[model_name], ignore_index, axis=-1)
+        class_ious[model_name] = {label_name: class_ious[model_name][:, i] for i, label_name in enumerate(label_names)}
+
+    plot(losses, 'Epoch', 'Value', 'Loss')
+    plot(mious, 'Epoch', 'Value', 'MIoU')
+    plot(accuracies, 'Epoch', 'Value', 'Accuracy')
+
+    for model_name, class_iou in class_ious.items():
+        plot(class_iou, 'Epoch', 'Value', f'{model_name} Class IoU')
+
+        # TODO: Add confusion matrix of the best epoch
+        # TODO: Add gradient flow of the last epoch
+
+
+def visualize_loss_experiment(cfg: DictConfig) -> None:
+    # TODO: Add train and validation loss
+    # TODO: Add train and validation accuracy
+    # TODO: Add train and validation MIoU
+
+    raise NotImplementedError
+
+
+def visualize_al_experiment(cfg: DictConfig) -> None:
+    """ Visualize the results of an AL experiment. Something like:
+        - Give a project name
+        - Give a list of percentages
+        - Give a list of histories
+        - Give a list of dataset statistics
+
+    """
+
     project_name = 'active_learning_average_entropy_voxels (test)'
 
     percentages = ['5%', '10%', '15%']
@@ -222,52 +329,6 @@ def visualize_experiment(cfg: DictConfig) -> None:
 
         confusion_matrix = data['confusion_matrix']['15%'][-1].numpy()
         plot_confusion_matrix(confusion_matrix, label_names)
-
-
-def log_sequence(cfg: DictConfig) -> None:
-    """ Log sample from dataset sequence to Weights & Biases.
-
-    :param cfg: Configuration object.
-    """
-
-    sequence = cfg.sequence if 'sequence' in cfg else 3
-
-    train_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo', split='train',
-                               sequences=[sequence], cfg=cfg.ds, active_mode=False)
-    val_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo', split='val',
-                             sequences=[sequence], cfg=cfg.ds, active_mode=False)
-
-    scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True)
-
-    if len(train_ds) > 0:
-        with wandb.init(project='Sequence Sample Visualization', group=cfg.ds.name,
-                        name=f'Sequence {sequence} - train'):
-            _log_sequence(train_ds, scan)
-    else:
-        log.info(f'Train dataset for sequence {sequence} is empty.')
-
-    if len(val_ds) > 0:
-        with wandb.init(project='Sequence Sample Visualization', group=cfg.ds.name, name=f'Sequence {sequence} - val'):
-            _log_sequence(val_ds, scan)
-    else:
-        log.info(f'Validation dataset for sequence {sequence} is empty.')
-
-
-def _log_sequence(dataset, scan):
-    i = np.random.randint(0, len(dataset))
-    scan.open_scan(dataset.scan_files[i])
-    scan.open_label(dataset.label_files[i])
-
-    cloud = np.concatenate([scan.points, scan.color * 255], axis=1)
-    label = np.concatenate([scan.points, scan.sem_label_color * 255], axis=1)
-
-    wandb.log({'Point Cloud': wandb.Object3D(cloud),
-               'Point Cloud Label': wandb.Object3D(label),
-               'Projection': wandb.Image(scan.proj_color),
-               'Projection Label': wandb.Image(scan.proj_sem_color)})
-
-    log.info(f'Logged scan: {dataset.scan_files[i]}')
-    log.info(f'Logged label: {dataset.label_files[i]}')
 
 
 def visualize_kitti360_conversion(cfg: DictConfig):

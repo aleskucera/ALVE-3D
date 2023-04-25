@@ -1,4 +1,3 @@
-import h5py
 import torch
 import numpy as np
 import torch.nn as nn
@@ -6,6 +5,8 @@ from torch.utils.data import Dataset
 
 from .base_selector import Selector
 from .superpoint_cloud import SuperpointCloud
+from src.superpoints import partition_cloud
+from src.utils.io import CloudInterface
 
 
 class SuperpointSelector(Selector):
@@ -17,13 +18,16 @@ class SuperpointSelector(Selector):
         self._initialize()
 
     def _initialize(self):
+        cloud_interface = CloudInterface(self.project_name)
         for cloud_id, cloud_path in enumerate(self.cloud_paths):
-            with h5py.File(cloud_path, 'r') as f:
-                num_voxels = f['points'].shape[0]
-                superpoint_map = np.asarray(f['superpoints'], dtype=np.int64)
-                superpoint_map = torch.from_numpy(superpoint_map)
-                self.num_voxels += num_voxels
-                self.clouds.append(SuperpointCloud(cloud_path, self.project_name, num_voxels, cloud_id, superpoint_map))
+            points = cloud_interface.read_points(cloud_path)
+            colors = cloud_interface.read_colors(cloud_path)
+            edge_sources, edge_targets = cloud_interface.read_edges(cloud_path)
+            superpoint_map = partition_cloud(points, edge_sources, edge_targets, colors)
+            superpoint_map = torch.from_numpy(superpoint_map)
+            self.num_voxels += points.shape[0]
+            self.clouds.append(SuperpointCloud(cloud_path, self.project_name,
+                                               points.shape[0], cloud_id, superpoint_map))
 
     def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5) -> tuple:
         if self.criterion == 'Random':
@@ -32,7 +36,7 @@ class SuperpointSelector(Selector):
             return self._select_by_criterion(dataset, model, percentage)
 
     def _select_randomly(self, dataset: Dataset, percentage: float) -> tuple:
-        selection_size = self.get_selection_size(dataset, percentage)
+        selection_size = self.get_selection_size(percentage)
 
         cloud_map = torch.tensor([], dtype=torch.long)
         superpoint_map = torch.tensor([], dtype=torch.long)
@@ -50,22 +54,22 @@ class SuperpointSelector(Selector):
 
         return self._choose_voxels(superpoint_map, superpoint_sizes, cloud_map, selection_size)
 
-    def _select_random_graphs(self, dataset: Dataset, percentage: float) -> tuple:
-        selection_size = self.get_selection_size(percentage)
-        print(selection_size)
-        subgraph_size = max(10000, selection_size // 10)
-        sizes = [subgraph_size] * (selection_size // subgraph_size)
-        sizes.append(selection_size % subgraph_size)
-        print(sizes)
-
-        raise NotImplementedError()
+    # def _select_random_graphs(self, dataset: Dataset, percentage: float) -> tuple:
+    #     selection_size = self.get_selection_size(percentage)
+    #     print(selection_size)
+    #     subgraph_size = max(10000, selection_size // 10)
+    #     sizes = [subgraph_size] * (selection_size // subgraph_size)
+    #     sizes.append(selection_size % subgraph_size)
+    #     print(sizes)
+    #
+    #     raise NotImplementedError()
 
     def _select_by_criterion(self, dataset: Dataset, model: nn.Module, percentage: float) -> tuple:
         values = torch.tensor([], dtype=torch.float32)
         cloud_map = torch.tensor([], dtype=torch.long)
         superpoint_map = torch.tensor([], dtype=torch.long)
         superpoint_sizes = torch.tensor([], dtype=torch.long)
-        selection_size = self.get_selection_size(dataset, percentage)
+        selection_size = self.get_selection_size(percentage)
 
         self._calculate_values(model, dataset, self.criterion, self.mc_dropout)
 

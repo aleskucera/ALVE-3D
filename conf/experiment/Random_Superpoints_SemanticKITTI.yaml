@@ -13,7 +13,7 @@ train:
 active:
   batch_size: 128
   criterion: Random
-  selection_objects: Voxels
+  selection_objects: Superpoints
   select_percentage: 0.2
 
-# sbatch --output=Random_Voxels_SemanticKITTI.out --error=Random_Voxels_SemanticKITTI.out scripts/active/{action}.batch --expected-percentage {p} --experiment Random_Voxels_SemanticKITTI
+# sbatch --output=Random_Superpoints_SemanticKITTI.out --error=Random_Superpoints_SemanticKITTI.out scripts/active/{action}.batch --expected-percentage {p} --experiment Random_Superpoints_SemanticKITTI

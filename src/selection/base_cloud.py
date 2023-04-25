@@ -1,6 +1,6 @@
-import h5py
 import torch
-from torch.utils.data import Dataset
+
+from src.datasets import Dataset
 
 
 class Cloud(object):

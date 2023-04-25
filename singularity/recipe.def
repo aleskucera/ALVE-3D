@@ -26,10 +26,6 @@ From: continuumio/miniconda3
     ln -s /opt/conda/envs/ALVE-3D/lib/python3.10/site-packages/numpy/core/include/numpy /opt/conda/envs/ALVE-3D/include/numpy
 
 
-%test
-    python --version
-    python -c "import torch; print(torch.cuda.is_available())"
-
 %labels
     author "Ales Kucera"
     maintainer "Ales Kucera"

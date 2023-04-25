@@ -13,7 +13,7 @@ train:
 active:
   batch_size: 128
   criterion: AverageEntropy
-  selection_objects: Voxels
+  selection_objects: Superpoints
   select_percentage: 0.2
 
-# sbatch --output=AverageEntropy_Voxels_SemanticKITTI.out --error=AverageEntropy_Voxels_SemanticKITTI.out scripts/active/{action}.batch --expected-percentage {p} --experiment AverageEntropy_Voxels_SemanticKITTI
+# sbatch --output=AverageEntropy_Superpoints_SemanticKITTI.out --error=AverageEntropy_Superpoints_SemanticKITTI.out scripts/active/{action}.batch --expected-percentage {p} --experiment AverageEntropy_Superpoints_SemanticKITTI

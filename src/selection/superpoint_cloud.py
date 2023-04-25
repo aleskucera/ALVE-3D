@@ -1,8 +1,8 @@
 import torch
-from .base_cloud import Cloud
 
+from .base_cloud import Cloud
 from src.ply_c import libply_c
-from src.utils import CloudInterface
+from src.utils.io import CloudInterface
 
 
 class SuperpointCloud(Cloud):

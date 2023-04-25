@@ -4,10 +4,12 @@ import logging
 import h5py
 import numpy as np
 from tqdm import tqdm
+
 from .ply import read_kitti360_ply
-from src.utils import transform_points, downsample_cloud, nearest_neighbors, \
-    nearest_neighbors_2, connected_label_components, nn_graph, map_labels
+from src.utils.map import map_labels
 from .utils import read_kitti360_scan
+from src.utils.cloud import transform_points, downsample_cloud, nearest_neighbors, \
+    nearest_neighbors_2, connected_label_components, nn_graph
 
 log = logging.getLogger(__name__)
 
