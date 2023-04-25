@@ -34,6 +34,8 @@ def main(cfg: DictConfig):
         visualize_dataset_scans(cfg)
     elif cfg.action == 'visualize_dataset_clouds':
         visualize_dataset_clouds(cfg)
+    elif cfg.action == 'visualize_dataset_statistics':
+        visualize_dataset_statistics(cfg)
     elif cfg.action == 'visualize_feature':
         visualize_feature(cfg)
     elif cfg.action == 'visualize_superpoints':
@@ -148,6 +150,22 @@ def visualize_dataset_clouds(cfg: DictConfig):
 
         colors = map_colors(labels, cfg.ds.color_map_train)
         visualize_cloud(points, colors)
+
+
+def visualize_dataset_statistics(cfg: DictConfig):
+    size = cfg.size if 'size' in cfg else None
+    split = cfg.split if 'split' in cfg else 'train'
+    sequences = [cfg.sequence] if 'sequence' in cfg else None
+
+    # Create dataset
+    train_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
+                               cfg=cfg.ds, split='train', num_clouds=size, sequences=sequences)
+    val_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
+                             cfg=cfg.ds, split='val', num_clouds=size, sequences=sequences)
+    train_stats = train_ds.statistics
+    val_stats = val_ds.statistics
+
+    print('done')
 
 
 def visualize_feature(cfg: DictConfig) -> None:
