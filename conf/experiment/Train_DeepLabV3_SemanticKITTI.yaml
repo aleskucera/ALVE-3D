@@ -9,5 +9,7 @@ train:
   patience: 20
   min_epochs: 100
   loss: CrossEntropyLoss
+  learning_rate: 0.05
+  lr_rate_decay: 0.95
 
 # sbatch --output=Train_DeepLabV3_SemanticKITTI.out --error=Train_DeepLabV3_SemanticKITTI.out scripts/train/train_model.batch --experiment Train_DeepLabV3_SemanticKITTI
