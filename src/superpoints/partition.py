@@ -7,6 +7,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../cut-pursuit/build/sr
 
 import libcp
 import numpy as np
+from omegaconf import DictConfig
+from src.datasets import SemanticDataset
+from src.utils.io import CloudInterface
 from jakteristics import compute_features, FEATURE_NAMES
 
 log = logging.getLogger(__name__)
@@ -16,6 +19,20 @@ REG_STRENGTH = 10
 EDGE_WEIGHT_THRESHOLD = -0.5
 FEATURES = ['anisotropy', 'planarity', 'linearity', 'PCA2',
             'sphericity', 'verticality', 'surface_variation']
+
+
+def create_superpoints(cfg: DictConfig):
+    dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo', cfg=cfg.ds, split='train')
+    cloud_interface = CloudInterface()
+
+    for cloud_id, cloud_path in enumerate(dataset.cloud_files):
+        points = cloud_interface.read_points(cloud_path)
+        colors = cloud_interface.read_colors(cloud_path)
+        edge_sources, edge_targets = cloud_interface.read_edges(cloud_path)
+        _, superpoint_map = partition_cloud(points, edge_sources, edge_targets, colors)
+        cloud_interface.write_superpoints(cloud_path, superpoint_map)
+
+    log.info('Superpoints successfully created')
 
 
 def partition_cloud(points: np.ndarray, edge_sources: np.ndarray, edge_targets: np.ndarray, colors: np.ndarray = None):

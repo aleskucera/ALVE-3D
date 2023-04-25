@@ -1,0 +1,26 @@
+#!/bin/bash
+
+#SBATCH --nodes=1                         # 1 node
+#SBATCH --ntasks-per-node=16               # 4 CPUs per node
+#SBATCH --time=1-00:00:00                 # time limits: 1 day
+#SBATCH --error=conversion.out            # standard error file
+#SBATCH --output=conversion.out           # standard output file
+#SBATCH --partition=amd                   # partition name
+#SBATCH --mail-user=kuceral4@fel.cvut.cz  # where send info about job
+#SBATCH --mail-type=ALL                   # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
+
+# Set default values for variables
+dataset="KITTI360"
+
+
+# Parse command line arguments
+while [ "$#" -gt 0 ]; do
+  case $1 in
+    -d|--dataset) dataset="$2"; shift ;;
+    *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;
+  esac
+  shift
+done
+
+singularity run --nv --bind /mnt singularity/alve-3d.sif python main.py \
+            action=create_superpoints ds="$dataset"

@@ -20,15 +20,12 @@ class SuperpointSelector(Selector):
 
     def _initialize(self):
         cloud_interface = CloudInterface(self.project_name)
-        for cloud_id, cloud_path in enumerate(tqdm(self.cloud_paths, desc='Loading clouds')):
-            points = cloud_interface.read_points(cloud_path)
-            colors = cloud_interface.read_colors(cloud_path)
-            edge_sources, edge_targets = cloud_interface.read_edges(cloud_path)
-            _, superpoint_map = partition_cloud(points, edge_sources, edge_targets, colors)
-            superpoint_map = torch.from_numpy(superpoint_map)
-            self.num_voxels += points.shape[0]
+        for cloud_id, cloud_path in enumerate(self.cloud_paths):
+            superpoint_map = cloud_interface.read_superpoints(cloud_path)
+            num_voxels = superpoint_map.shape[0]
+            self.num_voxels += num_voxels
             self.clouds.append(SuperpointCloud(cloud_path, self.project_name,
-                                               points.shape[0], cloud_id, superpoint_map))
+                                               num_voxels, cloud_id, superpoint_map))
 
     def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5) -> tuple:
         if self.criterion == 'Random':

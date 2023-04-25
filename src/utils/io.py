@@ -53,13 +53,11 @@ class ScanInterface(object):
         with h5py.File(path, 'r') as f:
             if 'colors' in f:
                 return np.asarray(f['colors']).astype(np.float32)
-            return None
 
     def read_selected_labels(self, path: str):
-        if self.project_name is None:
-            return None
-        with h5py.File(path.replace('sequences', self.project_name), 'r') as f:
-            return np.asarray(f['selected_labels']).flatten().astype(bool)
+        if self.project_name is not None:
+            with h5py.File(path.replace('sequences', self.project_name), 'r') as f:
+                return np.asarray(f['selected_labels']).flatten().astype(bool)
 
     def read_scan(self, path: str):
         ret = dict()
@@ -112,7 +110,6 @@ class CloudInterface(object):
         with h5py.File(path, 'r') as f:
             if 'colors' in f:
                 return np.asarray(f['colors']).astype(np.float32)
-            return None
 
     @staticmethod
     def read_objects(path: str):
@@ -127,15 +124,20 @@ class CloudInterface(object):
             return np.asarray(f['labels']).flatten().astype(np.int64)
 
     def read_selected_labels(self, path: str):
-        if self.project_name is None:
-            return None
-        with h5py.File(path.replace('sequences', self.project_name), 'r') as f:
-            return np.asarray(f['selected_labels']).flatten().astype(bool)
+        if self.project_name is not None:
+            with h5py.File(path.replace('sequences', self.project_name), 'r') as f:
+                return np.asarray(f['selected_labels']).flatten().astype(bool)
 
     @staticmethod
     def read_edges(path: str):
         with h5py.File(path, 'r') as f:
             return np.asarray(f['edge_sources']).astype(np.int64), np.asarray(f['edge_targets']).astype(np.int64)
+
+    @staticmethod
+    def read_superpoints(path: str):
+        with h5py.File(path, 'r') as f:
+            if 'superpoints' in f:
+                return np.asarray(f['superpoints']).astype(np.int64)
 
     def read_cloud(self, path: str):
         ret = dict()
@@ -148,6 +150,11 @@ class CloudInterface(object):
                 ret['colors'] = np.asarray(f['colors']).astype(np.float32)
             else:
                 ret['colors'] = None
+
+            if 'superpoints' in f:
+                ret['superpoints'] = np.asarray(f['superpoints']).astype(np.int64)
+            else:
+                ret['superpoints'] = None
 
             if self.label_map is not None:
                 ret['labels'] = map_labels(np.asarray(f['labels']).flatten().astype(np.int64), self.label_map)
@@ -164,6 +171,13 @@ class CloudInterface(object):
                 ret['selected_labels'] = np.asarray(f['selected_labels']).flatten().astype(bool)
                 ret['selected_vertices'] = np.asarray(f['selected_vertices']).flatten().astype(bool)
         return ret
+
+    @staticmethod
+    def write_superpoints(path: str, superpoints: np.ndarray):
+        with h5py.File(path, 'r+') as f:
+            if 'superpoints' in f:
+                del f['superpoints']
+            f.create_dataset('superpoints', data=superpoints.astype(np.int64))
 
     def select_voxels(self, path: str, voxels: np.ndarray):
         with h5py.File(path.replace('sequences', self.project_name), 'r+') as f:

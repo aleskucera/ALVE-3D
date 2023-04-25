@@ -12,6 +12,7 @@ from src.utils.io import set_paths
 from src.selection import select_voxels
 from src.kitti360 import KITTI360Converter
 from src.utils.experiment import Experiment
+from src.superpoints import create_superpoints
 from src.semantickitti import SemanticKITTIConverter
 from src.learn import train_model, train_model_active, train_semantickitti_original
 
@@ -49,6 +50,8 @@ def main(cfg: DictConfig):
             else:
                 raise NotImplementedError(f'The dataset "{cfg.ds.name}" is not supported')
             converter.convert()
+        elif cfg.action == 'create_superpoints':
+            create_superpoints(cfg)
         else:
             log.error(f'The action "{cfg.action}" is not supported')
 

@@ -15,8 +15,14 @@ show_help_job() {
 show_help_conversion () {
   echo "Usage: convert.batch [options]"
   echo "Options:"
-  echo "  -d, --dataset         Dataset name (default: kitti-360, options: kitti-360, semantic-kitti)"
+  echo "  -d, --dataset         Dataset name (default: KITTI360, options: KITTI360, SemanticKITTI)"
   echo "  -s, --sequence        Sequence to convert (default: 3)"
+}
+
+show_help_create_superpoints () {
+  echo "Usage: create_superpoints.batch [options]"
+  echo "Options:"
+  echo "  -d, --dataset         Dataset name (default: KITTI360, options: KITTI360, SemanticKITTI)"
 }
 
 show_help () {
