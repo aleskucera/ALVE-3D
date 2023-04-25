@@ -14,6 +14,6 @@ active:
   batch_size: 128
   criterion: AverageEntropy
   selection_objects: Superpoints
-  select_percentage: 0.2
+  select_percentage: 0.5
 
 # sbatch --output=AverageEntropy_Superpoints_SemanticKITTI.out --error=AverageEntropy_Superpoints_SemanticKITTI.out scripts/active/{action}.batch --expected-percentage {p} --experiment AverageEntropy_Superpoints_SemanticKITTI
