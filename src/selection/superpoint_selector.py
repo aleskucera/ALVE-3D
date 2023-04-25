@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import torch.nn as nn
+from tqdm import tqdm
 from torch.utils.data import Dataset
 
 from .base_selector import Selector
@@ -19,23 +20,23 @@ class SuperpointSelector(Selector):
 
     def _initialize(self):
         cloud_interface = CloudInterface(self.project_name)
-        for cloud_id, cloud_path in enumerate(self.cloud_paths):
+        for cloud_id, cloud_path in enumerate(tqdm(self.cloud_paths, desc='Loading clouds')):
             points = cloud_interface.read_points(cloud_path)
             colors = cloud_interface.read_colors(cloud_path)
             edge_sources, edge_targets = cloud_interface.read_edges(cloud_path)
-            superpoint_map = partition_cloud(points, edge_sources, edge_targets, colors)
-            superpoint_map = torch.from_numpy(superpoint_map)
+            _, superpoint_map = partition_cloud(points, edge_sources, edge_targets, colors)
+            superpoint_map = torch.from_numpy(superpoint_map).dtype(torch.long)
             self.num_voxels += points.shape[0]
             self.clouds.append(SuperpointCloud(cloud_path, self.project_name,
                                                points.shape[0], cloud_id, superpoint_map))
 
     def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5) -> tuple:
         if self.criterion == 'Random':
-            return self._select_randomly(dataset, percentage)
+            return self._select_randomly(percentage)
         else:
             return self._select_by_criterion(dataset, model, percentage)
 
-    def _select_randomly(self, dataset: Dataset, percentage: float) -> tuple:
+    def _select_randomly(self, percentage: float) -> tuple:
         selection_size = self.get_selection_size(percentage)
 
         cloud_map = torch.tensor([], dtype=torch.long)
@@ -43,9 +44,7 @@ class SuperpointSelector(Selector):
         superpoint_sizes = torch.tensor([], dtype=torch.long)
 
         for cloud in self.clouds:
-            voxel_mask = dataset.get_voxel_mask(cloud.path, cloud.size)
-            cloud_superpoint_map = cloud.superpoint_map[voxel_mask]
-            superpoints, cloud_superpoint_sizes = torch.unique(cloud_superpoint_map, return_counts=True)
+            superpoints, cloud_superpoint_sizes = torch.unique(cloud.superpoint_map, return_counts=True)
             cloud_ids = torch.full((superpoints.shape[0],), cloud.id, dtype=torch.long)
 
             cloud_map = torch.cat((cloud_map, cloud_ids))

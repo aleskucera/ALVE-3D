@@ -25,14 +25,14 @@ def partition_cloud(points: np.ndarray, edge_sources: np.ndarray, edge_targets: 
     dist = ((embeddings[edge_sources, :] - embeddings[edge_targets, :]) ** 2).sum(1)
     edge_weight = np.exp(dist * EDGE_WEIGHT_THRESHOLD) / np.exp(EDGE_WEIGHT_THRESHOLD)
 
-    components, in_component = libcp.cutpursuit(embeddings.astype(np.float32),
-                                                edge_sources.astype(np.uint32),
-                                                edge_targets.astype(np.uint32),
-                                                edge_weight.astype(np.float32),
-                                                REG_STRENGTH,
-                                                cutoff=CP_CUTOFF, spatial=1,
-                                                weight_decay=0.2)
-    return np.array(components), np.array(in_component)
+    components, component_map = libcp.cutpursuit(embeddings.astype(np.float32),
+                                                 edge_sources.astype(np.uint32),
+                                                 edge_targets.astype(np.uint32),
+                                                 edge_weight.astype(np.float32),
+                                                 REG_STRENGTH,
+                                                 cutoff=CP_CUTOFF, spatial=1,
+                                                 weight_decay=0.2)
+    return np.array(components), np.array(component_map)
 
 
 def calculate_features(points: np.ndarray) -> dict:
