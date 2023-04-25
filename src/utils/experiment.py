@@ -11,11 +11,11 @@ class Experiment(object):
 
     @property
     def project(self):
-        if self.cfg.action == 'train_semantic':
+        if self.cfg.action == 'train_model':
             if 'project' in self.cfg:
                 return self.cfg.project
             return 'Train Semantic Model'
-        elif self.cfg.action == 'train_semantic_active':
+        elif self.cfg.action == 'train_model_active':
             return f'AL - {self.cfg.active.criterion}'
         elif self.cfg.action == 'select_voxels':
             return f'AL - {self.cfg.active.criterion}'
@@ -24,11 +24,9 @@ class Experiment(object):
 
     @property
     def group(self):
-        if self.cfg.action == 'train_semantic':
+        if self.cfg.action == 'train_model':
             return self.cfg.ds.name
-        elif self.cfg.action == 'train_partition':
-            return self.cfg.ds.name
-        elif self.cfg.action == 'train_semantic_active':
+        elif self.cfg.action == 'train_model_active':
             return f'{self.cfg.ds.name} {self.cfg.active.selection_objects}'
         elif self.cfg.action == 'select_voxels':
             return f'{self.cfg.ds.name} {self.cfg.active.selection_objects}'
@@ -37,13 +35,9 @@ class Experiment(object):
 
     @property
     def job_type(self):
-        if self.cfg.action == 'train_semantic':
+        if self.cfg.action == 'train_model':
             return None
-        elif self.cfg.action == 'train_partition':
-            return None
-        elif self.cfg.action == 'train_semantic_active':
-            return None
-        elif self.cfg.action == 'train_partition_active':
+        elif self.cfg.action == 'train_model_active':
             return None
         elif self.cfg.action == 'select_voxels':
             return None
@@ -52,9 +46,9 @@ class Experiment(object):
 
     @property
     def name(self):
-        if self.cfg.action == 'train_semantic':
+        if self.cfg.action == 'train_model':
             return f'{self.cfg.model.architecture}'
-        elif self.cfg.action == 'train_semantic_active':
+        elif self.cfg.action == 'train_model_active':
             return f'Training Semantic - {self.cfg.active.expected_percentage_labeled}%'
         elif self.cfg.action == 'select_voxels':
             return f'Selection - {self.cfg.active.expected_percentage_labeled + self.cfg.active.select_percentage}%'
@@ -63,14 +57,9 @@ class Experiment(object):
 
     @property
     def info(self):
-        if self.cfg.action == 'train_semantic':
+        if self.cfg.action == 'train_model':
             return f'{self.cfg.model.architecture}_{self.cfg.ds.name}'
-        elif self.cfg.action == 'train_partition':
-            return f'{self.cfg.model.architecture}_{self.cfg.ds.name}'
-        elif self.cfg.action == 'train_semantic_active':
-            return f'{self.cfg.active.criterion}_{self.cfg.active.selection_objects}' \
-                   f'_{self.cfg.model.architecture}_{self.cfg.ds.name}'
-        elif self.cfg.action == 'train_partition_active':
+        elif self.cfg.action == 'train_model_active':
             return f'{self.cfg.active.criterion}_{self.cfg.active.selection_objects}' \
                    f'_{self.cfg.model.architecture}_{self.cfg.ds.name}'
         elif self.cfg.action == 'select_voxels':
