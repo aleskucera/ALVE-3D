@@ -1,10 +1,7 @@
 name: KITTI360
 path: data/KITTI-360
 num_classes: 15
-num_semantic_channels: 5
-num_partition_channels:
-  local: 6
-  global: 7
+num_channels: 5
 ignore_index: 0
 projection:
   H: 64
