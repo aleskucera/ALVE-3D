@@ -12,6 +12,7 @@
 
 
 # Set default values for variables
+batch_size="32"
 experiment="default"
 
 # Parse command line arguments

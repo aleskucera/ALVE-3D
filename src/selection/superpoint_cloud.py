@@ -21,29 +21,26 @@ class SuperpointCloud(Cloud):
         return self.superpoint_map.max().item() + 1
 
     def _average_by_superpoint(self, values: torch.Tensor):
-        superpoint_sizes = torch.zeros((self.num_superpoints,), dtype=torch.long)
-        average_superpoint_values = torch.full((self.num_superpoints,), float('nan'), dtype=torch.float32)
 
-        superpoints, sizes = torch.unique(self.superpoint_map, return_counts=True)
-        superpoint_sizes[superpoints] = sizes
+        superpoints, superpoint_sizes = torch.unique(self.superpoint_map, return_counts=True)
+        average_superpoint_values = torch.full((superpoints.shape[0],), float('nan'), dtype=torch.float32)
 
         # Average the values by superpoint
-        for superpoint in torch.unique(self.superpoint_map):
+        for superpoint in superpoints:
             indices = torch.where(self.superpoint_map == superpoint)
             superpoint_values = values[indices]
             valid_superpoint_values = superpoint_values[~torch.isnan(superpoint_values)]
             if len(valid_superpoint_values) > 0:
                 average_superpoint_values[superpoint] = torch.mean(valid_superpoint_values)
-        return average_superpoint_values, superpoint_sizes
+        valid_indices = ~torch.isnan(average_superpoint_values)
+        return superpoints[valid_indices], average_superpoint_values[valid_indices], superpoint_sizes[valid_indices]
 
     def _save_values(self, values: torch.Tensor):
-        superpoint_values, superpoint_sizes = self._average_by_superpoint(values)
-        valid_indices = ~torch.isnan(superpoint_values)
-
-        self.values = superpoint_values[valid_indices]
-        self.superpoint_sizes = superpoint_sizes[valid_indices]
-        self.superpoint_indices = self.superpoint_map[valid_indices]
-        self.cloud_ids = torch.full((self.num_superpoints,), self.id, dtype=torch.long)[valid_indices]
+        superpoints, superpoint_values, superpoint_sizes = self._average_by_superpoint(values)
+        self.values = superpoint_values
+        self.superpoint_indices = superpoints
+        self.superpoint_sizes = superpoint_sizes
+        self.cloud_ids = torch.full((superpoints.shape[0],), self.id, dtype=torch.long)
 
     def subgraph(self, size: int):
         cloud_interface = CloudInterface(self.project_name)

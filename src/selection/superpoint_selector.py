@@ -60,6 +60,8 @@ class SuperpointSelector(Selector):
         self._calculate_values(model, dataset, self.criterion, self.mc_dropout)
 
         for cloud in self.clouds:
+            if cloud.values is None:
+                continue
             values = torch.cat((values, cloud.values))
             cloud_map = torch.cat((cloud_map, cloud.cloud_ids))
             superpoint_map = torch.cat((superpoint_map, cloud.superpoint_indices))
@@ -76,7 +78,8 @@ class SuperpointSelector(Selector):
         else:
             order = torch.argsort(values, descending=True)
             values = values[order]
-            threshold = values[selection_size - 1]
+            superpoint_sizes = superpoint_sizes[order]
+            threshold = values[superpoint_sizes < selection_size].min()
             metric_statistics = self._metric_statistics(values, threshold)
 
         cloud_map = cloud_map[order]
