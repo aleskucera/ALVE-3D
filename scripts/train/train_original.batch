@@ -1,12 +1,12 @@
 #!/bin/bash
 
 #SBATCH --nodes=1                         # 1 node
-#SBATCH --ntasks-per-node=4               # 4 CPUs per node
+#SBATCH --ntasks-per-node=1               # 1 task per node
 #SBATCH --time=2-00:00:00                 # time limits: 1 day
-#SBATCH --error=train_semantic.out        # standard error file
-#SBATCH --output=train_semantic.out       # standard output file
+#SBATCH --error=train_original.out        # standard error file
+#SBATCH --output=train_original.out       # standard output file
 #SBATCH --partition=amdgpulong            # partition name
-#SBATCH --gres=gpu:1                      # number of GPUs per node
+#SBATCH --cpus-per-task=1                 # number of CPUs
 #SBATCH --mail-user=kuceral4@fel.cvut.cz  # where send info about job
 #SBATCH --mail-type=BEGIN,FAIL,END        # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 

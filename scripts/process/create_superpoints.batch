@@ -1,13 +1,13 @@
 #!/bin/bash
 
 #SBATCH --nodes=1                         # 1 node
-#SBATCH --ntasks-per-node=16               # 4 CPUs per node
+#SBATCH --ntasks-per-node=1               # 1 task per node
 #SBATCH --time=1-00:00:00                 # time limits: 1 day
-#SBATCH --error=superpoints.out            # standard error file
-#SBATCH --output=superpoints.out           # standard output file
+#SBATCH --error=superpoints.out           # standard error file
+#SBATCH --output=superpoints.out          # standard output file
 #SBATCH --partition=amd                   # partition name
 #SBATCH --mail-user=kuceral4@fel.cvut.cz  # where send info about job
-#SBATCH --mail-type=BEGIN,END,FAIL            # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
+#SBATCH --mail-type=BEGIN,END,FAIL        # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
 # Set default values for variables
 dataset="KITTI360"
