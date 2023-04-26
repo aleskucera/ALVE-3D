@@ -23,8 +23,7 @@ class SemanticKITTIDataset(Dataset):
         self.split = split
         self.path = cfg.path
 
-        splits = {'val': [8], 'train': [0, 1, 2, 3, 4, 5, 6, 7, 9, 10]}
-        self.sequences = splits[split]
+        self.sequences = cfg.split[split]
 
         self.scans = []
         self.labels = []
@@ -51,10 +50,10 @@ class SemanticKITTIDataset(Dataset):
         self.laser_scan.open_label(label_path)
 
         proj_scan = np.concatenate([self.laser_scan.proj_depth[np.newaxis, ...],
-                                    # self.laser_scan.proj_xyz.transpose(2, 0, 1),
+                                    self.laser_scan.proj_xyz.transpose(2, 0, 1),
                                     self.laser_scan.proj_remission[np.newaxis, ...]], axis=0)
 
-        # proj_scan = (proj_scan - self.mean[:, np.newaxis, np.newaxis]) / self.std[:, np.newaxis, np.newaxis]
+        proj_scan = (proj_scan - self.mean[:, np.newaxis, np.newaxis]) / self.std[:, np.newaxis, np.newaxis]
         proj_label = self.laser_scan.proj_label.astype(np.long)
         return proj_scan, proj_label
 

@@ -2,9 +2,6 @@ name: SemanticKITTI
 path: data/SemanticKITTI
 num_classes: 17
 num_semantic_channels: 2
-num_partition_channels:
-  local: 0
-  global: 0
 ignore_index: 0
 projection:
   H: 64
@@ -127,41 +124,6 @@ color_map: # bgr
   257: [ 250, 80, 100 ] # moving-on-rails
   258: [ 180, 30, 80 ]  # moving-truck
   259: [ 255, 0, 0 ]  # moving-other-vehicle
-content: # as a ratio with the total number of points
-  0: 0.018889854628292943
-  1: 0.0002937197336781505
-  10: 0.040818519255974316
-  11: 0.00016609538710764618
-  13: 2.7879693665067774e-05
-  15: 0.00039838616015114444
-  16: 0.0
-  18: 0.0020633612104619787
-  20: 0.0016218197275284021
-  30: 0.00017698551338515307
-  31: 1.1065903904919655e-08
-  32: 5.532951952459828e-09
-  40: 0.1987493871255525
-  44: 0.014717169549888214
-  48: 0.14392298360372
-  49: 0.0039048553037472045
-  50: 0.1326861944777486
-  51: 0.0723592229456223
-  52: 0.002395131480328884
-  60: 4.7084144280367186e-05
-  70: 0.26681502148037506
-  71: 0.006035012012626033
-  72: 0.07814222006271769
-  80: 0.002855498193863172
-  81: 0.0006155958086189918
-  99: 0.009923127583046915
-  252: 0.001789309418528068
-  253: 0.00012709999297008662
-  254: 0.00016059776092534436
-  255: 3.745553104802113e-05
-  256: 0.0
-  257: 0.00011351574470342043
-  258: 0.00010157861367183268
-  259: 4.3840131989471124e-05
 # classes that are indistinguishable from single scan or inconsistent in
 # ground truth are mapped to their closest equivalent
 learning_map:
@@ -199,65 +161,3 @@ learning_map:
   257: 4    # "moving-bus" mapped to "other-vehicle" -------------------mapped
   258: 0    # "moving-truck" to "truck" --------------------------------mapped
   259: 4    # "moving-other"-vehicle to "other-vehicle" ----------------mapped
-learning_map_inv: # inverse of previous map
-  0: 0      # "unlabeled", and others ignored
-  1: 10     # "car"
-  2: 11     # "bicycle"
-  3: 15     # "motorcycle"
-  4: 18     # "truck"
-  5: 20     # "other-vehicle"
-  6: 30     # "person"
-  7: 31     # "bicyclist"
-  8: 32     # "motorcyclist"
-  9: 40     # "road"
-  10: 44    # "parking"
-  11: 48    # "sidewalk"
-  12: 49    # "other-ground"
-  13: 50    # "building"
-  14: 51    # "fence"
-  15: 70    # "vegetation"
-  16: 71    # "trunk"
-  17: 72    # "terrain"
-  18: 80    # "pole"
-  19: 81    # "traffic-sign"
-learning_ignore: # Ignore classes
-  0: True      # "unlabeled", and others ignored
-  1: False     # "car"
-  2: False     # "bicycle"
-  3: False     # "motorcycle"
-  4: False     # "truck"
-  5: False     # "other-vehicle"
-  6: False     # "person"
-  7: False     # "bicyclist"
-  8: False     # "motorcyclist"
-  9: False     # "road"
-  10: False    # "parking"
-  11: False    # "sidewalk"
-  12: False    # "other-ground"
-  13: False    # "building"
-  14: False    # "fence"
-  15: False    # "vegetation"
-  16: False    # "trunk"
-  17: False    # "terrain"
-  18: False    # "pole"
-  19: False    # "traffic-sign"
-mean:
-  - 12.12
-  - 10.88
-  - 0.23
-  - -1.04
-  - 0.21
-
-std:
-  - 12.32
-  - 11.47
-  - 6.91
-  - 0.86
-  - 0.16
-mean_2: [ 5.75536025e+00,  8.06790742e-04,  1.52779721e-01, -6.80615991e-01, -3.18748858e-01 ]
-std_2: [ 9.65326504, 8.45452319, 7.28394953, 0.92235531, 0.65112849 ]
-content_2: [ 0.00000000e+00, 4.48751947e-02, 2.04068221e-04, 4.24292497e-04,
-             1.96236641e-03, 2.30624737e-03, 3.83910138e-04, 1.40827159e-04,
-             4.46391940e-05, 2.10208955e-01, 1.51818566e-02, 1.49635794e-01,
-             4.07179587e-03, 1.33119855e-01, 7.67055648e-02, 2.68733771e-01,
-             6.47125641e-03, 8.13706943e-02, 3.45801979e-03, 7.00891823e-04 ]

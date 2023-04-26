@@ -1,6 +1,6 @@
 # @package _global_
 defaults:
-  - override /ds: SemanticKITTI
+  - override /ds: SemanticKITTIOriginal
   - override /model: SalsaNext
 
 project: SalsaNext SemanticKITTI (Original)
