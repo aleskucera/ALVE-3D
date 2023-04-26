@@ -77,19 +77,19 @@ class SuperpointSelector(Selector):
             metric_statistics = None
         else:
             order = torch.argsort(values, descending=True)
-            values = values[order]
-            superpoint_sizes = superpoint_sizes[order]
-            threshold = values[superpoint_sizes < selection_size].min()
-            metric_statistics = self._metric_statistics(values, threshold)
 
         cloud_map = cloud_map[order]
         superpoint_map = superpoint_map[order]
         superpoint_sizes = superpoint_sizes[order]
-
         superpoint_sizes = torch.cumsum(superpoint_sizes, dim=0)
 
         selected_superpoints = superpoint_map[superpoint_sizes < selection_size]
         selected_cloud_map = cloud_map[superpoint_sizes < selection_size]
+
+        if values is not None:
+            values = values[order]
+            threshold = values[superpoint_sizes < selection_size][-1]
+            metric_statistics = self._metric_statistics(values, threshold)
 
         voxel_selection = dict()
         for cloud in self.clouds:

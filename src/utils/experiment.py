@@ -47,6 +47,8 @@ class Experiment(object):
     @property
     def name(self):
         if self.cfg.action == 'train_model':
+            if 'run_name' in self.cfg:
+                return self.cfg.run_name
             return f'{self.cfg.model.architecture}'
         elif self.cfg.action == 'train_model_active':
             return f'Training Semantic - {self.cfg.active.expected_percentage_labeled}%'

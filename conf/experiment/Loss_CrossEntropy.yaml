@@ -4,6 +4,7 @@ defaults:
   - override /model: SalsaNext
 
 project: Semantic Segmentation Losses Comparison
+run_name: SalsaNext - CrossEntropyLoss
 train:
   patience: 20
   batch_size: 32
