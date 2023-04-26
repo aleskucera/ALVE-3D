@@ -15,4 +15,4 @@ active:
   selection_objects: Superpoints
   select_percentage: 0.5
 
-# sbatch --output=EpistemicUncertainty_Superpoints_SemanticKITTI.out --error=EpistemicUncertainty_Superpoints_SemanticKITTI.out scripts/active/{action}.batch --expected-percentage {p} --experiment EpistemicUncertainty_Superpoints_SemanticKITTI
+# sbatch --output=EpistemicUncertainty_Superpoints_SemanticKITTI.out --error=EpistemicUncertainty_Superpoints_SemanticKITTI.out --gpus-per-node=1 scripts/active/{action}.batch --expected-percentage {p} --experiment EpistemicUncertainty_Superpoints_SemanticKITTI

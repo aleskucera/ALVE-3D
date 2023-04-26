@@ -10,3 +10,5 @@ train:
   min_epochs: 100
   loss: LovaszLoss
   learning_rate: 0.01
+
+# sbatch --output=Loss_Lovasz.out --error=Loss_Lovasz.out --gpus-per-node=1 scripts/train/train.batch --experiment Loss_Lovasz

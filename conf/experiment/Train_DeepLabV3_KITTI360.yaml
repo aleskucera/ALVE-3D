@@ -11,4 +11,4 @@ train:
   loss: CrossEntropyLoss
   learning_rate: 0.01
 
-# sbatch --output=Train_DeepLabV3_KITTI360.out --error=Train_DeepLabV3_KITTI360.out scripts/train/train_model.batch --experiment Train_DeepLabV3_KITTI360
+# sbatch --output=Train_DeepLabV3_KITTI360.out --error=Train_DeepLabV3_KITTI360.out --gpus-per-node=1 scripts/train/train_model.batch --experiment Train_DeepLabV3_KITTI360

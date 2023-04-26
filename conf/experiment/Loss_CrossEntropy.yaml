@@ -10,3 +10,5 @@ train:
   min_epochs: 100
   loss: CrossEntropyLoss
   learning_rate: 0.01
+
+# sbatch --output=Loss_CrossEntropy.out --error=Loss_CrossEntropy.out --gpus-per-node=1 scripts/train/train.batch --experiment Loss_CrossEntropy

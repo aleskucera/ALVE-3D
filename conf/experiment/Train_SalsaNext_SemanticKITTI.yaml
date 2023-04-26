@@ -11,4 +11,4 @@ train:
   loss: CrossEntropyLoss
   learning_rate: 0.01
 
-# sbatch --output=Train_SalsaNext_SemanticKITTI.out --error=Train_SalsaNext_SemanticKITTI.out scripts/train/train_model.batch --experiment Train_SalsaNext_SemanticKITTI
+# sbatch --output=Train_SalsaNext_SemanticKITTI.out --error=Train_SalsaNext_SemanticKITTI.out --gpus-per-node=1 scripts/train/train_model.batch --experiment Train_SalsaNext_SemanticKITTI

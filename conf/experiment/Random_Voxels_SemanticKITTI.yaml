@@ -15,4 +15,4 @@ active:
   selection_objects: Voxels
   select_percentage: 0.5
 
-# sbatch --output=Random_Voxels_SemanticKITTI.out --error=Random_Voxels_SemanticKITTI.out scripts/active/{action}.batch --expected-percentage {p} --experiment Random_Voxels_SemanticKITTI
+# sbatch --output=Random_Voxels_SemanticKITTI.out --error=Random_Voxels_SemanticKITTI.out --gpus-per-node=1 scripts/active/{action}.batch --expected-percentage {p} --experiment Random_Voxels_SemanticKITTI

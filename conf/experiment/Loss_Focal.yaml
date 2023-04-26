@@ -10,3 +10,5 @@ train:
   min_epochs: 100
   loss: FocalLoss
   learning_rate: 0.01
+
+# sbatch --output=Loss_Focal.out --error=Loss_Focal.out --gpus-per-node=1 scripts/train/train.batch --experiment Loss_Focal
