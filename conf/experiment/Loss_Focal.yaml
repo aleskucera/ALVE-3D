@@ -3,7 +3,7 @@ defaults:
   - override /ds: SemanticKITTI
   - override /model: SalsaNext
 
-project: Losses-Comparison
+project: Loss-Comparisonn
 run_name: SalsaNext-FocalLoss
 train:
   patience: 20

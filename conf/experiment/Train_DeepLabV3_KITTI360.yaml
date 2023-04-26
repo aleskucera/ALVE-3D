@@ -3,7 +3,7 @@ defaults:
   - override /ds: KITTI360
   - override /model: DeepLabV3
 
-project: Models-Comparison
+project: Model-Comparison
 train:
   batch_size: 40
   patience: 20
