@@ -9,5 +9,4 @@ train:
   batch_size: 32
   min_epochs: 100
   loss: CombinedLoss
-  learning_rate: 0.05
-  lr_decay: 0.9
+  learning_rate: 0.01

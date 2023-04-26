@@ -9,7 +9,6 @@ train:
   patience: 25
   min_epochs: 50
   learning_rate: 0.01
-  lr_decay: 0.95
 active:
   batch_size: 128
   criterion: AverageEntropy

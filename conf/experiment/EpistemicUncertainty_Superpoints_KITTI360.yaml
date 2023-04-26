@@ -8,8 +8,7 @@ train:
   loss: FocalLoss
   patience: 25
   min_epochs: 25
-  learning_rate: 0.05
-  lr_decay: 0.9
+  learning_rate: 0.01
 active:
   batch_size: 128
   criterion: EpistemicUncertainty
