@@ -7,7 +7,7 @@ train:
   batch_size: 32
   loss: FocalLoss
   patience: 25
-  min_epochs: 50
+  min_epochs: 25
   learning_rate: 0.01
 active:
   batch_size: 128
