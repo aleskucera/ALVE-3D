@@ -20,7 +20,7 @@ class Experiment(object):
         elif self.cfg.action == 'select_voxels':
             return f'AL - {self.cfg.active.criterion}'
         elif self.cfg.action == 'train_semantickitti_original':
-            return 'Train SemanticKITTI Original 2'
+            return 'Train SemanticKITTI Original'
 
     @property
     def group(self):
@@ -49,13 +49,15 @@ class Experiment(object):
         if self.cfg.action == 'train_model':
             if 'run_name' in self.cfg:
                 return self.cfg.run_name
-            return f'{self.cfg.model.architecture}'
+            return f'{self.cfg.model.architecture}_{self.cfg.train.loss}'
         elif self.cfg.action == 'train_model_active':
-            return f'Training Semantic - {self.cfg.active.expected_percentage_labeled}%'
+            return f'Training - {self.cfg.active.expected_percentage_labeled}%'
         elif self.cfg.action == 'select_voxels':
             return f'Selection - {self.cfg.active.expected_percentage_labeled + self.cfg.active.select_percentage}%'
         elif self.cfg.action == 'train_semantickitti_original':
-            return f'{self.cfg.model.architecture}'
+            if 'run_name' in self.cfg:
+                return self.cfg.run_name
+            return f'{self.cfg.model.architecture}_{self.cfg.train.loss}'
 
     @property
     def info(self):
@@ -68,7 +70,7 @@ class Experiment(object):
             return f'{self.cfg.active.criterion}_{self.cfg.active.selection_objects}' \
                    f'_{self.cfg.model.architecture}_{self.cfg.ds.name}'
         elif self.cfg.action == 'train_semantickitti_original':
-            return f'{self.cfg.model.architecture}_SemanticKITTI_Original'
+            return f'{self.cfg.model.architecture}_{self.cfg.train.loss}_SemanticKITTI_Original'
 
     @property
     def model(self):
