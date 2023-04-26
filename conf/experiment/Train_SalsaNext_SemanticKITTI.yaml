@@ -3,7 +3,7 @@ defaults:
   - override /ds: SemanticKITTI
   - override /model: SalsaNext
 
-project: Semantic Segmentation Models Comparison
+project: Models-Comparison
 train:
   batch_size: 32
   patience: 20

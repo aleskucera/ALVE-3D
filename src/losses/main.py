@@ -15,7 +15,7 @@ def get_loss(loss_type: str, weight: torch.tensor, device: torch.device, ignore_
     elif loss_type == 'DiceLoss':
         return smp.losses.DiceLoss(mode='multiclass', ignore_index=ignore_index).to(device)
     elif loss_type == 'LovaszLoss':
-        return smp.losses.LovaszLoss(mode='multiclass', ignore_index=ignore_index).to(device)
+        return LovaszSoftmax(ignore=ignore_index).to(device)
     else:
         raise ValueError(f'Unknown loss: {type}')
 

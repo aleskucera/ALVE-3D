@@ -3,7 +3,7 @@ defaults:
   - override /ds: SemanticKITTI
   - override /model: DeepLabV3
 
-project: Semantic Segmentation Models Comparison
+project: Models-Comparison
 train:
   batch_size: 40
   patience: 20

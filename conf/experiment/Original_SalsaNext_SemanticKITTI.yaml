@@ -3,7 +3,7 @@ defaults:
   - override /ds: SemanticKITTIOriginal
   - override /model: SalsaNext
 
-project: SalsaNext SemanticKITTI (Original)
+project: SemanticKITTI-Original
 train:
   patience: 20
   batch_size: 32
