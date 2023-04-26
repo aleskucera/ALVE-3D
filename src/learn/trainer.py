@@ -34,7 +34,7 @@ class BaseTrainer(object):
         self.parser = get_parser(train_ds.parser_type, device)
         self.logger = get_logger(cfg.model.type, cfg.ds.num_classes, cfg.ds.labels_train, device, cfg.ds.ignore_index)
         self.optimizer = optim.Adam(self.model.parameters(), lr=cfg.train.learning_rate)
-        self.scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=cfg.train.lr_decay)
+        # self.scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=cfg.train.lr_decay)
 
         self.epoch = 0
         self.min_epochs = cfg.train.min_epochs
@@ -82,7 +82,7 @@ class BaseTrainer(object):
             self.optimizer.step()
 
             # Update the learning rate
-            self.scheduler.step()
+            # self.scheduler.step()
 
         # Calculate the loss and metrics of the current epoch and log them
         with torch.no_grad():
