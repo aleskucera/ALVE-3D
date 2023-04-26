@@ -60,7 +60,7 @@ class Experiment(object):
     @property
     def info(self):
         if self.cfg.action == 'train_model':
-            return f'{self.cfg.model.architecture}_{self.cfg.ds.name}'
+            return f'{self.cfg.model.architecture}_{self.cfg.ds.name}_{self.cfg.train.loss}'
         elif self.cfg.action == 'train_model_active':
             return f'{self.cfg.active.criterion}_{self.cfg.active.selection_objects}' \
                    f'_{self.cfg.model.architecture}_{self.cfg.ds.name}'
