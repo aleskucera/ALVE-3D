@@ -11,4 +11,4 @@ train:
   loss: CombinedLoss
   learning_rate: 0.01
 
-# sbatch --output=Loss_Combined.out --error=Loss_Combined.out --gpus-per-node=1 scripts/train/train.batch --experiment Loss_Combined
+# sbatch --output=Loss_Combined.out --error=Loss_Combined.out --gpus-per-node=1 scripts/train/train_model.batch --experiment Loss_Combined

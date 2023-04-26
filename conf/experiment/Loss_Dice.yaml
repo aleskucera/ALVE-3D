@@ -11,4 +11,4 @@ train:
   loss: DiceLoss
   learning_rate: 0.01
 
-# sbatch --output=Loss_Dice.out --error=Loss_Dice.out --gpus-per-node=1 scripts/train/train.batch --experiment Loss_Dice
+# sbatch --output=Loss_Dice.out --error=Loss_Dice.out --gpus-per-node=1 scripts/train/train_model.batch --experiment Loss_Dice
