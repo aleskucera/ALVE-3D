@@ -30,6 +30,8 @@ def main(cfg: DictConfig):
 
     if cfg.action == 'config_object':
         show_hydra_config(cfg)
+    elif cfg.test == 'test':
+        test(cfg)
     elif cfg.action == 'visualize_dataset_scans':
         visualize_dataset_scans(cfg)
     elif cfg.action == 'visualize_dataset_clouds':
@@ -54,6 +56,10 @@ def main(cfg: DictConfig):
         raise ValueError('Invalid demo type.')
 
     log.info('Demo completed.')
+
+
+def test(cfg: DictConfig):
+    print(cfg)
 
 
 def show_hydra_config(cfg: DictConfig) -> None:

@@ -1,0 +1,1 @@
+sbatch --output=test.out --error=test.out --partition=amd scripts/test.batch
