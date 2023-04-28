@@ -30,7 +30,7 @@ def main(cfg: DictConfig):
 
     if cfg.action == 'config_object':
         show_hydra_config(cfg)
-    elif cfg.test == 'test':
+    elif cfg.action == 'test':
         test(cfg)
     elif cfg.action == 'visualize_dataset_scans':
         visualize_dataset_scans(cfg)
