@@ -13,6 +13,6 @@ active:
   batch_size: 128
   criterion: Random
   selection_objects: Superpoints
-  select_percentage: 0.5
+  select_percentage: 1
 
 # sbatch --output=Random_Superpoints_KITTI360.out --error=Random_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --expected-percentage {p} --experiment Random_Superpoints_KITTI360
