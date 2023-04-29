@@ -6,7 +6,7 @@
 #SBATCH --error=train_model.out           # standard error file
 #SBATCH --output=train_model.out          # standard output file
 #SBATCH --partition=amdgpu                # partition name
-#SBATCH --cpus-per-task=4                 # number of CPUs
+#SBATCH --cpus-per-task=8                 # number of CPUs
 #SBATCH --mail-user=kuceral4@fel.cvut.cz  # where send info about job
 #SBATCH --mail-type=BEGIN,FAIL,END        # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
