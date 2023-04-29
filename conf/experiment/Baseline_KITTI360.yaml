@@ -1,0 +1,16 @@
+# @package _global_
+defaults:
+  - override /ds: KITTI360
+  - override /model: SalsaNext
+
+project: Baseline
+run_name: SalsaNext-FocalLoss
+train:
+  patience: 20
+  batch_size: 32
+  num_workers: 8
+  min_epochs: 100
+  loss: FocalLoss
+  learning_rate: 0.01
+
+# sbatch --output=Baseline_KITTI360.out --error=Baseline_KITTI360.out --gpus-per-node=1 scripts/train/train_model.batch --experiment Baseline_KITTI360

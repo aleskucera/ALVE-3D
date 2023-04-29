@@ -5,6 +5,7 @@ defaults:
 
 train:
   batch_size: 32
+  num_workers: 8
   loss: FocalLoss
   patience: 20
   min_epochs: 50
@@ -13,6 +14,6 @@ active:
   batch_size: 128
   criterion: EpistemicUncertainty
   selection_objects: Voxels
-  select_percentage: 0.1
+  select_percentage: 0.2
 
 # sbatch --output=EpistemicUncertainty_Voxels_SemanticKITTI.out --error=EpistemicUncertainty_Voxels_SemanticKITTI.out --gpus-per-node=1 scripts/active/{action}.batch --expected-percentage {p} --experiment EpistemicUncertainty_Voxels_SemanticKITTI

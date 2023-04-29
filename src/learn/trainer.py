@@ -27,7 +27,7 @@ class BaseTrainer(object):
         self.train_ds = train_ds
 
         self.batch_size = cfg.train.batch_size
-        self.num_workers = torch.cuda.device_count() * 4 if device.type == 'cuda' else 4
+        self.num_workers = cfg.train.num_workers if device.type == 'cuda' else 4
 
         self.model = get_model(cfg, device)
         self.loss_fn = get_loss(cfg.train.loss, torch.from_numpy(weights).type(torch.float32), device)
