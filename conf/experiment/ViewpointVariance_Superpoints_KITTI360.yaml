@@ -13,6 +13,6 @@ active:
   batch_size: 128
   criterion: ViewpointVariance
   selection_objects: Superpoints
-  select_percentage: 1
+  select_percentage: 2
 
 # sbatch --output=ViewpointVariance_Superpoints_KITTI360.out --error=ViewpointVariance_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --expected-percentage {p} --experiment ViewpointVariance_Superpoints_KITTI360
