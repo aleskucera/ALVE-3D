@@ -5,7 +5,7 @@ defaults:
 
 train:
   batch_size: 32
-  num_workers: 8
+  num_workers: 4
   loss: FocalLoss
   patience: 20
   min_epochs: 50

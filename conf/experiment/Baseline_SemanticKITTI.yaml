@@ -8,7 +8,7 @@ run_name: SalsaNext-FocalLoss
 train:
   patience: 20
   batch_size: 32
-  num_workers: 8
+  num_workers: 4
   min_epochs: 100
   loss: FocalLoss
   learning_rate: 0.01
