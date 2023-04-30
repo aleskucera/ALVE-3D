@@ -14,6 +14,6 @@ active:
   batch_size: 128
   criterion: ViewpointVariance
   selection_objects: Voxels
-  select_percentage: 0.2
+  select_percentage: 0.3
 
 # sbatch --output=ViewpointVariance_Voxels_SemanticKITTI.out --error=ViewpointVariance_Voxels_SemanticKITTI.out --gpus-per-node=1 scripts/active/{action}.batch --expected-percentage {p} --experiment ViewpointVariance_Voxels_SemanticKITTI
