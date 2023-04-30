@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import atexit
 import logging
 
 import torch
@@ -19,6 +20,24 @@ from src.learn import train_model, train_model_active, train_semantickitti_origi
 log = logging.getLogger(__name__)
 
 
+def error_alert(experiment: Experiment):
+    log.error(f'Experiment failed: {experiment}')
+    wandb.alert(
+        title='Experiment failed',
+        text=f'Experiment info: {experiment}',
+        level=wandb.AlertLevel.ERROR
+    )
+
+
+def success_alert(experiment: Experiment):
+    log.info(f'Experiment finished successfully: {experiment}')
+    wandb.alert(
+        title='Experiment finished successfully',
+        text=f'Experiment info: {experiment}',
+        level=wandb.AlertLevel.INFO
+    )
+
+
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(cfg: DictConfig):
     cfg = set_paths(cfg, HydraConfig.get().runtime.output_dir)
@@ -31,6 +50,7 @@ def main(cfg: DictConfig):
     log.info(f'Starting action: {cfg.action} using device {device}')
 
     experiment = Experiment(cfg)
+    atexit.register(error_alert, experiment)
     dict_config = omegaconf.OmegaConf.to_container(cfg, resolve=True)
     with wandb.init(project=experiment.project, group=experiment.group,
                     name=experiment.name, config=dict_config, job_type=experiment.job_type):
@@ -55,11 +75,8 @@ def main(cfg: DictConfig):
         else:
             log.error(f'The action "{cfg.action}" is not supported')
 
-        wandb.alert(
-            title='Experiment finished successfully',
-            text=f'Experiment info: {experiment}',
-            level=wandb.AlertLevel.INFO
-        )
+        success_alert(experiment)
+        atexit.unregister(error_alert)
 
     log.info(f'Finished action: {cfg.action}')
 

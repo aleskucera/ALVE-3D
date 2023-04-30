@@ -1,6 +1,20 @@
 import torch
-import numpy as np
+import atexit
 
-tp = (1, 2, 3)
-tensor = torch.tensor(tp)
-print(tensor)
+
+def error_message():
+    print('Error message')
+
+
+def success_message():
+    print('Success message')
+
+
+def main():
+    a = torch.rand(1)
+    print(a)
+    success_message()
+
+
+if __name__ == '__main__':
+    main()
