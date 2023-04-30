@@ -55,6 +55,12 @@ def main(cfg: DictConfig):
         else:
             log.error(f'The action "{cfg.action}" is not supported')
 
+        wandb.alert(
+            title='Experiment finished successfully',
+            text=f'Experiment info: {experiment}',
+            level=wandb.AlertLevel.INFO
+        )
+
     log.info(f'Finished action: {cfg.action}')
 
 
