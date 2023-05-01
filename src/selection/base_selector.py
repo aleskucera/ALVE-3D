@@ -92,6 +92,7 @@ class Selector(object):
         # Cluster the voxels based on their features
         kmeans = KMeans(n_clusters=self.num_clusters, random_state=0).fit(features)
         clusters = kmeans.labels_
+        clusters = torch.tensor(clusters, dtype=torch.long)
 
         # Decay the values of the voxels based on their cluster
         unique_clusters, counts = torch.unique(clusters, return_counts=True)
