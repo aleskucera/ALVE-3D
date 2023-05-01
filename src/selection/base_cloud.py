@@ -145,7 +145,8 @@ class Cloud(object):
         """
 
         metric = torch.full((self.size,), float('nan'), dtype=torch.float32)
-        features = torch.full((self.size,), float('nan'), dtype=torch.float32) if self.diversity_aware else None
+        features = torch.full((self.size, self.num_classes), float('nan'),
+                              dtype=torch.float32) if self.diversity_aware else None
 
         order = torch.argsort(self.voxel_map)
         unique_voxels, num_views = torch.unique(self.voxel_map, return_counts=True)
