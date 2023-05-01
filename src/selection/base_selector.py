@@ -4,6 +4,7 @@ import torch
 import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
+from omegaconf import DictConfig
 from sklearn.cluster import KMeans
 from torch.utils.data import DataLoader
 
@@ -13,19 +14,16 @@ from src.datasets import Dataset
 
 class Selector(object):
     def __init__(self, dataset_path: str, project_name: str, cloud_paths: np.ndarray,
-                 device: torch.device, batch_size: int = None, diversity_aware: bool = False):
+                 device: torch.device, cfg: DictConfig):
         self.device = device
-        self.decay_rate = 0.95
-        self.num_clusters = 150
         self.cloud_paths = cloud_paths
         self.dataset_path = dataset_path
         self.project_name = project_name
-        self.diversity_aware = diversity_aware
 
-        if batch_size is None or device.type == 'cpu':
-            self.batch_size = 1
-        else:
-            self.batch_size = batch_size
+        self.decay_rate = cfg.active.decay_rate
+        self.num_clusters = cfg.active.num_clusters
+        self.diversity_aware = cfg.active.diversity_aware
+        self.batch_size = cfg.active.batch_size if device.type != 'cpu' else 1
 
         self.clouds = []
         self.num_voxels = 0
