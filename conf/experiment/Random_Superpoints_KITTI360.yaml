@@ -3,6 +3,7 @@ defaults:
   - override /ds: KITTI360
   - override /model: SalsaNext
 
+project: Test-AverageEntropy
 train:
   batch_size: 32
   num_workers: 4

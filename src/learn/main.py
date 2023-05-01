@@ -74,7 +74,7 @@ def train_model_active(cfg: DictConfig, experiment: Experiment, device: torch.de
     selector = get_selector(selection_objects=selection_objects, criterion=criterion,
                             dataset_path=cfg.ds.path, project_name=experiment.info,
                             cloud_paths=train_ds.cloud_files, device=device,
-                            batch_size=cfg.active.batch_size)
+                            cfg=cfg)
 
     # Load selected voxels from W&B
     artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
