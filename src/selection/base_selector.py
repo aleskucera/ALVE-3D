@@ -4,6 +4,7 @@ import torch
 import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
+from sklearn.cluster import KMeans
 from torch.utils.data import DataLoader
 
 from .base_cloud import Cloud
@@ -12,11 +13,14 @@ from src.datasets import Dataset
 
 class Selector(object):
     def __init__(self, dataset_path: str, project_name: str, cloud_paths: np.ndarray,
-                 device: torch.device, batch_size: int = None):
+                 device: torch.device, batch_size: int = None, diversity_aware: bool = False):
         self.device = device
+        self.decay_rate = 0.95
+        self.num_clusters = 150
         self.cloud_paths = cloud_paths
         self.dataset_path = dataset_path
         self.project_name = project_name
+        self.diversity_aware = diversity_aware
 
         if batch_size is None or device.type == 'cpu':
             self.batch_size = 1
@@ -80,16 +84,36 @@ class Selector(object):
                     if end:
                         self._calculate_cloud_values(cloud, criterion)
 
-    @staticmethod
-    def _calculate_cloud_values(cloud: Cloud, criterion: str):
+    def _diversity_aware_order(self, values: torch.Tensor, features: torch.Tensor) -> torch.Tensor:
+
+        # Sort the values in descending order
+        order = torch.argsort(values, descending=True)
+        values = values[order]
+        features = features[order]
+
+        # Cluster the voxels based on their features
+        kmeans = KMeans(n_clusters=self.num_clusters, random_state=0).fit(features)
+        clusters = kmeans.labels_
+
+        # Decay the values of the voxels based on their cluster
+        unique_clusters, counts = torch.unique(clusters, return_counts=True)
+        for cluster, count in zip(unique_clusters, counts):
+            geom_series = [self.decay_rate ** j for j in range(count)]
+            values[clusters == cluster] *= torch.tensor(geom_series)
+
+        # Re-sort the voxels based on their weighted values
+        weighted_order = order[torch.argsort(values, descending=True)]
+        return weighted_order
+
+    def _calculate_cloud_values(self, cloud: Cloud, criterion: str):
         if criterion == 'AverageEntropy':
-            cloud.calculate_average_entropies()
+            cloud.calculate_average_entropies(calculate_features=self.diversity_aware)
         elif criterion == 'ViewpointEntropy':
-            cloud.calculate_viewpoint_entropies()
+            cloud.calculate_viewpoint_entropies(calculate_features=self.diversity_aware)
         elif criterion == 'ViewpointVariance':
-            cloud.calculate_viewpoint_variances()
+            cloud.calculate_viewpoint_variances(calculate_features=self.diversity_aware)
         elif criterion == 'EpistemicUncertainty':
-            cloud.calculate_epistemic_uncertainties()
+            cloud.calculate_epistemic_uncertainties(calculate_features=self.diversity_aware)
         else:
             raise ValueError('Criterion not supported')
 

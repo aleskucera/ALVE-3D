@@ -6,12 +6,14 @@ from src.utils.io import CloudInterface
 
 
 class SuperpointCloud(Cloud):
-    def __init__(self, path: str, project_name: str, size: int, cloud_id: int, superpoint_map: torch.Tensor):
-        super().__init__(path, size, cloud_id)
+    def __init__(self, path: str, project_name: str, size: int, cloud_id: int, superpoint_map: torch.Tensor,
+                 diversity_aware: bool = False):
+        super().__init__(path, size, cloud_id, diversity_aware)
         self.project_name = project_name
         self.superpoint_map = superpoint_map
 
         self.values = None
+        self.features = None
         self.cloud_ids = None
         self.superpoint_sizes = None
         self.superpoint_indices = None
@@ -20,26 +22,37 @@ class SuperpointCloud(Cloud):
     def num_superpoints(self) -> int:
         return self.superpoint_map.max().item() + 1
 
-    def _average_by_superpoint(self, values: torch.Tensor):
+    def _average_by_superpoint(self, values: torch.Tensor, features: torch.Tensor = None):
+        valid_indices = ~torch.isnan(values)
+        values = values[valid_indices]
+        average_superpoint_features = None
+        superpoint_map = self.superpoint_map[valid_indices]
 
-        superpoints, superpoint_sizes = torch.unique(self.superpoint_map, return_counts=True)
+        if features is not None:
+            features = features[valid_indices]
+            average_superpoint_features = torch.full((self.num_superpoints, self.num_classes), float('nan'),
+                                                     dtype=torch.float32)
+
+        superpoints, superpoint_sizes = torch.unique(superpoint_map, return_counts=True)
         average_superpoint_values = torch.full((superpoints.shape[0],), float('nan'), dtype=torch.float32)
 
         # Average the values by superpoint
         for superpoint in superpoints:
             indices = torch.where(self.superpoint_map == superpoint)
             superpoint_values = values[indices]
-            valid_superpoint_values = superpoint_values[~torch.isnan(superpoint_values)]
-            if len(valid_superpoint_values) > 0:
-                average_superpoint_values[superpoint] = torch.mean(valid_superpoint_values)
-        valid_indices = ~torch.isnan(average_superpoint_values)
-        return superpoints[valid_indices], average_superpoint_values[valid_indices], superpoint_sizes[valid_indices]
+            average_superpoint_values[superpoint] = torch.mean(superpoint_values)
+            if features is not None:
+                superpoint_features = features[indices]
+                average_superpoint_features[superpoint] = torch.mean(superpoint_features, dim=0)
 
-    def _save_values(self, values: torch.Tensor):
-        superpoints, superpoint_values, superpoint_sizes = self._average_by_superpoint(values)
-        self.values = superpoint_values
+        return superpoints, average_superpoint_values, average_superpoint_features, superpoint_sizes,
+
+    def _save_metric(self, values: torch.Tensor, features: torch.Tensor = None) -> None:
+        superpoints, values, features, sizes = self._average_by_superpoint(values, features)
+        self.values = values
+        self.features = features
+        self.superpoint_sizes = sizes
         self.superpoint_indices = superpoints
-        self.superpoint_sizes = superpoint_sizes
         self.cloud_ids = torch.full((superpoints.shape[0],), self.id, dtype=torch.long)
 
     def subgraph(self, size: int):

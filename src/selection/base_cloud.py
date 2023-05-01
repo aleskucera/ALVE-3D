@@ -22,18 +22,19 @@ class Cloud(object):
     :param cloud_id: Unique id of the cloud
     """
 
-    def __init__(self, path: str, size: int, cloud_id: int):
+    def __init__(self, path: str, size: int, cloud_id: int, diversity_aware: bool = False):
         self.eps = 1e-6  # Small value to avoid division by zero
         self.path = path
         self.size = size
         self.id = cloud_id
+        self.diversity_aware = diversity_aware
 
         self.voxel_map = torch.zeros((0,), dtype=torch.int32)
         self.variances = torch.zeros((0,), dtype=torch.float32)
         self.label_mask = torch.zeros((size,), dtype=torch.bool)
         self.predictions = torch.zeros((0,), dtype=torch.float32)
 
-    def _save_values(self, values: torch.Tensor) -> tuple:
+    def _save_metric(self, values: torch.Tensor, features: torch.Tensor = None) -> None:
         raise NotImplementedError
 
     def __str__(self) -> str:
@@ -120,45 +121,52 @@ class Cloud(object):
 
     def calculate_average_entropies(self) -> None:
         self.__calculate_metric(self.predictions, self.__average_entropy)
-        self.__reset()
+        # self.__reset()
 
     def calculate_viewpoint_entropies(self) -> None:
         self.__calculate_metric(self.predictions, self.__viewpoint_entropy)
-        self.__reset()
+        # self.__reset()
 
     def calculate_viewpoint_variances(self) -> None:
         self.__calculate_metric(self.predictions, self.__variance)
-        self.__reset()
+        # self.__reset()
 
     def calculate_epistemic_uncertainties(self) -> None:
         self.__calculate_metric(self.variances, torch.mean)
-        self.__reset()
+        # self.__reset()
 
-    def __calculate_metric(self, items: torch.Tensor, function: callable):
+    def __calculate_metric(self, values: torch.Tensor, function: callable) -> None:
         """ Calculates the metric for the voxels in the cloud specified by the function argument.
 
-        :param items: Items that should be used to calculate the metric.
+        :param values: Items that should be used to calculate the metric.
                       The expected shape is (N, C) where N is the number
         :param function: Function that is used to calculate the metric. The function must take a tensor
                          of shape (N, C) and return a scalar value.
         """
 
-        values = torch.full((self.size,), float('nan'), dtype=torch.float32)
+        metric = torch.full((self.size,), float('nan'), dtype=torch.float32)
+        features = torch.full((self.size,), float('nan'), dtype=torch.float32) if self.diversity_aware else None
 
         order = torch.argsort(self.voxel_map)
         unique_voxels, num_views = torch.unique(self.voxel_map, return_counts=True)
 
-        items = items[order]
+        values = values[order]
         voxel_map = unique_voxels.type(torch.long)
-        item_sets = torch.split(items, num_views.tolist())
+        value_sets = torch.split(values, num_views.tolist())
 
         vals = torch.tensor([])
-        for item_set in item_sets:
-            val = function(item_set).unsqueeze(0)
-            vals = torch.cat((vals, val), dim=0)
+        feats = torch.tensor([])
+        for value_set in value_sets:
+            vals = torch.cat((vals, function(value_set).unsqueeze(0)), dim=0)
+            if self.diversity_aware:
+                feats = torch.cat((feats, value_set.mean(dim=0).unsqueeze(0)), dim=0)
 
-        values[voxel_map] = vals
-        self._save_values(values)
+        metric[voxel_map] = vals
+        if self.diversity_aware:
+            features[voxel_map] = feats
+            self._save_metric(metric, features)
+        else:
+            self._save_metric(metric)
 
     def __reset(self) -> None:
         self.voxel_map = torch.zeros((0,), dtype=torch.int32)

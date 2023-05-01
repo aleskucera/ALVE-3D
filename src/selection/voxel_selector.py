@@ -3,6 +3,7 @@ import torch
 import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
+from sklearn.cluster import KMeans
 
 from src.datasets import Dataset
 from .base_selector import Selector
@@ -19,7 +20,7 @@ class VoxelSelector(Selector):
 
     def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5) -> tuple:
         if self.criterion == 'Random':
-            return self._select_randomly(dataset, percentage)
+            return self._select_randomly(percentage)
         else:
             return self._select_by_criterion(dataset, model, percentage)
 
@@ -28,9 +29,10 @@ class VoxelSelector(Selector):
             with h5py.File(cloud_path, 'r') as f:
                 num_voxels = f['points'].shape[0]
                 self.num_voxels += num_voxels
-                self.clouds.append(VoxelCloud(cloud_path, num_voxels, cloud_id))
+                self.clouds.append(VoxelCloud(path=cloud_path, size=num_voxels, cloud_id=cloud_id,
+                                              diversity_aware=self.diversity_aware))
 
-    def _select_randomly(self, dataset: Dataset, percentage: float):
+    def _select_randomly(self, percentage: float):
 
         voxel_map = torch.tensor([], dtype=torch.long)
         cloud_map = torch.tensor([], dtype=torch.long)
@@ -47,29 +49,40 @@ class VoxelSelector(Selector):
         values = torch.tensor([], dtype=torch.float32)
         voxel_map = torch.tensor([], dtype=torch.long)
         cloud_map = torch.tensor([], dtype=torch.long)
+        features = torch.tensor([], dtype=torch.float32)
         selection_size = self.get_selection_size(percentage)
 
         self._calculate_values(model, dataset, self.criterion, self.mc_dropout)
 
         for cloud in self.clouds:
+            if cloud.values is None:
+                continue
             values = torch.cat((values, cloud.values))
-            voxel_map = torch.cat((voxel_map, cloud.voxel_indices))
             cloud_map = torch.cat((cloud_map, cloud.cloud_ids))
+            voxel_map = torch.cat((voxel_map, cloud.voxel_indices))
+            if cloud.features is not None:
+                features = torch.cat((features, cloud.features))
 
-        return self._choose_voxels(voxel_map, cloud_map, selection_size, values)
+        values = None if values.shape[0] == 0 else values
+        features = None if features.shape[0] == 0 else features
+
+        return self._choose_voxels(voxel_map, cloud_map, selection_size, values, features)
 
     def _choose_voxels(self, voxel_map: torch.Tensor, cloud_map: torch.Tensor,
-                       selection_size: int, values: torch.Tensor = None) -> tuple:
+                       selection_size: int, values: torch.Tensor = None, features: torch.Tensor = None) -> tuple:
         voxel_selection = dict()
 
         if values is None:
             order = torch.randperm(voxel_map.shape[0])
             metric_statistics = None
-        else:
+        elif features is None:
             order = torch.argsort(values, descending=True)
             values = values[order]
             threshold = values[selection_size]
             metric_statistics = self._metric_statistics(values, threshold)
+        else:
+            order = self._diversity_aware_order(values, features)
+            metric_statistics = None
 
         voxel_map, cloud_map = voxel_map[order], cloud_map[order]
         selected_voxels = voxel_map[:selection_size]

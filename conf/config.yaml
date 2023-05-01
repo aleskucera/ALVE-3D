@@ -19,4 +19,10 @@ defaults:
 
 action: none
 
+# W&B settings
+group: null
+project: null
+job_type: null
+run_name: null
+
 

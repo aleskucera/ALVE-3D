@@ -11,9 +11,10 @@ class Experiment(object):
 
     @property
     def project(self):
+        if self.cfg.project is not None:
+            return self.cfg.project
+
         if self.cfg.action == 'train_model':
-            if 'project' in self.cfg:
-                return self.cfg.project
             return 'Train-Semantic-Model'
         elif self.cfg.action == 'train_model_active':
             return f'AL-{self.cfg.active.criterion}'
@@ -26,6 +27,9 @@ class Experiment(object):
 
     @property
     def group(self):
+        if self.cfg.group is not None:
+            return self.cfg.group
+
         if self.cfg.action == 'train_model':
             return self.cfg.ds.name
         elif self.cfg.action == 'train_model_active':
@@ -37,6 +41,9 @@ class Experiment(object):
 
     @property
     def job_type(self):
+        if self.cfg.job_type is not None:
+            return self.cfg.job_type
+
         if self.cfg.action == 'train_model':
             return None
         elif self.cfg.action == 'train_model_active':
@@ -48,9 +55,10 @@ class Experiment(object):
 
     @property
     def name(self):
+        if self.cfg.run_name is not None:
+            return self.cfg.run_name
+        
         if self.cfg.action == 'train_model':
-            if 'run_name' in self.cfg:
-                return self.cfg.run_name
             return f'{self.cfg.model.architecture}-{self.cfg.train.loss}'
         elif self.cfg.action == 'train_model_active':
             return f'Training-{self.cfg.active.expected_percentage_labeled}%'

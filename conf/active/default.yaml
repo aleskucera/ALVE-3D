@@ -2,6 +2,10 @@ batch_size: 128
 criterion: 'AverageEntropy'
 selection_objects: 'Voxels'
 
+decay_rate: 0.95
+num_clusters: 150
+diversity_aware: false
+
 select_percentage: 0.5
 expected_percentage_labeled: 0
 

@@ -1,7 +1,14 @@
+import os
+
+import torch
+import wandb
 import numpy as np
 import seaborn as sn
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+
+from ruamel.yaml import YAML
+from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 cmap_small = cm.get_cmap('tab10')
 cmap_large = cm.get_cmap('tab20')
@@ -11,7 +18,7 @@ def bar_chart(values: np.ndarray, labels: list, value_label: str, title: str = N
     y = np.arange(len(labels))
 
     fig, ax = plt.subplots()
-    rects = ax.barh(y, values, color=cmap(0.5))
+    rects = ax.barh(y, values, color=cmap_small(0.5))
     bar_labels = [f"{val:.1e}" if val >= 0.00001 else "" for val in values]
     ax.bar_label(rects, labels=bar_labels, padding=10)
 
@@ -40,7 +47,7 @@ def grouped_bar_chart(values: dict, labels: list, value_label: str, title: str =
     # Create a bar plot for each key in labeled_distributions
     for i, (key, vals) in enumerate(values.items()):
         offset = i - (len(vals) - 1) / 2
-        rects = ax.barh(y + offset * width, vals, width, label=key, color=cmap(i))
+        rects = ax.barh(y + offset * width, vals, width, label=key, color=cmap_small(i))
         # bar_labels = [f"{val:.1e}" if val >= 0.00001 else "" for val in vals]
         # ax.bar_label(rects, labels=bar_labels, padding=10)
 
@@ -113,7 +120,103 @@ def plot_confusion_matrix(confusion_matrix: np.ndarray, labels: list, ignore_ind
         plt.show()
 
 
+class ExperimentVisualizer(object):
+    def __init__(self, file: str):
+        self.file = file
+        self.data = None
+
+        self.strategies = list()
+        self.percentages = dict()
+
+        self.histories = dict()
+
+        self.max_accs = dict()
+        self.max_mious = dict()
+
+        self.load_data()
+
+    def load_data(self):
+        yaml = YAML()
+        api = wandb.Api()
+
+        with open(self.file, 'r') as f:
+            self.data = yaml.load(f)
+
+        for s in self.data['SemanticKITTI']:
+            strategy_name = s['name']
+            self.strategies.append(strategy_name)
+            self.histories[strategy_name] = []
+            self.max_mious[strategy_name] = []
+            self.max_accs[strategy_name] = []
+            self.percentages[strategy_name] = s['percentages']
+
+            for v in s['history']['versions']:
+                history_artifact = f"{s['history']['url']}:v{v}"
+                history_file = s['history']['file']
+
+                artifact_dir = api.artifact(history_artifact).download()
+                history_path = os.path.join(artifact_dir, f'{history_file}.pt')
+                self.histories[strategy_name].append(torch.load(history_path))
+
+        self.calculate_max_metrics()
+
+    def calculate_max_metrics(self):
+        for strategy in self.strategies:
+            histories = self.histories[strategy]
+            print(f'Calculating max metrics for {strategy}')
+            print(f'Number of histories: {len(histories)}')
+            for history in histories:
+                max_miou = np.max(history['miou_val'])
+                print(f'Max miou: {max_miou}')
+                self.max_mious[strategy].append(np.max(history['miou_val']))
+
+    def plot_mious(self):
+        fig, ax = plt.subplots()
+        cmap = cmap_small
+
+        for i, strategy in enumerate(self.strategies):
+            print(self.percentages[strategy])
+            print(self.max_mious[strategy])
+            ax.plot(self.percentages[strategy], self.max_mious[strategy], label=strategy, linewidth=1.5, color=cmap(i))
+
+        ax.set_title('Max mious over percentages')
+        ax.set_xlabel('Percentage of training data')
+        ax.set_ylabel('Max mious')
+        ax.legend(loc='best')
+        ax.grid()
+        plt.show()
+
+
+def plot_result(file: str):
+    import os
+    import torch
+    import wandb
+    yaml = YAML()
+
+    with open(file, 'r') as f:
+        data = yaml.load(f)
+
+    print(data['SemanticKITTI'][0]['name'])
+    print(data['SemanticKITTI'][1]['name'])
+
+    api = wandb.Api()
+    history_artifact = f"{data['SemanticKITTI'][0]['history']['url']}:v{data['SemanticKITTI'][0]['history']['versions'][-1]}"
+    history_file = data['SemanticKITTI'][0]['history']['file']
+    history = api.artifact(history_artifact)
+    history_path = os.path.join(history.download(), f'{history_file}.pt')
+    history = torch.load(history_path)
+    plot({'Loss Train': history['loss_train'], 'Loss Val': history['loss_val']}, 'Epoch', 'Value', 'Loss')
+    plot({'Accuracy Train': history['accuracy_train'], 'Accuracy Val': history['accuracy_val']},
+         'Epoch', 'Value', 'Accuracy')
+    plot({'MIoU Train': history['miou_train'], 'IoU Val': history['miou_val']}, 'Epoch', 'Value', 'MIoU')
+
+
 if __name__ == '__main__':
+    experiment_visualizer = ExperimentVisualizer('test.yaml')
+    experiment_visualizer.plot_mious()
+    plot_result('test.yaml')
+    exit(0)
+
     distributions = {'0.5%': np.array([0.1, 0.5, 0.4]),
                      '1%': np.array([0.1, 0.5, 0.4]),
                      '1.5%': np.array([0.1, 0.5, 0.4])}

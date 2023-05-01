@@ -72,7 +72,8 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
         model = get_model(cfg=cfg, device=device)
         model.load_state_dict(model_state_dict)
 
-        selection, metric_statistics = selector.select(dataset=dataset, model=model, percentage=select_percentage)
+        selection, metric_statistics = selector.select(dataset=dataset, model=model, percentage=select_percentage,
+                                                       diversity_aware=cfg.active.diversity_aware)
 
     else:
         selector = get_selector(selection_objects=selection_objects, criterion='Random',
