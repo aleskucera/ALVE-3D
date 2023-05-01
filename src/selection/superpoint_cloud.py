@@ -28,22 +28,22 @@ class SuperpointCloud(Cloud):
         average_superpoint_features = None
         superpoint_map = self.superpoint_map[valid_indices]
 
-        if features is not None:
-            features = features[valid_indices]
-            average_superpoint_features = torch.full((self.num_superpoints, self.num_classes), float('nan'),
-                                                     dtype=torch.float32)
-
         superpoints, superpoint_sizes = torch.unique(superpoint_map, return_counts=True)
         average_superpoint_values = torch.full((superpoints.shape[0],), float('nan'), dtype=torch.float32)
 
+        if features is not None:
+            features = features[valid_indices]
+            average_superpoint_features = torch.full((superpoints.shape[0], self.num_classes), float('nan'),
+                                                     dtype=torch.float32)
+
         # Average the values by superpoint
-        for superpoint in superpoints:
+        for i, superpoint in enumerate(superpoints):
             indices = torch.where(superpoint_map == superpoint)
             superpoint_values = values[indices]
-            average_superpoint_values[superpoint] = torch.mean(superpoint_values)
+            average_superpoint_values[i] = torch.mean(superpoint_values)
             if features is not None:
                 superpoint_features = features[indices]
-                average_superpoint_features[superpoint] = torch.mean(superpoint_features, dim=0)
+                average_superpoint_features[i] = torch.mean(superpoint_features, dim=0)
 
         return superpoints, average_superpoint_values, average_superpoint_features, superpoint_sizes,
 
