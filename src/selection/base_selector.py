@@ -5,7 +5,7 @@ import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
 from omegaconf import DictConfig
-from sklearn.cluster import KMeans
+from sklearn.cluster import MiniBatchKMeans
 from torch.utils.data import DataLoader
 
 from .base_cloud import Cloud
@@ -90,7 +90,8 @@ class Selector(object):
         features = features[order]
 
         # Cluster the voxels based on their features
-        kmeans = KMeans(n_clusters=self.num_clusters, random_state=0).fit(features)
+        # kmeans = KMeans(n_clusters=self.num_clusters, random_state=0).fit(features)
+        kmeans = MiniBatchKMeans(n_clusters=self.num_clusters, random_state=0, batch_size=5000).fit(features)
         clusters = kmeans.labels_
         clusters = torch.tensor(clusters, dtype=torch.long)
 
