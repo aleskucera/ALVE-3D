@@ -10,8 +10,8 @@ from .superpoint_cloud import SuperpointCloud
 
 class SuperpointSelector(Selector):
     def __init__(self, dataset_path: str, project_name: str, cloud_paths: np.ndarray,
-                 device: torch.device, criterion: str, batch_size: int):
-        super().__init__(dataset_path, project_name, cloud_paths, device, batch_size)
+                 device: torch.device, criterion: str, batch_size: int, diversity_aware: bool = False):
+        super().__init__(dataset_path, project_name, cloud_paths, device, batch_size, diversity_aware)
         self.criterion = criterion
         self.mc_dropout = True if criterion == 'EpistemicUncertainty' else False
         self._initialize()

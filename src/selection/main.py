@@ -18,11 +18,12 @@ from src.utils.log import log_dataset_statistics, log_most_labeled_sample, \
 
 
 def get_selector(selection_objects: str, criterion: str, dataset_path: str, project_name: str,
-                 cloud_paths: np.ndarray, device: torch.device, batch_size: int) -> Selector:
+                 cloud_paths: np.ndarray, device: torch.device, batch_size: int, diversity_aware: bool) -> Selector:
     if selection_objects == 'Voxels':
-        return VoxelSelector(dataset_path, project_name, cloud_paths, device, criterion, batch_size)
+        return VoxelSelector(dataset_path, project_name, cloud_paths, device, criterion, batch_size, diversity_aware)
     elif selection_objects == 'Superpoints':
-        return SuperpointSelector(dataset_path, project_name, cloud_paths, device, criterion, batch_size)
+        return SuperpointSelector(dataset_path, project_name, cloud_paths, device, criterion, batch_size,
+                                  diversity_aware)
     else:
         raise ValueError(f'Unknown selection_objects: {selection_objects}')
 
@@ -58,7 +59,8 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
     if expected_percentage_labeled > 0:
         selector = get_selector(selection_objects=selection_objects, criterion=criterion,
                                 dataset_path=cfg.ds.path, project_name=experiment.info,
-                                cloud_paths=dataset.cloud_files, device=device, batch_size=cfg.active.batch_size)
+                                cloud_paths=dataset.cloud_files, device=device, batch_size=cfg.active.batch_size,
+                                diversity_aware=cfg.active.diversity_aware)
 
         artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
         selection = torch.load(os.path.join(artifact_dir, f'{experiment.selection}.pt'))
@@ -72,8 +74,7 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
         model = get_model(cfg=cfg, device=device)
         model.load_state_dict(model_state_dict)
 
-        selection, metric_statistics = selector.select(dataset=dataset, model=model, percentage=select_percentage,
-                                                       diversity_aware=cfg.active.diversity_aware)
+        selection, metric_statistics = selector.select(dataset=dataset, model=model, percentage=select_percentage)
 
     else:
         selector = get_selector(selection_objects=selection_objects, criterion='Random',
