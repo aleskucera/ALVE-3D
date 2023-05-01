@@ -38,7 +38,7 @@ class SuperpointCloud(Cloud):
 
         # Average the values by superpoint
         for superpoint in superpoints:
-            indices = torch.where(self.superpoint_map == superpoint)
+            indices = torch.where(superpoint_map == superpoint)
             superpoint_values = values[indices]
             average_superpoint_values[superpoint] = torch.mean(superpoint_values)
             if features is not None:
