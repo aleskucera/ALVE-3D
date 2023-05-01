@@ -105,15 +105,16 @@ class Selector(object):
         weighted_order = order[torch.argsort(values, descending=True)]
         return weighted_order
 
-    def _calculate_cloud_values(self, cloud: Cloud, criterion: str):
+    @staticmethod
+    def _calculate_cloud_values(cloud: Cloud, criterion: str):
         if criterion == 'AverageEntropy':
-            cloud.calculate_average_entropies(calculate_features=self.diversity_aware)
+            cloud.calculate_average_entropies()
         elif criterion == 'ViewpointEntropy':
-            cloud.calculate_viewpoint_entropies(calculate_features=self.diversity_aware)
+            cloud.calculate_viewpoint_entropies()
         elif criterion == 'ViewpointVariance':
-            cloud.calculate_viewpoint_variances(calculate_features=self.diversity_aware)
+            cloud.calculate_viewpoint_variances()
         elif criterion == 'EpistemicUncertainty':
-            cloud.calculate_epistemic_uncertainties(calculate_features=self.diversity_aware)
+            cloud.calculate_epistemic_uncertainties()
         else:
             raise ValueError('Criterion not supported')
 
