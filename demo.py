@@ -13,7 +13,8 @@ from src.models import get_model
 from src.datasets import SemanticDataset
 from src.utils.cloud import visualize_cloud
 from src.laserscan import LaserScan, ScanVis
-from src.superpoints import partition_cloud, calculate_features
+from src.superpoints import partition_cloud, calculate_features, calculate_color_discontinuity, \
+    calculate_surface_variation
 from src.utils.io import set_paths, ScanInterface, CloudInterface
 from src.kitti360 import KITTI360Converter, create_kitti360_config
 from src.utils.map import map_colors, colorize_values, colorize_instances
