@@ -1,4 +1,5 @@
 import torch
+import time
 
 from src.datasets import Dataset
 
@@ -143,7 +144,7 @@ class Cloud(object):
         :param function: Function that is used to calculate the metric. The function must take a tensor
                          of shape (N, C) and return a scalar value.
         """
-
+        start = time.time()
         metric = torch.full((self.size,), float('nan'), dtype=torch.float32)
         features = torch.full((self.size, self.num_classes), float('nan'),
                               dtype=torch.float32) if self.diversity_aware else None
@@ -162,12 +163,15 @@ class Cloud(object):
             if self.diversity_aware:
                 feats = torch.cat((feats, value_set.mean(dim=0).unsqueeze(0)), dim=0)
 
+        print(f'Calculating metric for {self.path} took {time.time() - start} seconds.')
+        start = time.time()
         metric[voxel_map] = vals
         if self.diversity_aware:
             features[voxel_map] = feats
             self._save_metric(metric, features)
         else:
             self._save_metric(metric)
+        print(f'Saving metric for {self.path} took {time.time() - start} seconds.')
 
     def __reset(self) -> None:
         self.voxel_map = torch.zeros((0,), dtype=torch.int32)
