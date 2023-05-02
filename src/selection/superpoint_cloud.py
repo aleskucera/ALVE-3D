@@ -54,6 +54,7 @@ class SuperpointCloud(Cloud):
         self.superpoint_sizes = sizes
         self.superpoint_indices = superpoints
         self.cloud_ids = torch.full((superpoints.shape[0],), self.id, dtype=torch.long)
+        self._reset()
 
     def subgraph(self, size: int):
         cloud_interface = CloudInterface(self.project_name)

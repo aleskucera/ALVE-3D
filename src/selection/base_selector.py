@@ -75,7 +75,7 @@ class Selector(object):
                         model_outputs_it = [x.unsqueeze(0) for x in model_outputs_it]
                         for i, model_output in enumerate(model_outputs_it):
                             model_outputs[i] = torch.cat((model_outputs[i], model_output), dim=0)
-
+                print('Here')
                 for cloud_id, model_output, voxel_map, end in zip(cloud_ids, model_outputs, voxel_maps, end_indicators):
                     cloud = self.get_cloud(cloud_id)
                     cloud.add_predictions(model_output.cpu(), voxel_map, mc_dropout=mc_dropout)

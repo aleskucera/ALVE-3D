@@ -144,6 +144,7 @@ class Cloud(object):
         :param function: Function that is used to calculate the metric. The function must take a tensor
                          of shape (N, C) and return a scalar value.
         """
+        print('Calculating metric for cloud: ' + self.path)
         start = time.time()
         metric = torch.full((self.size,), float('nan'), dtype=torch.float32)
         features = torch.full((self.size, self.num_classes), float('nan'),
@@ -173,7 +174,7 @@ class Cloud(object):
             self._save_metric(metric)
         print(f'Saving metric for {self.path} took {time.time() - start} seconds.')
 
-    def __reset(self) -> None:
+    def _reset(self) -> None:
         self.voxel_map = torch.zeros((0,), dtype=torch.int32)
         self.variances = torch.zeros((0,), dtype=torch.float32)
         self.predictions = torch.zeros((0,), dtype=torch.float32)
