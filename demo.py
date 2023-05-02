@@ -13,8 +13,7 @@ from src.models import get_model
 from src.datasets import SemanticDataset
 from src.utils.cloud import visualize_cloud
 from src.laserscan import LaserScan, ScanVis
-from src.superpoints import partition_cloud, calculate_features, calculate_color_discontinuity, \
-    calculate_surface_variation
+from src.superpoints import partition_cloud, calculate_features, compute_color_discontinuity, compute_surface_variation
 from src.utils.io import set_paths, ScanInterface, CloudInterface
 from src.kitti360 import KITTI360Converter, create_kitti360_config
 from src.utils.map import map_colors, colorize_values, colorize_instances
@@ -213,11 +212,9 @@ def visualize_superpoints(cfg: DictConfig) -> None:
         colors = cloud_interface.read_colors(cloud_file)
         edge_sources, edge_targets = cloud_interface.read_edges(cloud_file)
 
-        # Compute features
         components, component_map = partition_cloud(points=points, colors=colors,
                                                     edge_sources=edge_sources, edge_targets=edge_targets)
 
-        # Visualize feature
         superpoint_colors = colorize_instances(component_map)
         visualize_cloud(points, superpoint_colors)
 
