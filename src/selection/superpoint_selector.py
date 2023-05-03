@@ -73,8 +73,9 @@ class SuperpointSelector(Selector):
                 continue
             values = torch.cat((values, cloud.values))
             cloud_map = torch.cat((cloud_map, cloud.cloud_ids))
-            superpoint_map = torch.cat((superpoint_map, cloud.superpoint_map))
-            superpoint_sizes = torch.cat((superpoint_sizes, cloud.superpoint_sizes))
+            superpoints, cloud_superpoint_sizes = torch.unique(cloud.superpoint_map, return_counts=True)
+            superpoint_map = torch.cat((superpoint_map, superpoints))
+            superpoint_sizes = torch.cat((superpoint_sizes, cloud_superpoint_sizes))
             if cloud.features is not None:
                 features = torch.cat((features, cloud.features))
 
@@ -86,6 +87,12 @@ class SuperpointSelector(Selector):
     def _choose_voxels(self, superpoint_map: torch.Tensor, superpoint_sizes: torch.Tensor,
                        cloud_map: torch.Tensor, selection_size: int, values: torch.Tensor = None,
                        features: torch.Tensor = None) -> tuple:
+        log.info(f"Choosing {selection_size} superpoints from {superpoint_map.shape[0]} superpoints")
+        log.info(f"Superpoint sizes: {superpoint_sizes}")
+        log.info(f"Superpoint map shape: {superpoint_map.shape}")
+        log.info(f"Selection size: {selection_size}")
+        log.info(f"Values shape: {values.shape if values is not None else None}")
+        log.info(f"Features shape: {features.shape if features is not None else None}")
         metric_statistics = None
         if values is None:
             order = torch.randperm(superpoint_map.shape[0])
