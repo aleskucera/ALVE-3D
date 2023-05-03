@@ -100,7 +100,6 @@ class SuperpointSelector(Selector):
             order = torch.argsort(values, descending=True)
         else:
             order = self._diversity_aware_order(values, features)
-        order = torch.randperm(superpoint_map.shape[0])
 
         cloud_map = cloud_map[order]
         superpoint_map = superpoint_map[order]
