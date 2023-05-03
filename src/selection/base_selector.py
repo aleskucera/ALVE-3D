@@ -116,7 +116,7 @@ class Selector(object):
         elif criterion == 'EpistemicUncertainty':
             cloud.compute_epistemic_uncertainty()
         elif criterion == 'ReDAL':
-            cloud.compute_redal(self.redal_weights)
+            cloud.compute_redal_score(self.redal_weights)
         elif criterion == 'Entropy':
             cloud.compute_entropy()
         elif criterion == 'Margin':

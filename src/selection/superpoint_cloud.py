@@ -2,8 +2,6 @@ import torch
 from torch_scatter import scatter_mean
 
 from .base_cloud import Cloud
-from src.ply_c import libply_c
-from src.utils.io import CloudInterface
 
 
 class SuperpointCloud(Cloud):

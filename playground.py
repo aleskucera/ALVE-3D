@@ -41,15 +41,16 @@ def test_scatter_mean2():
                         [0, 2, 1, 3, 4]])
     index = torch.tensor([4, 5, 4])
 
-    out = scatter_mean(src, index, dim=0)
+    out = scatter_mean(src, index, dim=0, dim_size=8)
     print(out)
 
 
 def main():
-    size = 4
-    tensor = torch.tensor([1, 2, 3, 4])
-    full_tensor = torch.concatenate((tensor, torch.zeros((size - tensor.shape[0],))))
-    print(full_tensor)
+    test_scatter_mean2()
+    # size = 4
+    # tensor = torch.tensor([1, 2, 3, 4])
+    # full_tensor = torch.concatenate((tensor, torch.zeros((size - tensor.shape[0],))))
+    # print(full_tensor)
 
 
 if __name__ == '__main__':

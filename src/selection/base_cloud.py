@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 import logging
 from torch_scatter import scatter_mean, scatter_std
@@ -39,7 +38,8 @@ class Cloud(object):
 
         self.diversity_aware = diversity_aware
         self.surface_variation = surface_variation
-        self.color_discontinuity = color_discontinuity
+        self.color_discontinuity = color_discontinuity if color_discontinuity is not None \
+            else torch.zeros_like(self.surface_variation)
 
         self.voxel_map = torch.zeros((0,), dtype=torch.int32)
         self.variances = torch.zeros((0,), dtype=torch.float32)
@@ -84,6 +84,27 @@ class Cloud(object):
         split = self.path.split('/')
         key = '/'.join(split[-3:])
         return key
+
+    @property
+    def mean_predictions(self) -> torch.Tensor:
+        mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        zero_fill = torch.zeros((self.size - mean_predictions.shape[0], mean_predictions.shape[1]))
+        voxel_mean_predictions = torch.cat((mean_predictions, zero_fill))
+        return voxel_mean_predictions
+
+    @property
+    def mean_variances(self) -> torch.Tensor:
+        mean_variances = scatter_mean(self.variances, self.voxel_map, dim=0, dim_size=self.size)
+        zero_fill = torch.zeros((self.size - mean_variances.shape[0],))
+        voxel_mean_variances = torch.cat((mean_variances, zero_fill))
+        return voxel_mean_variances
+
+    @property
+    def std_predictions(self) -> torch.Tensor:
+        std_predictions = scatter_std(self.predictions, self.voxel_map, dim=0)
+        zero_fill = torch.zeros((self.size - std_predictions.shape[0], std_predictions.shape[1]))
+        voxel_std_predictions = torch.cat((std_predictions, zero_fill))
+        return voxel_std_predictions
 
     def add_predictions(self, predictions: torch.Tensor, voxel_map: torch.Tensor, mc_dropout: bool = False) -> None:
         """ Adds the predictions of the model to the cloud. The predictions are mapped to the voxels and the
@@ -132,87 +153,52 @@ class Cloud(object):
             dataset.label_voxels(voxels.numpy(), self.path)
 
     def compute_viewpoint_variance(self) -> None:
-        voxel_std = scatter_std(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        viewpoint_deviations = scatter_std(self.predictions, self.voxel_map, dim=0, dim_size=self.size).mean(dim=1)
         voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
-        viewpoint_deviations = torch.mean(voxel_std, dim=1)
-
-        if self.diversity_aware:
-            self._save_metric(viewpoint_deviations, features=voxel_mean_predictions)
-        else:
-            self._save_metric(viewpoint_deviations)
+        features = voxel_mean_predictions if self.diversity_aware else None
+        self._save_metric(viewpoint_deviations, features=features)
         self.__reset()
 
     def compute_epistemic_uncertainty(self) -> None:
+        epistemic_uncertainties = scatter_mean(self.variances, self.voxel_map, dim=0, dim_size=self.size).mean(dim=1)
         voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
-        voxel_mean_variances = scatter_mean(self.variances, self.voxel_map, dim=0, dim_size=self.size)
-        epistemic_uncertainties = torch.mean(voxel_mean_variances, dim=1)
-
-        if self.diversity_aware:
-            self._save_metric(epistemic_uncertainties, features=voxel_mean_predictions)
-        else:
-            self._save_metric(epistemic_uncertainties)
+        features = voxel_mean_predictions if self.diversity_aware else None
+        self._save_metric(epistemic_uncertainties, features=features)
         self.__reset()
 
-    def compute_redal(self, weights: list[float] = None) -> None:
-        log.info(f'Computing REDAL for {self.path}...')
-        log.info(f'Prediction shape: {self.predictions.shape}')
-        log.info(f'Voxel map shape: {self.voxel_map.shape}')
-        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0)
-        zero_fill = torch.zeros((self.size - voxel_mean_predictions.shape[0], voxel_mean_predictions.shape[1]))
-        voxel_mean_predictions = torch.cat((voxel_mean_predictions, zero_fill))
-
-        log.info(f'Voxel mean predictions shape: {voxel_mean_predictions.shape}')
-        log.info(f'Surface variation shape: {self.surface_variation.shape}')
-        log.info(f'Color discontinuity shape: {self.color_discontinuity.shape}')
-
-        voxel_distributions = torch.clamp(voxel_mean_predictions, min=self.eps, max=1 - self.eps)
-        entropy = -torch.sum(voxel_distributions * torch.log(voxel_distributions), dim=1)
-
-        # surface_variation = scatter_mean(self.surface_variation, self.voxel_map, dim=0)
-        if self.color_discontinuity is not None:
-            # color_discontinuity = scatter_mean(self.color_discontinuity, self.voxel_map, dim=0, dim_size=self.size)
-            redal_score = weights[0] * entropy + weights[1] * self.color_discontinuity + weights[
-                2] * self.surface_variation
-        else:
-            redal_score = weights[0] * entropy + weights[2] * self.surface_variation
-
-        if self.diversity_aware:
-            self._save_metric(redal_score, features=voxel_mean_predictions)
-        else:
-            self._save_metric(redal_score)
+    def compute_redal_score(self, weights: list[float] = None) -> None:
+        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        features = voxel_mean_predictions if self.diversity_aware else None
+        voxel_mean_predictions = torch.clamp(voxel_mean_predictions, min=self.eps, max=1 - self.eps)
+        entropy = -torch.sum(voxel_mean_predictions * torch.log(voxel_mean_predictions), dim=1)
+        redal_score = weights[0] * entropy + \
+                      weights[1] * self.color_discontinuity + \
+                      weights[2] * self.surface_variation
+        self._save_metric(redal_score, features=features)
         self.__reset()
 
     def compute_entropy(self) -> None:
-        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0)
-        voxel_distributions = torch.clamp(voxel_mean_predictions, min=self.eps, max=1 - self.eps)
-        entropy = -torch.sum(voxel_distributions * torch.log(voxel_distributions), dim=1)
-
-        if self.diversity_aware:
-            self._save_metric(entropy, features=voxel_mean_predictions)
-        else:
-            self._save_metric(entropy)
+        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        features = voxel_mean_predictions if self.diversity_aware else None
+        voxel_mean_predictions = torch.clamp(voxel_mean_predictions, min=self.eps, max=1 - self.eps)
+        entropy = -torch.sum(voxel_mean_predictions * torch.log(voxel_mean_predictions), dim=1)
+        self._save_metric(entropy, features=features)
         self.__reset()
 
     def compute_margin(self) -> None:
-        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0)
+        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
         sorted_predictions = torch.sort(voxel_mean_predictions, dim=1, descending=True)[0]
         margin = sorted_predictions[:, 0] - sorted_predictions[:, 1]
-
-        if self.diversity_aware:
-            self._save_metric(margin, features=voxel_mean_predictions)
-        else:
-            self._save_metric(margin)
+        features = voxel_mean_predictions if self.diversity_aware else None
+        self._save_metric(margin, features=features)
         self.__reset()
 
     def compute_confidence(self) -> None:
-        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0)
-        voxel_max_predictions = torch.max(voxel_mean_predictions, dim=1)[0]
-        least_confidence = 1 - voxel_max_predictions
-
-        if self.diversity_aware:
-            self._save_metric(least_confidence, features=voxel_mean_predictions)
-        else:
-            self._save_metric(least_confidence)
+        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        voxel_confidence = torch.max(voxel_mean_predictions, dim=1)[0]
+        least_confidence = 1 - voxel_confidence
+        features = voxel_mean_predictions if self.diversity_aware else None
+        self._save_metric(least_confidence, features=features)
         self.__reset()
 
     # def __calculate_metric(self, values: torch.Tensor, function: callable) -> None:
