@@ -1,7 +1,10 @@
 import torch
 from torch_scatter import scatter_mean
+import logging
 
 from .base_cloud import Cloud
+
+log = logging.getLogger(__name__)
 
 
 class SuperpointCloud(Cloud):
@@ -25,7 +28,10 @@ class SuperpointCloud(Cloud):
 
     @property
     def superpoint_labels(self) -> torch.Tensor:
+        log.info(f"Unique superpoint labels in cloud {self.id}: {torch.unique(self.labels)}")
+        log.info(f"Unique superpoint labels in cloud {self.id}: {torch.unique(self.superpoint_map)}")
         label_mean = scatter_mean(self.labels, self.superpoint_map, dim=0)
+        log.info(f"Unique superpoint labels in cloud {self.id}: {torch.unique(label_mean)}")
         return torch.round(label_mean).long()
 
     def _save_metric(self, values: torch.Tensor, features: torch.Tensor = None) -> None:
