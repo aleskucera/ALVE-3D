@@ -4,21 +4,20 @@ from .base_cloud import Cloud
 
 
 class VoxelCloud(Cloud):
-    def __init__(self, path: str, size: int, cloud_id: int, diversity_aware: bool = False):
-        super().__init__(path, size, cloud_id, diversity_aware)
-
+    def __init__(self, path: str, size: int, cloud_id: int,
+                 diversity_aware: bool,
+                 surface_variation: torch.Tensor,
+                 color_discontinuity: torch.Tensor = None):
+        super().__init__(path, size, cloud_id, diversity_aware,
+                         surface_variation, color_discontinuity)
         self.values = None
         self.features = None
-        self.cloud_ids = None
-        self.voxel_indices = None
+        self.voxel_indices = torch.arange(self.size, dtype=torch.long)
+        self.cloud_ids = torch.full((self.size,), self.id, dtype=torch.long)
 
     def _save_values(self, values: torch.Tensor, features: torch.Tensor = None):
-        valid_indices = ~torch.isnan(values)
-
-        self.values = values[valid_indices]
-        self.features = features[valid_indices] if features is not None else None
-        self.voxel_indices = torch.arange(self.size, dtype=torch.long)[valid_indices]
-        self.cloud_ids = torch.full((self.size,), self.id, dtype=torch.long)[valid_indices]
+        self.values = values
+        self.features = features
 
     def __str__(self):
         ret = f'\nVoxelCloud:\n' \

@@ -8,6 +8,7 @@ from omegaconf import DictConfig
 from src.datasets import Dataset
 from .base_selector import Selector
 from .voxel_cloud import VoxelCloud
+from src.utils.io import CloudInterface
 
 
 class VoxelSelector(Selector):
@@ -25,12 +26,17 @@ class VoxelSelector(Selector):
             return self._select_by_criterion(dataset, model, percentage)
 
     def _initialize(self):
+        cloud_interface = CloudInterface(self.project_name)
         for cloud_id, cloud_path in enumerate(self.cloud_paths):
             with h5py.File(cloud_path, 'r') as f:
                 num_voxels = f['points'].shape[0]
+                surface_variation = torch.from_numpy(cloud_interface.read_surface_variation(cloud_path))
+                color_discontinuity = cloud_interface.read_color_discontinuity(cloud_path)
+                color_discontinuity = torch.from_numpy(color_discontinuity) if color_discontinuity is not None else None
                 self.num_voxels += num_voxels
                 self.clouds.append(VoxelCloud(path=cloud_path, size=num_voxels, cloud_id=cloud_id,
-                                              diversity_aware=self.diversity_aware))
+                                              diversity_aware=self.diversity_aware, surface_variation=surface_variation,
+                                              color_discontinuity=color_discontinuity))
 
     def _select_randomly(self, percentage: float):
 

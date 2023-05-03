@@ -27,8 +27,10 @@ show_help_train () {
   echo "  --from-scratch                Train from scratch, do not load model"
   echo "  -b, --batch-size              Batch size (default: 128)"
   echo "  -e, --experiment              Experiment name (default: default)"
+  echo "  -m, --model                   Model name (default: null)"
+  echo "  -n, --num-clouds              Number of clouds (default: null)"
   echo "  -p, --expected-percentage     Expected percentage of labeled data (default: 0)"
-  echo "  -s, --size                    Dataset size - in number of clouds (default: null)"
+  echo "  -s, --selection               Selection name (default: null)"
 }
 
 show_help () {

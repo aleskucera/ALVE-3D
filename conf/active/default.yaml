@@ -1,16 +1,18 @@
+# Basic configuration
+strategy: 'Entropy'
+cloud_partitions: 'Voxels'
+
 batch_size: 128
-criterion: 'AverageEntropy'
-selection_objects: 'Voxels'
-
-decay_rate: 0.95
-num_clusters: 150
-diversity_aware: true
-
 select_percentage: 0.5
 expected_percentage_labeled: 0
 
-model_version: 'latest'
-history_version: 'latest'
-selection_version: 'latest'
-metric_stats_version: 'latest'
-dataset_stats_version: 'latest'
+# Diversity aware selection
+decay_rate: 0.95
+num_clusters: 500
+diversity_aware: true
+redal_weights: [ 1, 0.1, 0.05 ]
+
+# Artifacts
+model: null
+selection: null
+

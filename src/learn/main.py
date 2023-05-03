@@ -77,16 +77,26 @@ def train_model_active(cfg: DictConfig, experiment: Experiment, device: torch.de
                             cfg=cfg)
 
     # Load selected voxels from W&B
-    artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
-    selected_voxels = torch.load(os.path.join(artifact_dir, f'{experiment.selection}.pt'))
+    if cfg.active.selection is not None:
+        selection_file = cfg.active.selection.split('/')[-1].split(':')[0]
+        artifact_dir = wandb.use_artifact(cfg.active.selection).download()
+        selection = torch.load(os.path.join(artifact_dir, f'{selection_file}.pt'))
+    else:
+        artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
+        selection = torch.load(os.path.join(artifact_dir, f'{experiment.selection}.pt'))
 
     # Label train dataset
-    selector.load_voxel_selection(selected_voxels, train_ds)
+    selector.load_voxel_selection(selection, train_ds)
 
     # Load model from W&B
     if load_model:
-        artifact_dir = wandb.use_artifact(f'{experiment.model}:{model_version}').download()
-        model = torch.load(os.path.join(artifact_dir, f'{experiment.model}.pt'), map_location=device)
+        if cfg.active.model is not None:
+            model_file = cfg.active.model.split('/')[-1].split(':')[0]
+            artifact_dir = wandb.use_artifact(cfg.active.model).download()
+            model = torch.load(os.path.join(artifact_dir, f'{model_file}.pt'), map_location=device)
+        else:
+            artifact_dir = wandb.use_artifact(f'{experiment.model}:{model_version}').download()
+            model = torch.load(os.path.join(artifact_dir, f'{experiment.model}.pt'), map_location=device)
     else:
         model = None
 

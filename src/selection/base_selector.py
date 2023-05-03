@@ -28,6 +28,8 @@ class Selector(object):
         self.diversity_aware = cfg.active.diversity_aware
         self.batch_size = cfg.active.batch_size if device.type != 'cpu' else 1
 
+        self.redal_weights = cfg.active.redal_weights
+
         self.clouds = []
         self.num_voxels = 0
         self.voxels_labeled = 0
@@ -54,7 +56,7 @@ class Selector(object):
             voxels = torch.nonzero(label_mask).squeeze(1)
             cloud.label_voxels(voxels, dataset)
 
-    def _calculate_values(self, model: nn.Module, dataset: Dataset, criterion: str, mc_dropout: bool) -> None:
+    def _compute_values(self, model: nn.Module, dataset: Dataset, criterion: str, mc_dropout: bool) -> None:
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=4)
 
         model.eval() if not mc_dropout else model.train()
@@ -83,8 +85,7 @@ class Selector(object):
                     cloud = self.get_cloud(cloud_id)
                     cloud.add_predictions(model_output.cpu(), voxel_map, mc_dropout=mc_dropout)
                     if end:
-                        log.info('END!!!!!!!!!!!')
-                        self._calculate_cloud_values(cloud, criterion)
+                        self._compute_cloud_values(cloud, criterion)
 
     def _diversity_aware_order(self, values: torch.Tensor, features: torch.Tensor) -> torch.Tensor:
 
@@ -95,7 +96,7 @@ class Selector(object):
 
         # Cluster the voxels based on their features
         # kmeans = KMeans(n_clusters=self.num_clusters, random_state=0).fit(features)
-        kmeans = MiniBatchKMeans(n_clusters=self.num_clusters, random_state=0, batch_size=5000).fit(features)
+        kmeans = MiniBatchKMeans(n_clusters=self.num_clusters, random_state=0, batch_size=10000).fit(features)
         clusters = kmeans.labels_
         clusters = torch.tensor(clusters, dtype=torch.long)
 
@@ -109,16 +110,19 @@ class Selector(object):
         weighted_order = order[torch.argsort(values, descending=True)]
         return weighted_order
 
-    @staticmethod
-    def _calculate_cloud_values(cloud: Cloud, criterion: str):
-        if criterion == 'AverageEntropy':
-            cloud.calculate_average_entropies()
-        elif criterion == 'ViewpointEntropy':
-            cloud.calculate_viewpoint_entropies()
-        elif criterion == 'ViewpointVariance':
-            cloud.calculate_viewpoint_variances()
+    def _compute_cloud_values(self, cloud: Cloud, criterion: str):
+        if criterion == 'ViewpointVariance':
+            cloud.compute_viewpoint_variance()
         elif criterion == 'EpistemicUncertainty':
-            cloud.calculate_epistemic_uncertainties()
+            cloud.compute_epistemic_uncertainty()
+        elif criterion == 'ReDAL':
+            cloud.compute_redal(self.redal_weights)
+        elif criterion == 'Entropy':
+            cloud.compute_entropy()
+        elif criterion == 'Margin':
+            cloud.compute_margin()
+        elif criterion == 'Confidence':
+            cloud.compute_confidence()
         else:
             raise ValueError('Criterion not supported')
 

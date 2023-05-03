@@ -12,8 +12,9 @@ train:
   learning_rate: 0.01
 active:
   batch_size: 128
-  criterion: ViewpointVariance
-  selection_objects: Superpoints
-  select_percentage: 2
+  strategy: ViewpointVariance
+  cloud_partitions: Superpoints
+  select_percentage: 0.5
+  diversity_aware: true
 
 # sbatch --output=ViewpointVariance_Superpoints_KITTI360.out --error=ViewpointVariance_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --expected-percentage {p} --experiment ViewpointVariance_Superpoints_KITTI360

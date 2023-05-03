@@ -1,6 +1,7 @@
+import numpy as np
 import torch
-import time
 import logging
+from torch_scatter import scatter_mean, scatter_std
 
 from src.datasets import Dataset
 
@@ -26,12 +27,19 @@ class Cloud(object):
     :param cloud_id: Unique id of the cloud
     """
 
-    def __init__(self, path: str, size: int, cloud_id: int, diversity_aware: bool = False):
+    def __init__(self, path: str, size: int, cloud_id: int,
+                 diversity_aware: bool,
+                 surface_variation: torch.Tensor,
+                 color_discontinuity: torch.Tensor = None):
+
         self.eps = 1e-6  # Small value to avoid division by zero
         self.path = path
         self.size = size
         self.id = cloud_id
+
         self.diversity_aware = diversity_aware
+        self.surface_variation = surface_variation
+        self.color_discontinuity = color_discontinuity
 
         self.voxel_map = torch.zeros((0,), dtype=torch.int32)
         self.variances = torch.zeros((0,), dtype=torch.float32)
@@ -123,88 +131,155 @@ class Cloud(object):
         if dataset is not None:
             dataset.label_voxels(voxels.numpy(), self.path)
 
-    def calculate_average_entropies(self) -> None:
-        self.__calculate_metric(self.predictions, self.__average_entropy)
-        # self.__reset()
+    def compute_viewpoint_variance(self) -> None:
+        voxel_std = scatter_std(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        viewpoint_deviations = torch.mean(voxel_std, dim=1)
 
-    def calculate_viewpoint_entropies(self) -> None:
-        self.__calculate_metric(self.predictions, self.__viewpoint_entropy)
-        # self.__reset()
-
-    def calculate_viewpoint_variances(self) -> None:
-        self.__calculate_metric(self.predictions, self.__variance)
-        # self.__reset()
-
-    def calculate_epistemic_uncertainties(self) -> None:
-        self.__calculate_metric(self.variances, torch.mean)
-        # self.__reset()
-
-    def __calculate_metric(self, values: torch.Tensor, function: callable) -> None:
-        """ Calculates the metric for the voxels in the cloud specified by the function argument.
-
-        :param values: Items that should be used to calculate the metric.
-                      The expected shape is (N, C) where N is the number
-        :param function: Function that is used to calculate the metric. The function must take a tensor
-                         of shape (N, C) and return a scalar value.
-        """
-        log.info('Calculating metric for cloud: ' + self.path)
-        start = time.time()
-        metric = torch.full((self.size,), float('nan'), dtype=torch.float32)
-        features = torch.full((self.size, self.num_classes), float('nan'),
-                              dtype=torch.float32) if self.diversity_aware else None
-
-        order = torch.argsort(self.voxel_map)
-        unique_voxels, num_views = torch.unique(self.voxel_map, return_counts=True)
-
-        values = values[order]
-        voxel_map = unique_voxels.type(torch.long)
-        value_sets = torch.split(values, num_views.tolist())
-
-        vals = torch.tensor([])
-        feats = torch.tensor([])
-        for value_set in value_sets:
-            vals = torch.cat((vals, function(value_set).unsqueeze(0)), dim=0)
-            if self.diversity_aware:
-                feats = torch.cat((feats, value_set.mean(dim=0).unsqueeze(0)), dim=0)
-
-        log.info(f'Calculating metric for {self.path} took {time.time() - start} seconds.')
-        start = time.time()
-        metric[voxel_map] = vals
         if self.diversity_aware:
-            features[voxel_map] = feats
-            self._save_metric(metric, features)
+            self._save_metric(viewpoint_deviations, features=voxel_mean_predictions)
         else:
-            self._save_metric(metric)
-        log.info(f'Saving metric for {self.path} took {time.time() - start} seconds.')
+            self._save_metric(viewpoint_deviations)
+        self.__reset()
 
-    def _reset(self) -> None:
+    def compute_epistemic_uncertainty(self) -> None:
+        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        voxel_mean_variances = scatter_mean(self.variances, self.voxel_map, dim=0, dim_size=self.size)
+        epistemic_uncertainties = torch.mean(voxel_mean_variances, dim=1)
+
+        if self.diversity_aware:
+            self._save_metric(epistemic_uncertainties, features=voxel_mean_predictions)
+        else:
+            self._save_metric(epistemic_uncertainties)
+        self.__reset()
+
+    def compute_redal(self, weights: list[float] = None) -> None:
+        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        entropy = -torch.sum(voxel_mean_predictions * torch.log(voxel_mean_predictions), dim=1)
+        surface_variation = scatter_mean(self.surface_variation, self.voxel_map, dim=0, dim_size=self.size)
+
+        if self.color_discontinuity is not None:
+            color_discontinuity = scatter_mean(self.color_discontinuity, self.voxel_map, dim=0, dim_size=self.size)
+            redal_score = weights[0] * entropy + weights[1] * color_discontinuity + weights[2] * surface_variation
+        else:
+            redal_score = weights[0] * entropy + weights[2] * surface_variation
+
+        if self.diversity_aware:
+            self._save_metric(redal_score, features=voxel_mean_predictions)
+        else:
+            self._save_metric(redal_score)
+        self.__reset()
+
+    def compute_entropy(self) -> None:
+        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        voxel_distributions = torch.clamp(voxel_mean_predictions, min=self.eps, max=1 - self.eps)
+        viewpoint_entropies = -torch.sum(voxel_distributions * torch.log(voxel_distributions), dim=1)
+
+        if self.diversity_aware:
+            self._save_metric(viewpoint_entropies, features=voxel_mean_predictions)
+        else:
+            self._save_metric(viewpoint_entropies)
+        self.__reset()
+
+    def compute_margin(self) -> None:
+        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        sorted_predictions = torch.sort(voxel_mean_predictions, dim=1, descending=True)[0]
+        margin = sorted_predictions[:, 0] - sorted_predictions[:, 1]
+
+        if self.diversity_aware:
+            self._save_metric(margin, features=voxel_mean_predictions)
+        else:
+            self._save_metric(margin)
+        self.__reset()
+
+    def compute_confidence(self) -> None:
+        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        voxel_max_predictions = torch.max(voxel_mean_predictions, dim=1)[0]
+        least_confidence = 1 - voxel_max_predictions
+
+        if self.diversity_aware:
+            self._save_metric(least_confidence, features=voxel_mean_predictions)
+        else:
+            self._save_metric(least_confidence)
+        self.__reset()
+
+    # def __calculate_metric(self, values: torch.Tensor, function: callable) -> None:
+    #     """ Calculates the metric for the voxels in the cloud specified by the function argument.
+    #
+    #     :param values: Items that should be used to calculate the metric.
+    #                   The expected shape is (N, C) where N is the number
+    #     :param function: Function that is used to calculate the metric. The function must take a tensor
+    #                      of shape (N, C) and return a scalar value.
+    #     """
+    #     log.info('Calculating metric for cloud: ' + self.path)
+    #     start = time.time()
+    #     metric = torch.full((self.size,), float('nan'), dtype=torch.float32)
+    #     features = torch.full((self.size, self.num_classes), float('nan'),
+    #                           dtype=torch.float32) if self.diversity_aware else None
+    #
+    #     order = torch.argsort(self.voxel_map)
+    #     unique_voxels, num_views = torch.unique(self.voxel_map, return_counts=True)
+    #
+    #     values = values[order]
+    #     voxel_map = unique_voxels.type(torch.long)
+    #     value_sets = torch.split(values, num_views.tolist())
+    #
+    #     vals = torch.tensor([])
+    #     feats = torch.tensor([])
+    #     for value_set in value_sets:
+    #         vals = torch.cat((vals, function(value_set).unsqueeze(0)), dim=0)
+    #         if self.diversity_aware:
+    #             feats = torch.cat((feats, value_set.mean(dim=0).unsqueeze(0)), dim=0)
+    #
+    #     log.info(f'Calculating metric for {self.path} took {time.time() - start} seconds.')
+    #     start = time.time()
+    #     metric[voxel_map] = vals
+    #     if self.diversity_aware:
+    #         features[voxel_map] = feats
+    #         self._save_metric(metric, features)
+    #     else:
+    #         self._save_metric(metric)
+    #     log.info(f'Saving metric for {self.path} took {time.time() - start} seconds.')
+
+    def __reset(self) -> None:
         self.voxel_map = torch.zeros((0,), dtype=torch.int32)
         self.variances = torch.zeros((0,), dtype=torch.float32)
         self.predictions = torch.zeros((0,), dtype=torch.float32)
 
-    def __average_entropy(self, probability_distribution_set: torch.Tensor) -> torch.Tensor:
-        probability_distribution_set = torch.clamp(probability_distribution_set, min=self.eps, max=1 - self.eps)
-        entropies = torch.sum(- probability_distribution_set * torch.log(probability_distribution_set), dim=1)
-        return torch.mean(entropies)
+    # def __average_entropy(self, probability_distribution_set: torch.Tensor) -> torch.Tensor:
+    #     probability_distribution_set = torch.clamp(probability_distribution_set, min=self.eps, max=1 - self.eps)
+    #     entropies = torch.sum(- probability_distribution_set * torch.log(probability_distribution_set), dim=1)
+    #     return torch.mean(entropies)
+    #
+    # def __viewpoint_entropy(self, probability_distribution_set: torch.Tensor) -> torch.Tensor:
+    #     mean_distribution = torch.mean(probability_distribution_set, dim=0)
+    #     mean_distribution = torch.clamp(mean_distribution, min=self.eps, max=1 - self.eps)
+    #     return torch.sum(- mean_distribution * torch.log(mean_distribution))
+    #
+    # @staticmethod
+    # def __least_confident(probability_distribution_set: torch.Tensor) -> torch.Tensor:
+    #     max_probabilities = torch.max(probability_distribution_set, dim=1)[0]
+    #     return torch.mean(1 - max_probabilities)
+    #
+    # @staticmethod
+    # def __margin(probability_distribution_set: torch.Tensor) -> torch.Tensor:
+    #     sorted_probabilities = torch.sort(probability_distribution_set, dim=1)[0]
+    #     margin = sorted_probabilities[:, -1] - sorted_probabilities[:, -2]
+    #     return torch.mean(margin)
+    #
+    # @staticmethod
+    # def __variance(predictions: torch.Tensor) -> torch.Tensor:
+    #     var = torch.var(predictions, dim=0)
+    #     return torch.mean(var)
 
-    def __viewpoint_entropy(self, probability_distribution_set: torch.Tensor) -> torch.Tensor:
-        mean_distribution = torch.mean(probability_distribution_set, dim=0)
-        mean_distribution = torch.clamp(mean_distribution, min=self.eps, max=1 - self.eps)
-        return torch.sum(- mean_distribution * torch.log(mean_distribution))
-
-    @staticmethod
-    def __variance(predictions: torch.Tensor) -> torch.Tensor:
-        var = torch.var(predictions, dim=0)
-        return torch.mean(var)
-
-    @staticmethod
-    def __cluster_by_voxels(items: torch.Tensor, voxel_map: torch.Tensor) -> tuple:
-        order = torch.argsort(voxel_map)
-        unique_voxels, num_views = torch.unique(voxel_map, return_counts=True)
-
-        items = items[order]
-        item_sets = torch.split(items, num_views.tolist())
-        return item_sets, unique_voxels.type(torch.long)
+    # @staticmethod
+    # def __cluster_by_voxels(items: torch.Tensor, voxel_map: torch.Tensor) -> tuple:
+    #     order = torch.argsort(voxel_map)
+    #     unique_voxels, num_views = torch.unique(voxel_map, return_counts=True)
+    #
+    #     items = items[order]
+    #     item_sets = torch.split(items, num_views.tolist())
+    #     return item_sets, unique_voxels.type(torch.long)
 
     def __len__(self) -> int:
         return self.size

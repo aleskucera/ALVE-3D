@@ -139,6 +139,18 @@ class CloudInterface(object):
             if 'superpoints' in f:
                 return np.asarray(f['superpoints']).astype(np.int64)
 
+    @staticmethod
+    def read_surface_variation(path: str):
+        with h5py.File(path, 'r') as f:
+            if 'surface_variation' in f:
+                return np.asarray(f['surface_variation']).astype(np.float32)
+
+    @staticmethod
+    def read_color_discontinuity(path: str):
+        with h5py.File(path, 'r') as f:
+            if 'color_discontinuity' in f:
+                return np.asarray(f['color_discontinuity']).astype(np.float32)
+
     def read_cloud(self, path: str):
         ret = dict()
         with h5py.File(path, 'r') as f:
@@ -178,6 +190,20 @@ class CloudInterface(object):
             if 'superpoints' in f:
                 del f['superpoints']
             f.create_dataset('superpoints', data=superpoints.astype(np.int64))
+
+    @staticmethod
+    def write_surface_variation(path: str, surface_variation: np.ndarray):
+        with h5py.File(path, 'r+') as f:
+            if 'surface_variation' in f:
+                del f['surface_variation']
+            f.create_dataset('surface_variation', data=surface_variation.astype(np.float32))
+
+    @staticmethod
+    def write_color_discontinuity(path: str, color_discontinuity: np.ndarray):
+        with h5py.File(path, 'r+') as f:
+            if 'color_discontinuity' in f:
+                del f['color_discontinuity']
+            f.create_dataset('color_discontinuity', data=color_discontinuity.astype(np.float32))
 
     def select_voxels(self, path: str, voxels: np.ndarray):
         with h5py.File(path.replace('sequences', self.project_name), 'r+') as f:

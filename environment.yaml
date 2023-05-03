@@ -267,6 +267,7 @@ dependencies:
   - jakteristics==0.6.0
   - jedi==0.18.2
   - jinja2==3.1.2
+  - jit==0.2.7
   - joblib==1.2.0
   - jsonpatch==1.32
   - jsonpointer==2.3
@@ -281,7 +282,7 @@ dependencies:
   - laspy==2.4.0
   - lazy-object-proxy==1.9.0
   - libcst==0.4.9
-  - llvmlite==0.39.1
+  - llvmlite==0.40.0
   - markdown==3.4.1
   - markupsafe==2.1.1
   - matplotlib==3.6.2
@@ -294,6 +295,7 @@ dependencies:
   - nbformat==5.5.0
   - nest-asyncio==1.5.6
   - networkx==3.0
+  - numba==0.57.0
   - oauthlib==3.2.2
   - omegaconf==2.2.3
   - open3d==0.16.0
@@ -392,6 +394,7 @@ dependencies:
   - toml==0.10.2
   - tomli==2.0.1
   - tomlkit==0.11.6
+  - torch-scatter==2.1.1
   - torchmetrics==0.11.0
   - torchnet==0.0.4
   - tornado==6.2

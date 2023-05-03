@@ -13,29 +13,25 @@ class Experiment(object):
     def project(self):
         if self.cfg.project is not None:
             return self.cfg.project
-
         if self.cfg.action == 'train_model':
             return 'Train-Semantic-Model'
         elif self.cfg.action == 'train_model_active':
-            return f'AL-{self.cfg.active.criterion}'
+            return f'AL-{self.cfg.ds.name}'
         elif self.cfg.action == 'select_voxels':
-            return f'AL-{self.cfg.active.criterion}'
+            return f'AL-{self.cfg.ds.name}'
         elif self.cfg.action == 'train_semantickitti_original':
-            if 'project' in self.cfg:
-                return self.cfg.project
             return 'Train-SemanticKITTI-Original'
 
     @property
     def group(self):
         if self.cfg.group is not None:
             return self.cfg.group
-
         if self.cfg.action == 'train_model':
             return self.cfg.ds.name
         elif self.cfg.action == 'train_model_active':
-            return f'{self.cfg.ds.name}-{self.cfg.active.selection_objects}'
+            return f'{self.cfg.active.strategy}-{self.cfg.active.cloud_partitions}'
         elif self.cfg.action == 'select_voxels':
-            return f'{self.cfg.ds.name}-{self.cfg.active.selection_objects}'
+            return f'{self.cfg.active.strategy}-{self.cfg.active.cloud_partitions}'
         elif self.cfg.action == 'train_semantickitti_original':
             return None
 
@@ -43,13 +39,12 @@ class Experiment(object):
     def job_type(self):
         if self.cfg.job_type is not None:
             return self.cfg.job_type
-
         if self.cfg.action == 'train_model':
             return None
         elif self.cfg.action == 'train_model_active':
-            return None
+            return 'Training'
         elif self.cfg.action == 'select_voxels':
-            return None
+            return 'Selection'
         elif self.cfg.action == 'train_semantickitti_original':
             return None
 
@@ -57,16 +52,13 @@ class Experiment(object):
     def name(self):
         if self.cfg.run_name is not None:
             return self.cfg.run_name
-        
         if self.cfg.action == 'train_model':
             return f'{self.cfg.model.architecture}-{self.cfg.train.loss}'
         elif self.cfg.action == 'train_model_active':
-            return f'Training-{self.cfg.active.expected_percentage_labeled}%'
+            return f'{self.cfg.active.expected_percentage_labeled}%'
         elif self.cfg.action == 'select_voxels':
-            return f'Selection-{self.cfg.active.expected_percentage_labeled + self.cfg.active.select_percentage}%'
+            return f'{self.cfg.active.expected_percentage_labeled + self.cfg.active.select_percentage}%'
         elif self.cfg.action == 'train_semantickitti_original':
-            if 'run_name' in self.cfg:
-                return self.cfg.run_name
             return f'{self.cfg.model.architecture}-{self.cfg.train.loss}'
 
     @property
@@ -87,12 +79,12 @@ class Experiment(object):
         return f'Model_{self.info}'
 
     @property
-    def history(self):
-        return f'History_{self.info}'
-
-    @property
     def selection(self):
         return f'Selection_{self.info}'
+
+    @property
+    def history(self):
+        return f'History_{self.info}'
 
     @property
     def metric_stats(self):

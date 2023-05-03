@@ -1,36 +1,53 @@
-import torch
 import time
+import torch
 
-# decay_rate = 0.5
-# num_values = int(1e6)
-# num_labels = int(1e3)
-#
-# values = torch.rand(num_values)
-# labels = torch.randint(0, num_labels, (num_values,))
-# weights = torch.ones(num_labels)
-#
-# start = time.time()
-# for i in range(num_values):
-#     label = labels[i]
-#     weight = weights[label]
-#     values[i] *= weight
-#     weights[label] *= decay_rate
-#
-# print(time.time() - start)
-#
-# values = torch.rand(num_values)
-# labels = torch.randint(0, num_labels, (num_values,))
-#
-# start = time.time()
-# unique_labels, counts = torch.unique(labels, return_counts=True)
-# for label, count in zip(unique_labels, counts):
-#     series = [decay_rate ** j for j in range(count)]
-#     values[labels == label] *= torch.tensor(series)
-# print(time.time() - start)
+from torch_scatter import scatter_mean
 
-tensor1 = torch.tensor([1, 2, 3, 4, 5])
-order = torch.tensor([4, 3, 2, 1, 0])
-weighted_order = torch.tensor([0, 3, 2, 1, 4])
 
-print(tensor1[order])
-print(tensor1[order[weighted_order]])
+def test_scatter_mean():
+    # Values are tensor of shape (N, C) where N is the number of voxels and C is the number of classes.
+    # Voxel map is a tensor of shape (N,) where N is the number of voxels.
+    values = torch.rand((10000000, 10))
+    voxel_map = torch.randint(0, 200000, (10000000,))
+
+    start = time.time()
+    metric_normal = torch.full((200000, 10), float('nan'), dtype=torch.float32)
+    order = torch.argsort(voxel_map)
+    unique_voxels, num_views = torch.unique(voxel_map, return_counts=True)
+
+    values2 = values[order]
+    mapping = unique_voxels.type(torch.long)
+    value_sets = torch.split(values2, num_views.tolist())
+
+    vals = torch.tensor([])
+    for value_set in value_sets:
+        vals = torch.cat((vals, torch.mean(value_set, dim=0).unsqueeze(0)), dim=0)
+
+    metric_normal[mapping] = vals
+
+    print(f'Calculating metric for took {time.time() - start} seconds.')
+
+    start = time.time()
+    metric_scatter = torch.full((1000,), float('nan'), dtype=torch.float32)
+    metric_scatter[mapping] = scatter_mean(values, voxel_map, dim=0)
+    print(f'Calculating metric for took {time.time() - start} seconds.')
+
+    print(torch.allclose(metric_normal, metric_scatter))
+
+
+def test_scatter_mean2():
+    src = torch.tensor([[2, 0, 1, 4, 3],
+                        [0, 1, 1, 3, 4],
+                        [0, 2, 1, 3, 4]])
+    index = torch.tensor([4, 5, 4])
+
+    out = scatter_mean(src, index, dim=0)
+    print(out)
+
+
+def main():
+    test_scatter_mean2()
+
+
+if __name__ == '__main__':
+    main()
