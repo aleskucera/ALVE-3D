@@ -75,7 +75,7 @@ def main(cfg: DictConfig):
         elif cfg.action == 'compute_redal_features':
             compute_redal_features(cfg)
         else:
-            log.error(f'The action "{cfg.action}" is not supported')
+            raise ValueError(f'Action "{cfg.action}" is not supported')
 
         success_alert(experiment)
         atexit.unregister(error_alert)
