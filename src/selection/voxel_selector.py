@@ -58,7 +58,7 @@ class VoxelSelector(Selector):
         features = torch.tensor([], dtype=torch.float32)
         selection_size = self.get_selection_size(percentage)
 
-        self._calculate_values(model, dataset, self.criterion, self.mc_dropout)
+        self._compute_values(model, dataset, self.criterion, self.mc_dropout)
 
         for cloud in self.clouds:
             if cloud.values is None:

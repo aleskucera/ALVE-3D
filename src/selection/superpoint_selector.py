@@ -63,7 +63,7 @@ class SuperpointSelector(Selector):
         superpoint_sizes = torch.tensor([], dtype=torch.long)
         selection_size = self.get_selection_size(percentage)
 
-        self._calculate_values(model, dataset, self.criterion, self.mc_dropout)
+        self._compute_values(model, dataset, self.criterion, self.mc_dropout)
 
         for cloud in self.clouds:
             if cloud.values is None:
