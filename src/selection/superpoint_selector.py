@@ -24,6 +24,7 @@ class SuperpointSelector(Selector):
         cloud_interface = CloudInterface(self.project_name, self.cfg.ds.learning_map)
         for cloud_id, cloud_path in enumerate(self.cloud_paths):
             labels = torch.from_numpy(cloud_interface.read_labels(cloud_path))
+            log.info(f'Unique labels in cloud {cloud_id}: {torch.unique(labels)}')
             superpoint_map = torch.from_numpy(cloud_interface.read_superpoints(cloud_path))
             surface_variation = torch.from_numpy(cloud_interface.read_surface_variation(cloud_path))
             color_discontinuity = cloud_interface.read_color_discontinuity(cloud_path)

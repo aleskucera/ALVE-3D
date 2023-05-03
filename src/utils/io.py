@@ -155,7 +155,7 @@ class CloudInterface(object):
         ret = dict()
         with h5py.File(path, 'r') as f:
             ret['points'] = np.asarray(f['points'])
-            ret['labels'] = np.asarray(f['labels']).flatten().astype(np.int64)
+            # ret['labels'] = np.asarray(f['labels']).flatten().astype(np.int64)
             ret['objects'] = np.asarray(f['objects']).flatten().astype(np.int64)
 
             if 'colors' in f:
