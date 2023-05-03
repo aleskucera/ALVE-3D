@@ -1,4 +1,5 @@
 from typing import Any
+import logging
 
 import torch
 import numpy as np
@@ -10,6 +11,8 @@ from torch.utils.data import DataLoader
 
 from .base_cloud import Cloud
 from src.datasets import Dataset
+
+log = logging.getLogger(__name__)
 
 
 class Selector(object):
@@ -75,13 +78,12 @@ class Selector(object):
                         model_outputs_it = [x.unsqueeze(0) for x in model_outputs_it]
                         for i, model_output in enumerate(model_outputs_it):
                             model_outputs[i] = torch.cat((model_outputs[i], model_output), dim=0)
-                print('Here')
+
                 for cloud_id, model_output, voxel_map, end in zip(cloud_ids, model_outputs, voxel_maps, end_indicators):
-                    print('No end')
                     cloud = self.get_cloud(cloud_id)
                     cloud.add_predictions(model_output.cpu(), voxel_map, mc_dropout=mc_dropout)
                     if end:
-                        print('END!!!!!!!!!!!')
+                        log.info('END!!!!!!!!!!!')
                         self._calculate_cloud_values(cloud, criterion)
 
     def _diversity_aware_order(self, values: torch.Tensor, features: torch.Tensor) -> torch.Tensor:
