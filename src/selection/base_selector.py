@@ -63,6 +63,7 @@ class Selector(object):
             voxels = torch.nonzero(label_mask).squeeze(1)
             cloud.label_voxels(voxels, dataset)
             self.voxels_labeled += voxels.shape[0]
+        log.info(f'Loaded voxel selection with {self.percentage_selected}% of the dataset.')
 
     def _compute_values(self, model: nn.Module, dataset: Dataset, criterion: str, mc_dropout: bool) -> None:
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=4)
