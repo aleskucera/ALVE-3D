@@ -28,10 +28,13 @@ class SuperpointCloud(Cloud):
 
     @property
     def superpoint_labels(self) -> torch.Tensor:
-        log.info(f"Unique superpoint labels in cloud {self.id}: {torch.unique(self.labels)}")
-        log.info(f"Unique superpoint labels in cloud {self.id}: {torch.unique(self.superpoint_map)}")
+        log.info(f'Computing superpoint labels for cloud {self.id}')
+        log.info(f'Size of cloud {self.id}: {self.size}')
+        log.info(f'Number of superpoints in cloud {self.id}: {self.num_superpoints}')
+        log.info(f'Labels shape: {self.labels.shape}')
+        log.info(f'Superpoint map shape: {self.superpoint_map.shape}')
+
         label_mean = scatter_mean(self.labels, self.superpoint_map, dim=0)
-        log.info(f"Unique superpoint labels in cloud {self.id}: {torch.unique(label_mean)}")
         return torch.round(label_mean).long()
 
     def _save_metric(self, values: torch.Tensor, features: torch.Tensor = None) -> None:
