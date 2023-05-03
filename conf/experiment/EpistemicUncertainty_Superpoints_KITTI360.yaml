@@ -16,4 +16,4 @@ active:
   cloud_partitions: Superpoints
   diversity_aware: true
 
-# sbatch --output=EpistemicUncertainty_Superpoints_KITTI360.out --error=EpistemicUncertainty_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --expected-percentage {p} --experiment EpistemicUncertainty_Superpoints_KITTI360
+# sbatch --output=EpistemicUncertainty_Superpoints_KITTI360.out --error=EpistemicUncertainty_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --percentage {p} --experiment EpistemicUncertainty_Superpoints_KITTI360

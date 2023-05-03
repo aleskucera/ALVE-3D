@@ -16,4 +16,4 @@ active:
   cloud_partitions: Superpoints
   diversity_aware: true
 
-# sbatch --output=ReDAL_Superpoints_KITTI360.out --error=ReDAL_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --expected-percentage {p} --experiment ReDAL_Superpoints_KITTI360
+# sbatch --output=ReDAL_Superpoints_KITTI360.out --error=ReDAL_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --percentage {p} --experiment ReDAL_Superpoints_KITTI360
