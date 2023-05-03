@@ -164,16 +164,17 @@ class Cloud(object):
         log.info(f'Voxel mean predictions shape: {voxel_mean_predictions.shape}')
         log.info(f'Surface variation shape: {self.surface_variation.shape}')
         log.info(f'Color discontinuity shape: {self.color_discontinuity.shape}')
-        
+
         voxel_distributions = torch.clamp(voxel_mean_predictions, min=self.eps, max=1 - self.eps)
         entropy = -torch.sum(voxel_distributions * torch.log(voxel_distributions), dim=1)
 
-        surface_variation = scatter_mean(self.surface_variation, self.voxel_map, dim=0)
+        # surface_variation = scatter_mean(self.surface_variation, self.voxel_map, dim=0)
         if self.color_discontinuity is not None:
-            color_discontinuity = scatter_mean(self.color_discontinuity, self.voxel_map, dim=0, dim_size=self.size)
-            redal_score = weights[0] * entropy + weights[1] * color_discontinuity + weights[2] * surface_variation
+            # color_discontinuity = scatter_mean(self.color_discontinuity, self.voxel_map, dim=0, dim_size=self.size)
+            redal_score = weights[0] * entropy + weights[1] * self.color_discontinuity + weights[
+                2] * self.surface_variation
         else:
-            redal_score = weights[0] * entropy + weights[2] * surface_variation
+            redal_score = weights[0] * entropy + weights[2] * self.surface_variation
 
         if self.diversity_aware:
             self._save_metric(redal_score, features=voxel_mean_predictions)
