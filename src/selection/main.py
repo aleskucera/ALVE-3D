@@ -44,8 +44,8 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
     :param device: The device to be used for the selection.
     """
 
-    criterion = cfg.active.criterion
-    selection_objects = cfg.active.selection_objects
+    criterion = cfg.active.strategy
+    selection_objects = cfg.active.cloud_partitions
     select_percentage = cfg.active.select_percentage
     expected_percentage_labeled = cfg.active.expected_percentage_labeled
 

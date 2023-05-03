@@ -66,10 +66,10 @@ class Experiment(object):
         if self.cfg.action == 'train_model':
             return f'{self.cfg.model.architecture}_{self.cfg.ds.name}_{self.cfg.train.loss}'
         elif self.cfg.action == 'train_model_active':
-            return f'{self.cfg.active.criterion}_{self.cfg.active.selection_objects}' \
+            return f'{self.cfg.active.strategy}_{self.cfg.active.cloud_partitions}' \
                    f'_{self.cfg.model.architecture}_{self.cfg.ds.name}'
         elif self.cfg.action == 'select_voxels':
-            return f'{self.cfg.active.criterion}_{self.cfg.active.selection_objects}' \
+            return f'{self.cfg.active.strategy}_{self.cfg.active.cloud_partitions}' \
                    f'_{self.cfg.model.architecture}_{self.cfg.ds.name}'
         elif self.cfg.action == 'train_semantickitti_original':
             return f'{self.cfg.model.architecture}_{self.cfg.train.loss}_SemanticKITTI_Original'

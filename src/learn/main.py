@@ -56,8 +56,8 @@ def train_model_active(cfg: DictConfig, experiment: Experiment, device: torch.de
     :param device: The device to be used for the training.
     """
 
-    criterion = cfg.active.criterion
-    selection_objects = cfg.active.selection_objects
+    criterion = cfg.active.strategy
+    selection_objects = cfg.active.cloud_partitions
 
     model_version = cfg.active.model_version
     selection_version = cfg.active.selection_version

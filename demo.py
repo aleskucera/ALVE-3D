@@ -219,6 +219,10 @@ def visualize_superpoints(cfg: DictConfig) -> None:
         visualize_cloud(points, superpoint_colors)
 
 
+def visualize_redal_features(cfg: DictConfig):
+    pass
+
+
 def visualize_model_training(cfg: DictConfig) -> None:
     ignore_index = cfg.ds.ignore_index
     label_names = [v for k, v in cfg.ds.labels_train.items() if k != ignore_index]
@@ -292,65 +296,6 @@ def visualize_loss_experiment(cfg: DictConfig) -> None:
     # TODO: Add train and validation MIoU
 
     raise NotImplementedError
-
-
-def visualize_al_experiment(cfg: DictConfig) -> None:
-    """ Visualize the results of an AL experiment. Something like:
-        - Give a project name
-        - Give a list of percentages
-        - Give a list of histories
-        - Give a list of dataset statistics
-
-    """
-
-    project_name = 'active_learning_average_entropy_voxels (test)'
-
-    percentages = ['5%', '10%', '15%']
-    history_versions = ['v0', 'v1', 'v2']
-    dataset_statistics_versions = ['v0', 'v1', 'v2']
-
-    ignore_index = cfg.ds.ignore_index
-    label_names = [v for k, v in cfg.ds.labels_train.items() if k != ignore_index]
-
-    data = dict()
-
-    with wandb.init(project='demo'):
-        for h_v, d_v, p in zip(history_versions, dataset_statistics_versions, percentages):
-            history_artifact = wandb.use_artifact(f'aleskucera/{project_name}/history:{h_v}')
-            dataset_statistics_artifact = wandb.use_artifact(f'aleskucera/{project_name}/dataset_statistics:{d_v}')
-
-            history_artifact_dir = history_artifact.download()
-            dataset_statistics_artifact_dir = dataset_statistics_artifact.download()
-
-            history_path = os.path.join(history_artifact_dir, f'history.pt')
-            dataset_statistics_path = os.path.join(dataset_statistics_artifact_dir, f'dataset_statistics.pt')
-
-            history = torch.load(history_path)
-            dataset_statistics = torch.load(dataset_statistics_path)
-
-            for key, value in history.items():
-                if key not in data:
-                    data[key] = dict()
-                data[key][p] = value
-
-            for key, value in dataset_statistics.items():
-                if key not in data:
-                    data[key] = dict()
-                data[key][p] = value
-
-        # Visualize the full dataset class distribution
-        dataset_distributions = data['class_distribution']
-        distributions_matrix = np.vstack(list(dataset_distributions.values()))
-        assert np.all(distributions_matrix == distributions_matrix[0]), 'Distributions are not equal.'
-        bar_chart(distributions_matrix[0], label_names, 'Mass [%]')
-        grouped_bar_chart(data['labeled_class_distribution'], label_names, 'Mass [%]')
-        grouped_bar_chart(data['class_labeling_progress'], label_names, 'Percentage labeled [%]')
-
-        max_mious = [np.max(m) for m in data['miou_val'].values()]
-        plot({'max': max_mious}, 'percentages', 'Maximum mIoU [%]')
-
-        confusion_matrix = data['confusion_matrix']['15%'][-1].numpy()
-        plot_confusion_matrix(confusion_matrix, label_names)
 
 
 def visualize_kitti360_conversion(cfg: DictConfig):
