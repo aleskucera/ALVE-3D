@@ -26,8 +26,8 @@ class SuperpointSelector(Selector):
             color_discontinuity = torch.from_numpy(color_discontinuity) if color_discontinuity is not None else None
             num_voxels = superpoint_map.shape[0]
             self.num_voxels += num_voxels
-            self.clouds.append(SuperpointCloud(path=cloud_path, project_name=self.project_name,
-                                               size=num_voxels, cloud_id=cloud_id, superpoint_map=superpoint_map,
+            self.clouds.append(SuperpointCloud(path=cloud_path, size=num_voxels,
+                                               cloud_id=cloud_id, superpoint_map=superpoint_map,
                                                diversity_aware=self.diversity_aware,
                                                surface_variation=surface_variation,
                                                color_discontinuity=color_discontinuity))
