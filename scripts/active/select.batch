@@ -17,10 +17,12 @@ dataset_size="null"
 percentage="0"
 model="null"
 selection="null"
+seed="False"
 
 # Parse command line arguments
 while [ "$#" -gt 0 ]; do
   case $1 in
+    --seed) seed="True"; shift ;;
     -b|--batch-size) batch_size="$2"; shift ;;
     -e|--experiment) experiment="$2"; shift ;;
     -m|--model) model="$2"; shift ;;
@@ -37,6 +39,7 @@ singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf960162
                 experiment="$experiment" \
                 train.dataset_size="$dataset_size" \
                 active.batch_size="$batch_size" \
+                active.seed="$seed" \
                 active.model="$model" \
                 active.selection="$selection" \
                 active.percentage="$percentage"
