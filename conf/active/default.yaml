@@ -3,8 +3,7 @@ strategy: 'Entropy'
 cloud_partitions: 'Voxels'
 
 batch_size: 128
-select_percentage: 0.5
-expected_percentage_labeled: 0
+percentage: 0
 
 # Diversity aware selection
 decay_rate: 0.95

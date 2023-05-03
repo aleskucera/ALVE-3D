@@ -34,6 +34,10 @@ class Selector(object):
         self.num_voxels = 0
         self.voxels_labeled = 0
 
+    @property
+    def percentage_selected(self) -> float:
+        return self.voxels_labeled / self.num_voxels * 100
+
     def _initialize(self) -> None:
         raise NotImplementedError
 
@@ -48,13 +52,17 @@ class Selector(object):
                 return cloud
 
     def get_selection_size(self, percentage: float) -> int:
-        return int(self.num_voxels * percentage / 100)
+        log.info(f'Computing selection size for {percentage}% of the dataset.')
+        log.info(f'Current percentage of the dataset: {self.percentage_selected}%')
+        select_percentage = percentage - self.percentage_selected
+        return int(self.num_voxels * select_percentage / 100)
 
     def load_voxel_selection(self, voxel_selection: dict, dataset: Dataset = None) -> None:
         for cloud_name, label_mask in voxel_selection.items():
             cloud = self.get_cloud(cloud_name)
             voxels = torch.nonzero(label_mask).squeeze(1)
             cloud.label_voxels(voxels, dataset)
+            self.voxels_labeled += voxels.shape[0]
 
     def _compute_values(self, model: nn.Module, dataset: Dataset, criterion: str, mc_dropout: bool) -> None:
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=4)
@@ -95,7 +103,6 @@ class Selector(object):
         features = features[order]
 
         # Cluster the voxels based on their features
-        # kmeans = KMeans(n_clusters=self.num_clusters, random_state=0).fit(features)
         kmeans = MiniBatchKMeans(n_clusters=self.num_clusters, random_state=0, batch_size=10000).fit(features)
         clusters = kmeans.labels_
         clusters = torch.tensor(clusters, dtype=torch.long)

@@ -1,3 +1,4 @@
+import logging
 import torch
 import numpy as np
 import torch.nn as nn
@@ -7,6 +8,8 @@ from torch.utils.data import Dataset
 from .base_selector import Selector
 from src.utils.io import CloudInterface
 from .superpoint_cloud import SuperpointCloud
+
+log = logging.getLogger(__name__)
 
 
 class SuperpointSelector(Selector):
@@ -96,8 +99,14 @@ class SuperpointSelector(Selector):
         superpoint_sizes = superpoint_sizes[order]
         superpoint_sizes = torch.cumsum(superpoint_sizes, dim=0)
 
+        log.info(f"Choosing superpoints from {superpoint_map.shape[0]} superpoints")
+        log.info(f"Superpoint sizes: {superpoint_sizes}")
+        log.info(f"Selection size: {selection_size}")
+
         selected_superpoints = superpoint_map[superpoint_sizes < selection_size]
         selected_cloud_map = cloud_map[superpoint_sizes < selection_size]
+
+        log.info(f"Selected superpoints: {selected_superpoints.shape[0]}")
 
         # if values is not None:
         #     values = values[order]

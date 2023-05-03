@@ -11,10 +11,8 @@ train:
   min_epochs: 50
   learning_rate: 0.01
 active:
-  batch_size: 128
   strategy: Confidence
   cloud_partitions: Superpoints
-  select_percentage: 0.5
   diversity_aware: true
 
 # sbatch --output=Confidence_Superpoints_KITTI360.out --error=Confidence_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --expected-percentage {p} --experiment Confidence_Superpoints_KITTI360

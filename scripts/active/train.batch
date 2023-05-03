@@ -14,7 +14,7 @@
 batch_size="32"
 experiment="default"
 dataset_size="null"
-expected_percentage="0"
+percentage="0"
 load_model_arg="+load_model=True"
 model="null"
 selection="null"
@@ -27,7 +27,7 @@ while [ "$#" -gt 0 ]; do
     -e|--experiment) experiment="$2"; shift ;;
     -m|--model) model="$2"; shift ;;
     -n|--num_clouds) dataset_size="$2"; shift ;;
-    -p|--expected-percentage) expected_percentage="$2"; shift ;;
+    -p|--percentage) percentage="$2"; shift ;;
     -s|--selection) selection="$2"; shift ;;
     *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;
   esac
@@ -41,4 +41,4 @@ singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf960162
             train.dataset_size="$dataset_size" \
             active.model="$model" \
             active.selection="$selection" \
-            active.expected_percentage_labeled="$expected_percentage"
+            active.percentage="$percentage"

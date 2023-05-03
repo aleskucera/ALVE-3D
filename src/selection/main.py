@@ -44,10 +44,10 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
     :param device: The device to be used for the selection.
     """
 
+    seed = cfg.active.seed
     criterion = cfg.active.strategy
-    selection_objects = cfg.active.cloud_partitions
-    select_percentage = cfg.active.select_percentage
-    expected_percentage_labeled = cfg.active.expected_percentage_labeled
+    percentage = cfg.active.percentage
+    cloud_partitions = cfg.active.cloud_partitions
 
     model_version = cfg.active.model_version
     selection_version = cfg.active.selection_version
@@ -55,47 +55,32 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
     dataset = SemanticDataset(split='train', cfg=cfg.ds, dataset_path=cfg.ds.path, project_name=experiment.info,
                               num_clouds=cfg.train.dataset_size, al_experiment=True, selection_mode=True)
 
-    if expected_percentage_labeled > 0:
-        selector = get_selector(selection_objects=selection_objects, criterion=criterion,
+    if seed:
+        selector = get_selector(selection_objects=cloud_partitions, criterion='Random',
+                                dataset_path=cfg.ds.path, project_name=experiment.info,
+                                cloud_paths=dataset.cloud_files, device=device, cfg=cfg)
+        selection, metric_statistics = selector.select(dataset=dataset, percentage=percentage)
+    else:
+        selector = get_selector(selection_objects=cloud_partitions, criterion=criterion,
                                 dataset_path=cfg.ds.path, project_name=experiment.info,
                                 cloud_paths=dataset.cloud_files, device=device, cfg=cfg)
 
-        if cfg.active.selection is not None:
-            selection_file = cfg.active.selection.split('/')[-1].split(':')[0]
-            artifact_dir = wandb.use_artifact(cfg.active.selection).download()
-            selection = torch.load(os.path.join(artifact_dir, f'{selection_file}.pt'))
-        else:
-            artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
-            selection = torch.load(os.path.join(artifact_dir, f'{experiment.selection}.pt'))
-
-        # artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
-        # selection = torch.load(os.path.join(artifact_dir, f'{experiment.selection}.pt'))
-
+        # Load the selection from W&B
+        selection_artifact = cfg.active.selection if cfg.active.selection is not None else \
+            f'{experiment.selection}:{selection_version}'
+        selection = load_artifact(selection_artifact)
         selector.load_voxel_selection(selection, dataset)
 
-        if cfg.active.model is not None:
-            model_file = cfg.active.model.split('/')[-1].split(':')[0]
-            artifact_dir = wandb.use_artifact(cfg.active.model).download()
-            model = torch.load(os.path.join(artifact_dir, f'{model_file}.pt'), map_location=device)
-        else:
-            artifact_dir = wandb.use_artifact(f'{experiment.model}:{model_version}').download()
-            model = torch.load(os.path.join(artifact_dir, f'{experiment.model}.pt'), map_location=device)
-
-        # Load model from W&B
-        # artifact_dir = wandb.use_artifact(f'{experiment.model}:{model_version}').download()
-        # model = torch.load(os.path.join(artifact_dir, f'{experiment.model}.pt'), map_location=device)
+        # Load the model from W&B
+        model_artifact = cfg.active.model if cfg.active.model is not None else \
+            f'{experiment.model}:{model_version}'
+        model = load_artifact(model_artifact, device=device)
         model_state_dict = model['model_state_dict']
         model = get_model(cfg=cfg, device=device)
         model.load_state_dict(model_state_dict)
 
-        selection, metric_statistics = selector.select(dataset=dataset, model=model, percentage=select_percentage)
-
-    else:
-        selector = get_selector(selection_objects=selection_objects, criterion='Random',
-                                dataset_path=cfg.ds.path, project_name=experiment.info,
-                                cloud_paths=dataset.cloud_files, device=device, cfg=cfg)
-
-        selection, metric_statistics = selector.select(dataset=dataset, percentage=select_percentage)
+        # Select the voxels to be labeled
+        selection, metric_statistics = selector.select(dataset=dataset, model=model, percentage=percentage)
 
     # Save the selection to W&B
     log_selection(selection=selection, selection_name=experiment.selection)
@@ -113,3 +98,9 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
                      color_map=cfg.ds.color_map_train,
                      colorize=True)
     log_most_labeled_sample(dataset=dataset, laser_scan=scan)
+
+
+def load_artifact(artifact: str, device: torch.device = torch.device('cpu')):
+    artifact_dir = wandb.use_artifact(artifact).download()
+    data = torch.load(os.path.join(artifact_dir, f'{artifact.split("/")[-1].split(":")[0]}.pt'), map_location=device)
+    return data

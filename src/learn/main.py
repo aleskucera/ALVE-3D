@@ -77,28 +77,17 @@ def train_model_active(cfg: DictConfig, experiment: Experiment, device: torch.de
                             cfg=cfg)
 
     # Load selected voxels from W&B
-    if cfg.active.selection is not None:
-        selection_file = cfg.active.selection.split('/')[-1].split(':')[0]
-        artifact_dir = wandb.use_artifact(cfg.active.selection).download()
-        selection = torch.load(os.path.join(artifact_dir, f'{selection_file}.pt'))
-    else:
-        artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
-        selection = torch.load(os.path.join(artifact_dir, f'{experiment.selection}.pt'))
+    selection_artifact = cfg.active.selection if cfg.active.selection is not None else \
+        f'{experiment.selection}:{selection_version}'
+    selection = load_artifact(selection_artifact, device=device)
 
     # Label train dataset
     selector.load_voxel_selection(selection, train_ds)
 
     # Load model from W&B
-    if load_model:
-        if cfg.active.model is not None:
-            model_file = cfg.active.model.split('/')[-1].split(':')[0]
-            artifact_dir = wandb.use_artifact(cfg.active.model).download()
-            model = torch.load(os.path.join(artifact_dir, f'{model_file}.pt'), map_location=device)
-        else:
-            artifact_dir = wandb.use_artifact(f'{experiment.model}:{model_version}').download()
-            model = torch.load(os.path.join(artifact_dir, f'{experiment.model}.pt'), map_location=device)
-    else:
-        model = None
+    model_artifact = cfg.active.model if cfg.active.model is not None else \
+        f'{experiment.model}:{model_version}'
+    model = load_artifact(model_artifact, device=device) if load_model else None
 
     # Log dataset statistics and calculate the weights for the loss function from them
     class_distribution = log_dataset_statistics(cfg=cfg, dataset=train_ds, artifact_name=experiment.dataset_stats)
@@ -109,6 +98,12 @@ def train_model_active(cfg: DictConfig, experiment: Experiment, device: torch.de
     trainer = SemanticTrainer(cfg=cfg, train_ds=train_ds, val_ds=val_ds, device=device, weights=weights,
                               model=model, model_name=experiment.model, history_name=experiment.history)
     trainer.train()
+
+
+def load_artifact(artifact: str, device: torch.device = torch.device('cpu')):
+    artifact_dir = wandb.use_artifact(artifact).download()
+    data = torch.load(os.path.join(artifact_dir, f'{artifact.split("/")[-1].split(":")[0]}.pt'), map_location=device)
+    return data
 
 
 def train_semantickitti_original(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:

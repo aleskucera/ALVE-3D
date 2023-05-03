@@ -14,7 +14,6 @@ active:
   batch_size: 128
   strategy: Margin
   cloud_partitions: Superpoints
-  select_percentage: 0.5
   diversity_aware: true
 
 # sbatch --output=Margin_Superpoints_KITTI360.out --error=Margin_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --expected-percentage {p} --experiment Margin_Superpoints_KITTI360

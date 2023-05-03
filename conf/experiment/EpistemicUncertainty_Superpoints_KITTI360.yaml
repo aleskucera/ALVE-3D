@@ -14,7 +14,6 @@ active:
   batch_size: 128
   strategy: EpistemicUncertainty
   cloud_partitions: Superpoints
-  select_percentage: 0.5
   diversity_aware: true
 
 # sbatch --output=EpistemicUncertainty_Superpoints_KITTI360.out --error=EpistemicUncertainty_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --expected-percentage {p} --experiment EpistemicUncertainty_Superpoints_KITTI360
