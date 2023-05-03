@@ -16,5 +16,6 @@ active:
   criterion: AverageEntropy
   selection_objects: Superpoints
   select_percentage: 2
+  diversity_aware: false
 
 # sbatch --output=AverageEntropy_Superpoints_KITTI360.out --error=AverageEntropy_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --expected-percentage {p} --experiment AverageEntropy_Superpoints_KITTI360
