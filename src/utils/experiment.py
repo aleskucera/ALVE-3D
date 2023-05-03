@@ -55,9 +55,9 @@ class Experiment(object):
         if self.cfg.action == 'train_model':
             return f'{self.cfg.model.architecture}-{self.cfg.train.loss}'
         elif self.cfg.action == 'train_model_active':
-            return f'{self.cfg.active.expected_percentage_labeled}%'
+            return f'{self.cfg.active.percentage}%'
         elif self.cfg.action == 'select_voxels':
-            return f'{self.cfg.active.expected_percentage_labeled + self.cfg.active.select_percentage}%'
+            return f'{self.cfg.active.percentage}%'
         elif self.cfg.action == 'train_semantickitti_original':
             return f'{self.cfg.model.architecture}-{self.cfg.train.loss}'
 
