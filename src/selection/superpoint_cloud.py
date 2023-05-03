@@ -34,7 +34,7 @@ class SuperpointCloud(Cloud):
         log.info(f'Labels shape: {self.labels.shape}')
         log.info(f'Superpoint map shape: {self.superpoint_map.shape}')
 
-        label_mean = scatter_mean(self.labels, self.superpoint_map, dim=0)
+        label_mean = scatter_mean(self.labels.float(), self.superpoint_map, dim=0)
         return torch.round(label_mean).long()
 
     def _save_metric(self, values: torch.Tensor, features: torch.Tensor = None) -> None:
