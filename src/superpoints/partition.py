@@ -7,6 +7,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../cut-pursuit/build/sr
 
 import libcp
 import numpy as np
+from tqdm import tqdm
 from omegaconf import DictConfig
 from src.datasets import SemanticDataset
 from src.utils.io import CloudInterface
@@ -25,7 +26,7 @@ def create_superpoints(cfg: DictConfig):
     dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo', cfg=cfg.ds, split='train')
     cloud_interface = CloudInterface()
 
-    for cloud_id, cloud_path in enumerate(dataset.cloud_files):
+    for cloud_path in tqdm(dataset.cloud_files):
         points = cloud_interface.read_points(cloud_path)
         colors = cloud_interface.read_colors(cloud_path)
         edge_sources, edge_targets = cloud_interface.read_edges(cloud_path)

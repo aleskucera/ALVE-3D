@@ -1,7 +1,33 @@
-from tqdm import tqdm
+import logging
+
 import numpy as np
+from tqdm import tqdm
+from omegaconf import DictConfig
 from sklearn.neighbors import KDTree
 from jakteristics import compute_features
+
+from src.datasets import SemanticDataset
+from src.utils.io import CloudInterface
+
+log = logging.getLogger(__name__)
+
+
+def compute_redal_features(cfg: DictConfig):
+    dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo', cfg=cfg.ds, split='train')
+    cloud_interface = CloudInterface()
+
+    for cloud_path in tqdm(dataset.cloud_files):
+        points = cloud_interface.read_points(cloud_path)
+        colors = cloud_interface.read_colors(cloud_path)
+
+        surface_variation = compute_surface_variation(points)
+        cloud_interface.write_surface_variation(cloud_path, surface_variation)
+
+        if colors is not None:
+            color_discontinuity = compute_color_discontinuity(points, colors)
+            cloud_interface.write_color_discontinuity(cloud_path, color_discontinuity)
+
+    log.info('ReDAL features successfully created')
 
 
 def count_colorgrad(rgb, nhoods):
