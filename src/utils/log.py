@@ -168,7 +168,7 @@ def log_selection(selection: dict, selection_name: str) -> None:
     wandb.run.log_artifact(artifact)
 
 
-def log_selection_metric_statistics(cfg, metric_statistics: dict, metric_statistics_name: str) -> None:
+def log_selection_metric_statistics(cfg, metric_statistics: dict, metric_statistics_name: str = None) -> None:
     if cfg.active.diversity_aware:
         metric_title = f"Diversity Aware Selection Metric"
         labels_title = f"Diversity Aware Selected Labels"
@@ -205,11 +205,12 @@ def log_selection_metric_statistics(cfg, metric_statistics: dict, metric_statist
     table = wandb.Table(data=data, columns=["Class", "Count"])
     wandb.log({f"{labels_title} Statistics": wandb.plot.bar(table, "Class", "Count")}, step=0)
 
-    torch.save(metric_statistics, f'data/log/{metric_statistics_name}.pt')
-    artifact = wandb.Artifact(metric_statistics_name, type='statistics',
-                              description='Metric statistics for each epoch.')
-    artifact.add_file(f'data/log/{metric_statistics_name}.pt')
-    wandb.run.log_artifact(artifact)
+    if metric_statistics_name is not None:
+        torch.save(metric_statistics, f'data/log/{metric_statistics_name}.pt')
+        artifact = wandb.Artifact(metric_statistics_name, type='statistics',
+                                  description='Metric statistics for each epoch.')
+        artifact.add_file(f'data/log/{metric_statistics_name}.pt')
+        wandb.run.log_artifact(artifact)
 
 
 def log_gradient_flow(average_gradients: np.ndarray, maximum_gradients: np.ndarray, step: int) -> None:

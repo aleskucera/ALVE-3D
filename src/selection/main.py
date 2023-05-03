@@ -88,12 +88,17 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
     log_selection(selection=selection, selection_name=experiment.selection)
 
     # Save the statistics of the metric used for the selection to W&B
+    normal_metric_name, weighted_metric_name = None, None
+    if cfg.active.diversity_aware:
+        weighted_metric_name = cfg.active.metric_stats
+    else:
+        normal_metric_name = cfg.active.metric_stats
     if normal_metric_statistics is not None:
         log_selection_metric_statistics(cfg, metric_statistics=normal_metric_statistics,
-                                        metric_statistics_name=experiment.metric_stats)
+                                        metric_statistics_name=normal_metric_name)
     if weighted_metric_statistics is not None:
         log_selection_metric_statistics(cfg, metric_statistics=weighted_metric_statistics,
-                                        metric_statistics_name=experiment.weighted_metric_stats)
+                                        metric_statistics_name=weighted_metric_name)
 
     # Log the results of the selection to W&B
     selector.load_voxel_selection(voxel_selection=selection, dataset=dataset)
