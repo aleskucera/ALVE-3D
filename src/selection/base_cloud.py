@@ -154,10 +154,21 @@ class Cloud(object):
         self.__reset()
 
     def compute_redal(self, weights: list[float] = None) -> None:
-        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
-        entropy = -torch.sum(voxel_mean_predictions * torch.log(voxel_mean_predictions), dim=1)
-        surface_variation = scatter_mean(self.surface_variation, self.voxel_map, dim=0, dim_size=self.size)
+        log.info(f'Computing REDAL for {self.path}...')
+        log.info(f'Prediction shape: {self.predictions.shape}')
+        log.info(f'Voxel map shape: {self.voxel_map.shape}')
+        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0)
+        zero_fill = torch.zeros((self.size - voxel_mean_predictions.shape[0], voxel_mean_predictions.shape[1]))
+        voxel_mean_predictions = torch.cat((voxel_mean_predictions, zero_fill))
 
+        log.info(f'Voxel mean predictions shape: {voxel_mean_predictions.shape}')
+        log.info(f'Surface variation shape: {self.surface_variation.shape}')
+        log.info(f'Color discontinuity shape: {self.color_discontinuity.shape}')
+        
+        voxel_distributions = torch.clamp(voxel_mean_predictions, min=self.eps, max=1 - self.eps)
+        entropy = -torch.sum(voxel_distributions * torch.log(voxel_distributions), dim=1)
+
+        surface_variation = scatter_mean(self.surface_variation, self.voxel_map, dim=0)
         if self.color_discontinuity is not None:
             color_discontinuity = scatter_mean(self.color_discontinuity, self.voxel_map, dim=0, dim_size=self.size)
             redal_score = weights[0] * entropy + weights[1] * color_discontinuity + weights[2] * surface_variation
@@ -171,18 +182,18 @@ class Cloud(object):
         self.__reset()
 
     def compute_entropy(self) -> None:
-        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0)
         voxel_distributions = torch.clamp(voxel_mean_predictions, min=self.eps, max=1 - self.eps)
-        viewpoint_entropies = -torch.sum(voxel_distributions * torch.log(voxel_distributions), dim=1)
+        entropy = -torch.sum(voxel_distributions * torch.log(voxel_distributions), dim=1)
 
         if self.diversity_aware:
-            self._save_metric(viewpoint_entropies, features=voxel_mean_predictions)
+            self._save_metric(entropy, features=voxel_mean_predictions)
         else:
-            self._save_metric(viewpoint_entropies)
+            self._save_metric(entropy)
         self.__reset()
 
     def compute_margin(self) -> None:
-        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0)
         sorted_predictions = torch.sort(voxel_mean_predictions, dim=1, descending=True)[0]
         margin = sorted_predictions[:, 0] - sorted_predictions[:, 1]
 
@@ -193,7 +204,7 @@ class Cloud(object):
         self.__reset()
 
     def compute_confidence(self) -> None:
-        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
+        voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0)
         voxel_max_predictions = torch.max(voxel_mean_predictions, dim=1)[0]
         least_confidence = 1 - voxel_max_predictions
 

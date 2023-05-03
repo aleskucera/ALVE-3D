@@ -46,7 +46,10 @@ def test_scatter_mean2():
 
 
 def main():
-    test_scatter_mean2()
+    size = 4
+    tensor = torch.tensor([1, 2, 3, 4])
+    full_tensor = torch.concatenate((tensor, torch.zeros((size - tensor.shape[0],))))
+    print(full_tensor)
 
 
 if __name__ == '__main__':
