@@ -59,7 +59,8 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
         selector = get_selector(selection_objects=cloud_partitions, criterion='Random',
                                 dataset_path=cfg.ds.path, project_name=experiment.info,
                                 cloud_paths=dataset.cloud_files, device=device, cfg=cfg)
-        selection, metric_statistics = selector.select(dataset=dataset, percentage=percentage)
+        selection_data = selector.select(dataset=dataset, percentage=percentage)
+        selection, normal_metric_statistics, weighted_metric_statistics = selection_data
     else:
         selector = get_selector(selection_objects=cloud_partitions, criterion=criterion,
                                 dataset_path=cfg.ds.path, project_name=experiment.info,
@@ -80,15 +81,19 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
         model.load_state_dict(model_state_dict)
 
         # Select the voxels to be labeled
-        selection, metric_statistics = selector.select(dataset=dataset, model=model, percentage=percentage)
+        selection_data = selector.select(dataset=dataset, model=model, percentage=percentage)
+        selection, normal_metric_statistics, weighted_metric_statistics = selection_data
 
     # Save the selection to W&B
     log_selection(selection=selection, selection_name=experiment.selection)
 
     # Save the statistics of the metric used for the selection to W&B
-    if metric_statistics is not None:
-        log_selection_metric_statistics(metric_statistics=metric_statistics,
+    if normal_metric_statistics is not None:
+        log_selection_metric_statistics(cfg, metric_statistics=normal_metric_statistics,
                                         metric_statistics_name=experiment.metric_stats)
+    if weighted_metric_statistics is not None:
+        log_selection_metric_statistics(cfg, metric_statistics=weighted_metric_statistics,
+                                        metric_statistics_name=experiment.weighted_metric_stats)
 
     # Log the results of the selection to W&B
     selector.load_voxel_selection(voxel_selection=selection, dataset=dataset)

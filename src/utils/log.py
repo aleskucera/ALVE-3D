@@ -168,24 +168,42 @@ def log_selection(selection: dict, selection_name: str) -> None:
     wandb.run.log_artifact(artifact)
 
 
-def log_selection_metric_statistics(metric_statistics: dict, metric_statistics_name: str) -> None:
+def log_selection_metric_statistics(cfg, metric_statistics: dict, metric_statistics_name: str) -> None:
+    if cfg.active.diversity_aware:
+        metric_title = f"Diversity Aware Selection Metric"
+        labels_title = f"Diversity Aware Selected Labels"
+    else:
+        metric_title = f"Selection Metric"
+        labels_title = f"Selected Labels"
+
+    # Plot the metric values
     selected_values = metric_statistics['selected_values']
     left_values = metric_statistics['left_values']
-    threshold = metric_statistics['threshold']
-
     x = np.linspace(0, 1, len(selected_values) + len(left_values))
 
     plt.figure(figsize=(10, 8))
     plt.plot(x[:len(selected_values)], selected_values, label='Selected Values', linewidth=3)
     plt.plot(x[len(selected_values):], left_values, label='Left Values', linewidth=3)
-    plt.axhline(y=threshold, color='k', linestyle='--', label='Threshold')
-    plt.title('Selection Metric Statistics')
+    plt.axhline(y=min(selected_values), color='k', linestyle='--', label='Threshold')
+    plt.title(f"{metric_title} Statistics")
     plt.xlabel('Sorted Values')
     plt.ylabel('Metric Value')
     plt.legend()
     plt.grid()
 
-    wandb.log({f"Selection Metric Statistics": wandb.Image(plt)}, step=0)
+    wandb.log({f"{metric_title} Statistics": wandb.Image(plt)}, step=0)
+
+    # Plot the selected labels
+    label_names = []
+    label_counts = metric_statistics['label_counts']
+    selected_labels = metric_statistics['selected_labels']
+    for l, c in zip(selected_labels, label_counts):
+        if l != cfg.ds.ignore_index:
+            label_names.append(cfg.ds.labels_train[l])
+
+    data = [[name, value] for name, value in zip(label_names, label_counts)]
+    table = wandb.Table(data=data, columns=["Class", "Count"])
+    wandb.log({f"{labels_title} Statistics": wandb.plot.bar(table, "Class", "Count")}, step=0)
 
     torch.save(metric_statistics, f'data/log/{metric_statistics_name}.pt')
     artifact = wandb.Artifact(metric_statistics_name, type='statistics',

@@ -91,6 +91,10 @@ class Experiment(object):
         return f'MetricStats_{self.info}'
 
     @property
+    def weighted_metric_stats(self):
+        return f'WeightedMetricStats_{self.info}'
+
+    @property
     def dataset_stats(self):
         return f'DatasetStats_{self.info}'
 
