@@ -101,11 +101,11 @@ class Selector(object):
 
         # Sort the values in descending order
         order = torch.argsort(values, descending=True)
-        values = values[order]
-        features = features[order]
+        sorted_values = values[order]
+        sorted_features = features[order]
 
         # Cluster the voxels based on their features
-        kmeans = MiniBatchKMeans(n_clusters=self.num_clusters, random_state=0, batch_size=10000).fit(features)
+        kmeans = MiniBatchKMeans(n_clusters=self.num_clusters, random_state=0, batch_size=10000).fit(sorted_features)
         clusters = kmeans.labels_
         clusters = torch.tensor(clusters, dtype=torch.long)
 
@@ -113,10 +113,10 @@ class Selector(object):
         unique_clusters, counts = torch.unique(clusters, return_counts=True)
         for cluster, count in zip(unique_clusters, counts):
             geom_series = [self.decay_rate ** j for j in range(count)]
-            values[clusters == cluster] *= torch.tensor(geom_series)
+            sorted_values[clusters == cluster] *= torch.tensor(geom_series)
 
         # Re-sort the voxels based on their weighted values
-        weighted_order = order[torch.argsort(values, descending=True)]
+        weighted_order = order[torch.argsort(sorted_values, descending=True)]
         return weighted_order
 
     def _compute_cloud_values(self, cloud: Cloud, criterion: str):
@@ -159,22 +159,50 @@ class Selector(object):
         return model_outputs
 
     @staticmethod
-    def _metric_statistics(values: torch.Tensor, threshold: float) -> dict:
+    def _metric_statistics(values: torch.Tensor, labels: torch.Tensor, split: int) -> dict:
+
         f = torch.nn.functional.interpolate
-        expected_size = min(1000, values.shape[0])
-        interp_values = f(values.unsqueeze(0).unsqueeze(0), size=expected_size, mode='linear',
-                          align_corners=True).squeeze()
-        threshold_index = torch.nonzero(interp_values < threshold, as_tuple=True)[0][0]
-        selected_values = interp_values[:threshold_index]
-        left_values = interp_values[threshold_index:]
+
+        selected_values = values[:split]
+        left_values = values[split:]
+
+        sel_interp_size = min(1000, selected_values.shape[0])
+        left_interp_size = min(1000, left_values.shape[0])
+
+        # Calculate the count of each class
+        selected_labels, label_counts = torch.unique(labels[:split], return_counts=True)
+        selected_values = f(selected_values.unsqueeze(0).unsqueeze(0), size=sel_interp_size,
+                            mode='linear', align_corners=True).squeeze()
+        left_values = f(left_values.unsqueeze(0).unsqueeze(0), size=left_interp_size,
+                        mode='linear', align_corners=True).squeeze()
         metric_statistics = {'min': values.min().item(),
                              'max': values.max().item(),
                              'mean': values.mean().item(),
                              'std': values.std().item(),
-                             'threshold': threshold,
-                             'selected_mean': interp_values[threshold_index:].mean().item(),
-                             'selected_std': interp_values[threshold_index:].std().item(),
                              'selected_values': selected_values.tolist(),
-                             'left_values': left_values.tolist()}
+                             'left_values': left_values.tolist(),
+                             'label_counts': label_counts.tolist(),
+                             'selected_labels': selected_labels.tolist()}
 
         return metric_statistics
+
+    # @staticmethod
+    # def _metric_statistics(values: torch.Tensor, threshold: float) -> dict:
+    #     f = torch.nn.functional.interpolate
+    #     expected_size = min(1000, values.shape[0])
+    #     interp_values = f(values.unsqueeze(0).unsqueeze(0), size=expected_size, mode='linear',
+    #                       align_corners=True).squeeze()
+    #     threshold_index = torch.nonzero(interp_values < threshold, as_tuple=True)[0][0]
+    #     selected_values = interp_values[:threshold_index]
+    #     left_values = interp_values[threshold_index:]
+    #     metric_statistics = {'min': values.min().item(),
+    #                          'max': values.max().item(),
+    #                          'mean': values.mean().item(),
+    #                          'std': values.std().item(),
+    #                          'threshold': threshold,
+    #                          'selected_mean': interp_values[threshold_index:].mean().item(),
+    #                          'selected_std': interp_values[threshold_index:].std().item(),
+    #                          'selected_values': selected_values.tolist(),
+    #                          'left_values': left_values.tolist()}
+    #
+    #     return metric_statistics

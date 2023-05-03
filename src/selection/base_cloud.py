@@ -27,7 +27,7 @@ class Cloud(object):
     """
 
     def __init__(self, path: str, size: int, cloud_id: int,
-                 diversity_aware: bool,
+                 diversity_aware: bool, labels: torch.Tensor,
                  surface_variation: torch.Tensor,
                  color_discontinuity: torch.Tensor = None):
 
@@ -35,6 +35,7 @@ class Cloud(object):
         self.path = path
         self.size = size
         self.id = cloud_id
+        self.labels = labels
 
         self.diversity_aware = diversity_aware
         self.surface_variation = surface_variation

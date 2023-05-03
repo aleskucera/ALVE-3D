@@ -6,10 +6,11 @@ from .base_cloud import Cloud
 
 class SuperpointCloud(Cloud):
     def __init__(self, path: str, size: int, cloud_id: int,
-                 superpoint_map: torch.Tensor, diversity_aware: bool,
+                 superpoint_map: torch.Tensor,
+                 diversity_aware: bool, labels: torch.Tensor,
                  surface_variation: torch.Tensor,
                  color_discontinuity: torch.Tensor = None):
-        super().__init__(path, size, cloud_id, diversity_aware,
+        super().__init__(path, size, cloud_id, diversity_aware, labels,
                          surface_variation, color_discontinuity)
         self.superpoint_map = superpoint_map
 
@@ -22,19 +23,16 @@ class SuperpointCloud(Cloud):
     def num_superpoints(self) -> int:
         return self.superpoint_map.max().item() + 1
 
+    @property
+    def superpoint_labels(self) -> torch.Tensor:
+        label_mean = scatter_mean(self.labels, self.superpoint_map, dim=0)
+        return torch.round(label_mean).long()
+
     def _save_metric(self, values: torch.Tensor, features: torch.Tensor = None) -> None:
-        # self.superpoint_sizes = torch.bincount(self.superpoint_map)
         self.values = scatter_mean(values, self.superpoint_map, dim=0)
         if features is not None:
             self.superpoint_features = scatter_mean(features, self.superpoint_map, dim=0)
-
-    # def _average_by_superpoint(self, values: torch.Tensor, features: torch.Tensor = None):
-    #     superpoint_sizes = torch.bincount(self.superpoint_map)
-    #     superpoint_values = scatter_mean(values, self.superpoint_map, dim=0)
-    #     if features is not None:
-    #         superpoint_features = scatter_mean(features, self.superpoint_map, dim=0)
-    #         return superpoint_values, superpoint_features, superpoint_sizes
-    #     return superpoint_values, superpoint_sizes
+        self.superpoint_indices, self.superpoint_sizes = torch.unique(self.superpoint_map, return_counts=True)
 
     def __str__(self):
         ret = f'\nSuperpointCloud:\n' \
