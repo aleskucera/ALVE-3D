@@ -21,7 +21,7 @@ class SuperpointSelector(Selector):
         self._initialize()
 
     def _initialize(self):
-        cloud_interface = CloudInterface(self.project_name)
+        cloud_interface = CloudInterface(self.project_name, self.cfg.ds.learning_map)
         for cloud_id, cloud_path in enumerate(self.cloud_paths):
             labels = torch.from_numpy(cloud_interface.read_labels(cloud_path))
             superpoint_map = torch.from_numpy(cloud_interface.read_superpoints(cloud_path))
