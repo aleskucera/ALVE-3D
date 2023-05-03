@@ -39,6 +39,7 @@ class SuperpointSelector(Selector):
                                                diversity_aware=self.diversity_aware,
                                                surface_variation=surface_variation,
                                                color_discontinuity=color_discontinuity))
+            log.info(f"Unique superpoint labels in cloud {cloud_id}: {torch.unique(self.clouds[-1].superpoint_labels)}")
 
     def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5) -> tuple:
         if self.criterion == 'Random':
