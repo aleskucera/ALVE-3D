@@ -15,4 +15,6 @@ redal_weights: [ 1, 0.1, 0.05 ]
 # Artifacts
 model: null
 selection: null
+model_version: null
+selection_version: null
 
