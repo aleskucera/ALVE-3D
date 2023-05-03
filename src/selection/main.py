@@ -60,14 +60,30 @@ def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device)
                                 dataset_path=cfg.ds.path, project_name=experiment.info,
                                 cloud_paths=dataset.cloud_files, device=device, cfg=cfg)
 
-        artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
-        selection = torch.load(os.path.join(artifact_dir, f'{experiment.selection}.pt'))
+        if cfg.active.selection is not None:
+            selection_file = cfg.active.selection.split('/')[-1].split(':')[0]
+            artifact_dir = wandb.use_artifact(cfg.active.selection).download()
+            selection = torch.load(os.path.join(artifact_dir, f'{selection_file}.pt'))
+        else:
+            artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
+            selection = torch.load(os.path.join(artifact_dir, f'{experiment.selection}.pt'))
+
+        # artifact_dir = wandb.use_artifact(f'{experiment.selection}:{selection_version}').download()
+        # selection = torch.load(os.path.join(artifact_dir, f'{experiment.selection}.pt'))
 
         selector.load_voxel_selection(selection, dataset)
 
+        if cfg.active.model is not None:
+            model_file = cfg.active.model.split('/')[-1].split(':')[0]
+            artifact_dir = wandb.use_artifact(cfg.active.model).download()
+            model = torch.load(os.path.join(artifact_dir, f'{model_file}.pt'), map_location=device)
+        else:
+            artifact_dir = wandb.use_artifact(f'{experiment.model}:{model_version}').download()
+            model = torch.load(os.path.join(artifact_dir, f'{experiment.model}.pt'), map_location=device)
+
         # Load model from W&B
-        artifact_dir = wandb.use_artifact(f'{experiment.model}:{model_version}').download()
-        model = torch.load(os.path.join(artifact_dir, f'{experiment.model}.pt'), map_location=device)
+        # artifact_dir = wandb.use_artifact(f'{experiment.model}:{model_version}').download()
+        # model = torch.load(os.path.join(artifact_dir, f'{experiment.model}.pt'), map_location=device)
         model_state_dict = model['model_state_dict']
         model = get_model(cfg=cfg, device=device)
         model.load_state_dict(model_state_dict)

@@ -15,14 +15,18 @@ batch_size="128"
 experiment="default"
 dataset_size="null"
 expected_percentage="0"
+model="null"
+selection="null"
 
 # Parse command line arguments
 while [ "$#" -gt 0 ]; do
   case $1 in
     -b|--batch-size) batch_size="$2"; shift ;;
     -e|--experiment) experiment="$2"; shift ;;
+    -m|--model) model="$2"; shift ;;
+    -n|--num_clouds) dataset_size="$2"; shift ;;
     -p|--expected-percentage) expected_percentage="$2"; shift ;;
-    -s|--size) dataset_size="$2"; shift ;;
+    -s|--selection) selection="$2"; shift ;;
     *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;
   esac
   shift
@@ -33,4 +37,6 @@ singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf960162
                 experiment="$experiment" \
                 train.dataset_size="$dataset_size" \
                 active.batch_size="$batch_size" \
+                active.model="$model" \
+                active.selection="$selection" \
                 active.expected_percentage_labeled="$expected_percentage"
