@@ -16,4 +16,6 @@ active:
   cloud_partitions: Superpoints
   diversity_aware: true
 
+# --selection aleskucera/AL-KITTI360/Selection_Random_Superpoints_SalsaNext_KITTI360:v0 --model aleskucera/AL-KITTI360/Model_Random_Superpoints_SalsaNext_KITTI360:v2
+
 # sbatch --output=Entropy_Superpoints_KITTI360.out --error=Entropy_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --percentage {p} --experiment Entropy_Superpoints_KITTI360
