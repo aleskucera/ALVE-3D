@@ -192,6 +192,7 @@ def log_selection_metric_statistics(cfg, metric_statistics: dict, metric_statist
     plt.grid()
 
     wandb.log({f"{metric_title} Statistics": wandb.Image(plt)}, step=0)
+    plt.close()
 
     # Plot the selected labels
     label_names = []

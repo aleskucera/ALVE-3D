@@ -39,7 +39,6 @@ class SuperpointSelector(Selector):
                                                diversity_aware=self.diversity_aware,
                                                surface_variation=surface_variation,
                                                color_discontinuity=color_discontinuity))
-            log.info(f"Unique superpoint labels in cloud {cloud_id}: {torch.unique(self.clouds[-1].superpoint_labels)}")
 
     def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5) -> tuple:
         if self.criterion == 'Random':
@@ -118,17 +117,17 @@ class SuperpointSelector(Selector):
             normal_cum_sizes = torch.cumsum(superpoint_sizes[normal_order], dim=0)
             normal_split = torch.nonzero(normal_cum_sizes >= selection_size, as_tuple=False)[0, 0]
             normal_metric_statistics = self._metric_statistics(normal_values, normal_labels, normal_split)
-            log.info(f"Normal metric statistics: {normal_metric_statistics}")
         if weighted_order is not None:
             weighted_values, weighted_labels = values[weighted_order], labels[weighted_order]
             weighted_cum_sizes = torch.cumsum(superpoint_sizes[weighted_order], dim=0)
             weighted_split = torch.nonzero(weighted_cum_sizes >= selection_size, as_tuple=False)[0, 0]
             weighted_metric_statistics = self._metric_statistics(weighted_values, weighted_labels, weighted_split)
-            log.info(f"Weighted metric statistics: {weighted_metric_statistics}")
 
         log.info(f"Choosing superpoints from {superpoint_map.shape[0]} superpoints")
         log.info(f"Selected {selected_superpoints.shape[0]} superpoints")
-
+        log.info(f"Weighted order: {True if weighted_order is not None else False}")
+        log.info(f"Normal order: {True if normal_order is not None else False}")
+        
         voxel_selection = dict()
         for cloud in self.clouds:
             superpoints = selected_superpoints[selected_cloud_map == cloud.id]
