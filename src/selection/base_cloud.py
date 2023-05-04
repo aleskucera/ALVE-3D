@@ -170,6 +170,7 @@ class Cloud(object):
     def compute_redal_score(self, weights: list[float] = None) -> None:
         voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
         features = voxel_mean_predictions if self.diversity_aware else None
+        log.info(f'Features shape: {features.shape if features is not None else None}')
         voxel_mean_predictions = torch.clamp(voxel_mean_predictions, min=self.eps, max=1 - self.eps)
         entropy = -torch.sum(voxel_mean_predictions * torch.log(voxel_mean_predictions), dim=1)
         redal_score = weights[0] * entropy + \
