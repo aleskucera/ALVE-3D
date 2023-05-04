@@ -49,19 +49,18 @@ class SuperpointSelector(Selector):
     def _select_randomly(self, percentage: float) -> tuple:
         selection_size = self.get_selection_size(percentage)
 
+        labels = torch.tensor([], dtype=torch.long)
         cloud_map = torch.tensor([], dtype=torch.long)
         superpoint_map = torch.tensor([], dtype=torch.long)
         superpoint_sizes = torch.tensor([], dtype=torch.long)
 
         for cloud in self.clouds:
-            superpoints, cloud_superpoint_sizes = torch.unique(cloud.superpoint_map, return_counts=True)
-            cloud_ids = torch.full((superpoints.shape[0],), cloud.id, dtype=torch.long)
+            cloud_map = torch.cat((cloud_map, cloud.ids))
+            labels = torch.cat((labels, cloud.superpoint_labels))
+            superpoint_map = torch.cat((superpoint_map, cloud.superpoint_indices))
+            superpoint_sizes = torch.cat((superpoint_sizes, cloud.superpoint_sizes))
 
-            cloud_map = torch.cat((cloud_map, cloud_ids))
-            superpoint_map = torch.cat((superpoint_map, superpoints))
-            superpoint_sizes = torch.cat((superpoint_sizes, cloud_superpoint_sizes))
-
-        return self._choose_voxels(superpoint_map, superpoint_sizes, cloud_map, selection_size)
+        return self._choose_voxels(superpoint_map, superpoint_sizes, labels, cloud_map, selection_size)
 
     def _select_by_criterion(self, dataset: Dataset, model: nn.Module, percentage: float) -> tuple:
         values = torch.tensor([], dtype=torch.float32)
