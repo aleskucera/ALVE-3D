@@ -53,9 +53,10 @@ class Selector(object):
                 return cloud
 
     def get_selection_size(self, percentage: float) -> int:
+        select_percentage = percentage - self.percentage_selected
         log.info(f'Computing selection size for {percentage}% of the dataset.')
         log.info(f'Current percentage of the dataset: {self.percentage_selected}%')
-        select_percentage = percentage - self.percentage_selected
+        log.info(f'Percentage of the dataset to be selected: {select_percentage}%')
         return int(self.num_voxels * select_percentage / 100)
 
     def load_voxel_selection(self, voxel_selection: dict, dataset: Dataset = None) -> None:
@@ -65,7 +66,7 @@ class Selector(object):
             voxels = torch.nonzero(label_mask).squeeze(1)
             cloud.label_voxels(voxels, dataset)
             self.voxels_labeled += voxels.shape[0]
-        log.info(f'Loaded voxel selection with {self.percentage_selected}% of the dataset.')
+        log.info(f'Loaded voxel selection with {self.percentage_selected}% of the dataset labeled.')
 
     def _compute_values(self, model: nn.Module, dataset: Dataset, criterion: str, mc_dropout: bool) -> None:
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=4)

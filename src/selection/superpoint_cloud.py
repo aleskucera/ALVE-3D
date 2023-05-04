@@ -28,12 +28,6 @@ class SuperpointCloud(Cloud):
 
     @property
     def superpoint_labels(self) -> torch.Tensor:
-        log.info(f'Computing superpoint labels for cloud {self.id}')
-        log.info(f'Size of cloud {self.id}: {self.size}')
-        log.info(f'Number of superpoints in cloud {self.id}: {self.num_superpoints}')
-        log.info(f'Labels shape: {self.labels.shape}')
-        log.info(f'Superpoint map shape: {self.superpoint_map.shape}')
-
         label_mean = scatter_mean(self.labels.float(), self.superpoint_map, dim=0)
         return torch.round(label_mean).long()
 

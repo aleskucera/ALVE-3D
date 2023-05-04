@@ -24,7 +24,6 @@ class SuperpointSelector(Selector):
         cloud_interface = CloudInterface(self.project_name, self.cfg.ds.learning_map)
         for cloud_id, cloud_path in enumerate(self.cloud_paths):
             labels = torch.from_numpy(cloud_interface.read_labels(cloud_path))
-            log.info(f'Unique labels in cloud {cloud_id}: {torch.unique(labels)}')
             superpoint_map = torch.from_numpy(cloud_interface.read_superpoints(cloud_path))
             surface_variation = torch.from_numpy(cloud_interface.read_surface_variation(cloud_path))
             color_discontinuity = cloud_interface.read_color_discontinuity(cloud_path)
@@ -82,6 +81,7 @@ class SuperpointSelector(Selector):
             cloud_map = torch.cat((cloud_map, cloud.cloud_ids))
             superpoint_map = torch.cat((superpoint_map, cloud.superpoint_indices))
             superpoint_sizes = torch.cat((superpoint_sizes, cloud.superpoint_sizes))
+            log.info(f'Cloud features shape: {cloud.features.shape if cloud.features is not None else None}')
             if cloud.features is not None:
                 features = torch.cat((features, cloud.features))
 
@@ -127,7 +127,7 @@ class SuperpointSelector(Selector):
         log.info(f"Selected {selected_superpoints.shape[0]} superpoints")
         log.info(f"Weighted order: {True if weighted_order is not None else False}")
         log.info(f"Normal order: {True if normal_order is not None else False}")
-        
+
         voxel_selection = dict()
         for cloud in self.clouds:
             superpoints = selected_superpoints[selected_cloud_map == cloud.id]
