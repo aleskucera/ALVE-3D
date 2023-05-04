@@ -79,7 +79,7 @@ def train_model_active(cfg: DictConfig, experiment: Experiment, device: torch.de
     # Load selected voxels from W&B
     selection_artifact = cfg.active.selection if cfg.active.selection is not None else \
         f'{experiment.selection}:{selection_version}'
-    selection = load_artifact(selection_artifact, device=device)
+    selection = load_artifact(selection_artifact)
 
     # Label train dataset
     selector.load_voxel_selection(selection, train_ds)

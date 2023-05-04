@@ -11,13 +11,13 @@
 #SBATCH --mail-type=BEGIN,END,FAIL                  # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
 # Set default values for variables
+model="null"
+percentage="0"
 batch_size="32"
+selection="null"
 experiment="default"
 dataset_size="null"
-percentage="0"
 load_model_arg="+load_model=True"
-model="null"
-selection="null"
 
 # Parse command line arguments
 while [ "$#" -gt 0 ]; do
