@@ -9,7 +9,7 @@ batch_size: 128
 
 # Diversity aware selection
 decay_rate: 0.95
-num_clusters: 500
+num_clusters: 250
 diversity_aware: true
 redal_weights: [ 1, 0.1, 0.05 ]
 
