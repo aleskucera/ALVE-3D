@@ -34,7 +34,7 @@ class SuperpointCloud(Cloud):
     def _save_metric(self, values: torch.Tensor, features: torch.Tensor = None) -> None:
         self.values = scatter_mean(values, self.superpoint_map, dim=0)
         if features is not None:
-            self.superpoint_features = scatter_mean(features, self.superpoint_map, dim=0)
+            self.features = scatter_mean(features, self.superpoint_map, dim=0)
         self.superpoint_indices, self.superpoint_sizes = torch.unique(self.superpoint_map, return_counts=True)
 
     def __str__(self):
