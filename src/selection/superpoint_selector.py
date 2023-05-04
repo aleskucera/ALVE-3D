@@ -78,7 +78,7 @@ class SuperpointSelector(Selector):
                 continue
             values = torch.cat((values, cloud.values))
             labels = torch.cat((labels, cloud.superpoint_labels))
-            cloud_map = torch.cat((cloud_map, cloud.cloud_ids))
+            cloud_map = torch.cat((cloud_map, cloud.ids))
             superpoint_map = torch.cat((superpoint_map, cloud.superpoint_indices))
             superpoint_sizes = torch.cat((superpoint_sizes, cloud.superpoint_sizes))
             log.info(f'Cloud features shape: {cloud.features.shape if cloud.features is not None else None}')

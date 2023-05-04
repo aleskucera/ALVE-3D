@@ -19,7 +19,7 @@ class SuperpointCloud(Cloud):
 
         self.values = None
         self.features = None
-        self.cloud_ids = torch.full((self.num_superpoints,), self.id, dtype=torch.long)
+        self.ids = torch.full((self.num_superpoints,), self.id, dtype=torch.long)
         self.superpoint_indices, self.superpoint_sizes = torch.unique(self.superpoint_map, return_counts=True)
 
     @property
