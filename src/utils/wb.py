@@ -92,6 +92,7 @@ def push_artifact(artifact: str, data: Any, artifact_type: str, metadata: dict =
 
     path = f'{artifact}.pt'
     torch.save(data, path)
+    log.info(f'Pushing {artifact} to W&B.')
     artifact = wandb.Artifact(artifact,
                               type=artifact_type,
                               metadata=metadata,
@@ -99,5 +100,3 @@ def push_artifact(artifact: str, data: Any, artifact_type: str, metadata: dict =
     artifact.add_file(path)
     wandb.log_artifact(artifact)
     os.remove(path)
-
-    log.info(f'Artifact {artifact} pushed to W&B.')
