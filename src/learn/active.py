@@ -54,7 +54,6 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
                               train_ds=train_ds,
                               val_ds=val_ds,
                               device=device)
-    print(type(trainer.model.state_dict()))
 
     selection = pull_artifact(selection_artifact, device=torch.device('cpu'))
     selector.load_voxel_selection(selection, train_ds)
@@ -68,8 +67,8 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
 
     for p in percentages:
         cfg.active.percentage = p
-        with wandb.init(project='ActiveLearning-Demo',
-                        group='Test2',
+        with wandb.init(project='ActiveLearning-KITTI360',
+                        group=f'{cfg.active.strategy}_{cfg.active.cloud_partitions}',
                         name=f'Iteration-{p}%',
                         config=omegaconf.OmegaConf.to_container(cfg, resolve=True)):
 
