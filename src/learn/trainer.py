@@ -149,7 +149,7 @@ class SemanticTrainer(BaseTrainer):
 
             if self.logger.miou_improved():
                 self.best_model['state_dict'] = self.model.state_dict()
-                self.best_model['miou'] = self.logger.history['val_miou'][-1]
+                self.best_model['miou'] = self.logger.history['miou_val'][-1]
                 self.best_model['epoch'] = self.epoch
 
             self.epoch += 1

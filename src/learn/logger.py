@@ -101,14 +101,13 @@ class SemanticLogger(object):
         """
 
         if len(self.history['miou_val']) < 2:
-            log.info(f'Skipping improvement check, not enough epochs: {len(self.history["miou_val"])}')
-            return False
+            return True
 
         last_miou = self.history['miou_val'][-1]
         max_miou = max(self.history['miou_val'][:-1])
         improvement = last_miou - max_miou
         log.info(f'Last miou: {last_miou}, max miou: {max_miou}, improvement: {improvement}')
-        return improvement >= 0.01
+        return improvement > 0
 
     def update(self, loss: float, outputs: torch.Tensor, targets: torch.Tensor, named_params: dict = None):
         """ Update loss and metrics
