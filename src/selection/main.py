@@ -20,14 +20,13 @@ from src.utils.log import log_dataset_statistics, log_most_labeled_sample, \
 log = logging.getLogger(__name__)
 
 
-def get_selector(selection_objects: str, criterion: str, dataset_path: str, project_name: str,
-                 cloud_paths: np.ndarray, device: torch.device, cfg: DictConfig) -> Selector:
-    if selection_objects == 'Voxels':
-        return VoxelSelector(dataset_path, project_name, cloud_paths, device, criterion, cfg)
-    elif selection_objects == 'Superpoints':
-        return SuperpointSelector(dataset_path, project_name, cloud_paths, device, criterion, cfg)
+def get_selector(cfg: DictConfig, project_name: str, cloud_paths: np.ndarray, device: torch.device, ) -> Selector:
+    # if selection_objects == 'Voxels':
+    #     return VoxelSelector(dataset_path, project_name, cloud_paths, device, criterion, cfg)
+    if cfg.active.cloud_partitions == 'Superpoints':
+        return SuperpointSelector(cfg, project_name, cloud_paths, device)
     else:
-        raise ValueError(f'Unknown selection_objects: {selection_objects}')
+        raise ValueError(f'Unknown selection_objects: {cfg.active.cloud_partitions}')
 
 
 def select_voxels(cfg: DictConfig, experiment: Experiment, device: torch.device) -> None:

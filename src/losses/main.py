@@ -5,7 +5,7 @@ import segmentation_models_pytorch as smp
 from .lovasz import LovaszSoftmax
 
 
-def get_loss(loss_type: str, weight: torch.tensor, device: torch.device, ignore_index=0):
+def get_loss(loss_type: str, weight: torch.tensor = None, device: torch.device = torch.device('cpu'), ignore_index=0):
     if loss_type == 'CombinedLoss':
         return CombinedLoss(device, weight=weight, ignore_index=ignore_index)
     elif loss_type == 'CrossEntropyLoss':

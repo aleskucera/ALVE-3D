@@ -95,7 +95,7 @@ def train_model_active(cfg: DictConfig, experiment: Experiment, device: torch.de
     weights = 1 / (class_distribution + 1e-6)
 
     # Train model
-    trainer = SemanticTrainer(cfg=cfg, train_ds=train_ds, val_ds=val_ds, device=device, weights=weights,
+    trainer = SemanticTrainer(cfg=cfg, train_ds=train_ds, val_ds=val_ds, device=device,
                               model=model, model_name=experiment.model, history_name=experiment.history)
     trainer.train()
 

@@ -166,6 +166,12 @@ class Dataset(TorchDataset):
 
         return idx, max_label_ratio, sample_label_mask
 
+    def select_mode(self):
+        self.selection_mode = True
+
+    def train_mode(self):
+        self.selection_mode = False
+
     def cloud_id_of_scan(self, scan_idx: int) -> int:
         cloud = self.cloud_map[scan_idx]
         return np.where(self.cloud_files == cloud)[0][0]

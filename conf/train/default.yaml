@@ -5,4 +5,5 @@ dataset_size: null      # null means all
 loss: CombinedLoss
 patience: 10
 min_epochs: 30
+max_epochs: 100
 lr_decay: 0.98

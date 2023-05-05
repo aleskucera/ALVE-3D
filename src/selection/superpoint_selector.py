@@ -1,7 +1,6 @@
 import logging
 import torch
 import numpy as np
-import torch.nn as nn
 from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
@@ -13,11 +12,9 @@ log = logging.getLogger(__name__)
 
 
 class SuperpointSelector(Selector):
-    def __init__(self, dataset_path: str, project_name: str, cloud_paths: np.ndarray,
-                 device: torch.device, criterion: str, cfg: DictConfig):
-        super().__init__(dataset_path, project_name, cloud_paths, device, cfg)
-        self.criterion = criterion
-        self.mc_dropout = True if criterion == 'EpistemicUncertainty' else False
+    def __init__(self, cfg: DictConfig, project_name: str, cloud_paths: np.ndarray, device: torch.device):
+        super().__init__(cfg, project_name, cloud_paths, device)
+
         self._initialize()
 
     def _initialize(self):
@@ -30,7 +27,6 @@ class SuperpointSelector(Selector):
             color_discontinuity = torch.from_numpy(color_discontinuity) if color_discontinuity is not None else None
             num_voxels = superpoint_map.shape[0]
             self.num_voxels += num_voxels
-            log.info(f'Diversity aware: {self.diversity_aware}')
             self.clouds.append(SuperpointCloud(path=cloud_path,
                                                size=num_voxels,
                                                cloud_id=cloud_id,
@@ -40,11 +36,11 @@ class SuperpointSelector(Selector):
                                                surface_variation=surface_variation,
                                                color_discontinuity=color_discontinuity))
 
-    def select(self, dataset: Dataset, model: nn.Module = None, percentage: float = 0.5) -> tuple:
-        if self.criterion == 'Random':
+    def select(self, dataset: Dataset, percentage: float = 0.5) -> tuple:
+        if self.strategy == 'Random':
             return self._select_randomly(percentage)
         else:
-            return self._select_by_criterion(dataset, model, percentage)
+            return self._select_by_criterion(dataset, percentage)
 
     def _select_randomly(self, percentage: float) -> tuple:
         selection_size = self.get_selection_size(percentage)
@@ -62,7 +58,7 @@ class SuperpointSelector(Selector):
 
         return self._choose_voxels(superpoint_map, superpoint_sizes, labels, cloud_map, selection_size)
 
-    def _select_by_criterion(self, dataset: Dataset, model: nn.Module, percentage: float) -> tuple:
+    def _select_by_criterion(self, dataset: Dataset, percentage: float) -> tuple:
         values = torch.tensor([], dtype=torch.float32)
         labels = torch.tensor([], dtype=torch.long)
         cloud_map = torch.tensor([], dtype=torch.long)
@@ -71,7 +67,7 @@ class SuperpointSelector(Selector):
         superpoint_sizes = torch.tensor([], dtype=torch.long)
         selection_size = self.get_selection_size(percentage)
 
-        self._compute_values(model, dataset, self.criterion, self.mc_dropout)
+        self._compute_values(dataset)
 
         for cloud in self.clouds:
             if cloud.values is None:
@@ -81,7 +77,6 @@ class SuperpointSelector(Selector):
             cloud_map = torch.cat((cloud_map, cloud.ids))
             superpoint_map = torch.cat((superpoint_map, cloud.superpoint_indices))
             superpoint_sizes = torch.cat((superpoint_sizes, cloud.superpoint_sizes))
-            log.info(f'Cloud features shape: {cloud.features.shape if cloud.features is not None else None}')
             if cloud.features is not None:
                 features = torch.cat((features, cloud.features))
 

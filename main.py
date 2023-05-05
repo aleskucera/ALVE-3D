@@ -9,6 +9,7 @@ import omegaconf
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
+from src.utils.wb import success_alert, error_alert
 from src.utils.io import set_paths
 from src.selection import select_voxels
 from src.kitti360 import KITTI360Converter
@@ -18,24 +19,6 @@ from src.superpoints import create_superpoints, compute_redal_features
 from src.learn import train_model, train_model_active, train_semantickitti_original
 
 log = logging.getLogger(__name__)
-
-
-def error_alert(experiment: Experiment):
-    log.error(f'Experiment failed: {experiment}')
-    wandb.alert(
-        title='Experiment failed',
-        text=f'Experiment info: {experiment}',
-        level=wandb.AlertLevel.ERROR
-    )
-
-
-def success_alert(experiment: Experiment):
-    log.info(f'Experiment finished successfully: {experiment}')
-    wandb.alert(
-        title='Experiment finished successfully',
-        text=f'Experiment info: {experiment}',
-        level=wandb.AlertLevel.INFO
-    )
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
