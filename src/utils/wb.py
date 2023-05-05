@@ -1,4 +1,6 @@
 import os
+from collections import OrderedDict
+
 import torch
 import wandb
 import shutil
@@ -87,7 +89,7 @@ def push_artifact(artifact: str, data: Any, artifact_type: str, metadata: dict =
     :param description: The description of the artifact.
     """
 
-    assert isinstance(data, (torch.Tensor, dict)), \
+    assert isinstance(data, (torch.Tensor, dict, OrderedDict)), \
         'Data must be a torch.Tensor or a dictionary of torch.Tensors.'
 
     path = f'{artifact}.pt'

@@ -54,6 +54,7 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
                               train_ds=train_ds,
                               val_ds=val_ds,
                               device=device)
+    print(type(trainer.model.state_dict()))
 
     selection = pull_artifact(selection_artifact, device=torch.device('cpu'))
     selector.load_voxel_selection(selection, train_ds)
