@@ -13,7 +13,14 @@ show_help_job() {
 }
 
 show_help_train () {
-  echo "Usage: train_semantic.batch [options]"
+  echo "Usage: train_model.batch [options]"
+  echo "Options:"
+  echo "  -b, --batch-size      Batch size (default: 32)"
+  echo "  -e, --experiment      Experiment name (default: default)"
+}
+
+show_help_train_original () {
+  echo "Usage: train_model_original.batch [options]"
   echo "Options:"
   echo "  -b, --batch-size      Batch size (default: 32)"
   echo "  -e, --experiment      Experiment name (default: default)"
@@ -30,7 +37,7 @@ show_help () {
 
 while [ "$#" -gt 0 ]; do
   case $1 in
-    -t|--train_semantic) show_help_train; exit 0 ;;
+    -t|--train_model) show_help_train; exit 0 ;;
     -j|--job) show_help_job; exit 0 ;;
     -h|--help) show_help; exit 0 ;;
     *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;

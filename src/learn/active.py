@@ -1,6 +1,7 @@
-import wandb
-import torch
 import logging
+
+import torch
+import wandb
 import omegaconf
 from omegaconf import DictConfig
 
@@ -87,10 +88,65 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
             log_dataset_statistics(cfg, train_ds, dataset_stats)
 
             # Train model on selected voxels
-            # trainer.train_ds = train_ds
-            print(f'Labeled percentage of selection {train_ds.statistics["labeled_ratio"] * 100:.2f}%')
+            print(f'Labeled percentage of selection {trainer.train_ds.statistics["labeled_ratio"] * 100:.2f}%')
             trainer.train()
 
             push_artifact(model_name, trainer.best_model['state_dict'], 'model')
             push_artifact(history_name, trainer.history, 'history')
             trainer.reset()
+
+
+def train_iteration(cfg: DictConfig, device: torch.device) -> None:
+    raise NotImplementedError
+
+
+def create_seed(cfg: DictConfig, device: torch.device) -> None:
+    selection_name = f'Seed_{cfg.ds.name}'
+    model_name = f'{cfg.model.architecture}_{cfg.ds.name}'
+    project_name = f'Seed_{cfg.active.strategy}'
+
+    # Create datasets
+    train_ds = SemanticDataset(split='train',
+                               cfg=cfg.ds,
+                               dataset_path=cfg.ds.path,
+                               project_name=project_name,
+                               num_clouds=cfg.train.dataset_size,
+                               al_experiment=True,
+                               selection_mode=False)
+
+    val_ds = SemanticDataset(split='val',
+                             cfg=cfg.ds,
+                             dataset_path=cfg.ds.path,
+                             project_name=project_name,
+                             num_clouds=cfg.train.dataset_size,
+                             al_experiment=True,
+                             selection_mode=False)
+
+    # Load Selector for selecting labeled voxels
+    selector = get_selector(cfg=cfg,
+                            project_name=project_name,
+                            cloud_paths=train_ds.cloud_files,
+                            device=device)
+
+    # Create trainer
+    trainer = SemanticTrainer(cfg=cfg,
+                              train_ds=train_ds,
+                              val_ds=val_ds,
+                              device=device)
+
+    with wandb.init(project='AL-Seed',
+                    group=f'{cfg.active.strategy}_{cfg.active.cloud_partitions}',
+                    config=omegaconf.OmegaConf.to_container(cfg, resolve=True)):
+        selection, normal_metric_statistics, weighted_metric_statistics = selector.select(train_ds,
+                                                                                          cfg.active.percentage)
+
+        selector.load_voxel_selection(selection, train_ds)
+
+        push_artifact(selection_name, selection, 'selection')
+        log_dataset_statistics(cfg, train_ds)
+
+        # Train model on selected voxels
+        print(f'Labeled percentage of selection {train_ds.statistics["labeled_ratio"] * 100:.2f}%')
+        trainer.train()
+
+        push_artifact(model_name, trainer.best_model['state_dict'], 'model')

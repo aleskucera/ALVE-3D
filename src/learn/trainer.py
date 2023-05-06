@@ -12,7 +12,6 @@ from .logger import get_logger
 from src.losses import get_loss
 from src.models import get_model
 from src.datasets import Dataset, get_parser
-from src.utils.log import log_model, log_history
 
 log = logging.getLogger(__name__)
 
@@ -36,14 +35,9 @@ class BaseTrainer(object):
         self.optimizer = optim.Adam(self.model.parameters(), lr=cfg.train.learning_rate)
 
         self.epoch = 0
+        self.epochs = cfg.train.epochs
         self.min_epochs = cfg.train.min_epochs
         self.patience = cfg.train.patience
-
-        # self.model_name = model_name if model_name is not None else 'model'
-        # self.history_name = history_name if history_name is not None else 'history'
-        #
-        # if model is not None:
-        #     self.load_model(model)
 
     @property
     def history(self):
@@ -130,17 +124,6 @@ class SemanticTrainer(BaseTrainer):
                  weights: np.ndarray = None):
         super().__init__(cfg, train_ds, val_ds, device, weights)
         self.best_model = dict(state_dict=None, miou=0, epoch=0)
-        self.max_epochs = cfg.train.max_epochs
-
-    # def train(self):
-    #     while not self.logger.miou_converged(self.min_epochs, self.patience):
-    #         self.train_epoch(validate=True)
-    #         if self.logger.miou_improved():
-    #             log_model(model=self.model, history=self.logger.history,
-    #                       epoch=self.epoch, model_name=self.model_name)
-    #         self.epoch += 1
-    #
-    #     log_history(history=self.logger.history, history_name=self.history_name)
 
     def reset(self):
         self.epoch = 0
@@ -149,7 +132,7 @@ class SemanticTrainer(BaseTrainer):
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.cfg.train.learning_rate)
 
     def train(self):
-        while True:
+        while self.epoch < self.epochs:
 
             self.train_epoch(validate=True)
 
@@ -159,6 +142,3 @@ class SemanticTrainer(BaseTrainer):
                 self.best_model['epoch'] = self.epoch
 
             self.epoch += 1
-
-            if self.epoch >= self.max_epochs:
-                break

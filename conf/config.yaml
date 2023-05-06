@@ -17,7 +17,8 @@ defaults:
   # KITTI-360 conversion settings
   - conversion: default
 
-action: none
+option: null
+action: null
 
 # W&B settings
 group: null

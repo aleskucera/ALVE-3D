@@ -12,18 +12,22 @@
 
 # Set default values for variables
 model="null"
+percentage="0"
 batch_size="32"
 selection="null"
 experiment="default"
 dataset_size="null"
+load_model_arg="+load_model=True"
 
 # Parse command line arguments
 while [ "$#" -gt 0 ]; do
   case $1 in
+    --from-scratch) load_model_arg="+load_model=False" ;;
     -b|--batch-size) batch_size="$2"; shift ;;
     -e|--experiment) experiment="$2"; shift ;;
     -m|--model) model="$2"; shift ;;
     -n|--num_clouds) dataset_size="$2"; shift ;;
+    -p|--percentage) percentage="$2"; shift ;;
     -s|--selection) selection="$2"; shift ;;
     *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;
   esac
@@ -31,9 +35,10 @@ while [ "$#" -gt 0 ]; do
 done
 
 singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf96016298e59b1e030ae \
-            singularity/alve-3d.sif python train_active.py action=full_experiment \
+            singularity/alve-3d.sif python main.py action=train_model_active "$load_model_arg" \
             experiment="$experiment" \
+            train.batch_size="$batch_size" \
+            train.dataset_size="$dataset_size" \
             active.model="$model" \
             active.selection="$selection" \
-            train.batch_size="$batch_size" \
-            train.dataset_size="$dataset_size"
+            active.percentage="$percentage"

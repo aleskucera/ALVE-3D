@@ -1,49 +1,49 @@
 - name: ViewpointVariance
-  percentages: [ 1, 2, 4, 6, 8, 10 ]
+  percentages: [ 1, 2, 4, 6, 8 ]
   history:
     url: aleskucera/ActiveLearning-KITTI360/History_ViewpointVariance_Superpoints_SalsaNext_KITTI360
     file: History_ViewpointVariance_Superpoints_SalsaNext_KITTI360
-    versions: [ 0, 1, 2, 3, 4, 5 ]
+    versions: [ 0, 1, 2, 3, 4 ]
 
 - name: ReDAL
-  percentages: [ 1, 2, 4, 6, 8, 10 ]
+  percentages: [ 1, 2, 4, 6, 8 ]
   history:
     url: aleskucera/ActiveLearning-KITTI360/History_ReDAL_Superpoints_SalsaNext_KITTI360
     file: History_ReDAL_Superpoints_SalsaNext_KITTI360
-    versions: [ 0, 1, 2, 3, 4, 5 ]
+    versions: [ 0, 1, 2, 3, 4 ]
 
 - name: EpistemicUncertainty
-  percentages: [ 1, 2, 4, 6, 8, 10 ]
+  percentages: [ 1, 2, 4, 6, 8 ]
   history:
     url: aleskucera/ActiveLearning-KITTI360/History_EpistemicUncertainty_Superpoints_SalsaNext_KITTI360
     file: History_EpistemicUncertainty_Superpoints_SalsaNext_KITTI360
-    versions: [ 0, 1, 2, 3, 4, 5 ]
+    versions: [ 0, 1, 2, 3, 4 ]
 
 - name: Entropy
-  percentages: [ 1, 2, 4, 6, 8, 10 ]
+  percentages: [ 1, 2, 4, 6, 8 ]
   history:
     url: aleskucera/ActiveLearning-KITTI360/History_Entropy_Superpoints_SalsaNext_KITTI360
     file: History_Entropy_Superpoints_SalsaNext_KITTI360
-    versions: [ 0, 1, 2, 3, 4, 5 ]
+    versions: [ 0, 1, 2, 3, 4 ]
 
 - name: Margin
-  percentages: [ 1, 2, 4, 6, 8, 10 ]
+  percentages: [ 1, 2, 4, 6, 8 ]
   history:
     url: aleskucera/ActiveLearning-KITTI360/History_Margin_Superpoints_SalsaNext_KITTI360
     file: History_Margin_Superpoints_SalsaNext_KITTI360
-    versions: [ 0, 1, 2, 3, 4, 5 ]
+    versions: [ 0, 1, 2, 3, 4 ]
 
 - name: Confidence
-  percentages: [ 1, 2, 4, 6, 8, 10 ]
+  percentages: [ 1, 2, 4, 6, 8 ]
   history:
     url: aleskucera/ActiveLearning-KITTI360/History_Confidence_Superpoints_SalsaNext_KITTI360
     file: History_Confidence_Superpoints_SalsaNext_KITTI360
-    versions: [ 0, 1, 2, 3, 4, 5 ]
+    versions: [ 0, 1, 2, 3, 4 ]
 
 - name: Random
-  percentages: [ 1, 2, 4, 6, 8, 10 ]
+  percentages: [ 1, 2, 4, 6, 8 ]
   history:
     url: aleskucera/ActiveLearning-KITTI360/History_Random_Superpoints_SalsaNext_KITTI360
     file: History_Random_Superpoints_SalsaNext_KITTI360
-    versions: [ 0, 1, 2, 3, 4, 5 ]
+    versions: [ 0, 1, 2, 3, 4 ]
 

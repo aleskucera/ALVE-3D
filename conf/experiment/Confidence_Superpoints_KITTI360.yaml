@@ -4,12 +4,10 @@ defaults:
   - override /model: SalsaNext
 
 train:
+  epochs: 20
   batch_size: 32
   num_workers: 4
   loss: FocalLoss
-  patience: 20
-  min_epochs: 50
-  max_epochs: 100
   learning_rate: 0.01
 active:
   strategy: Confidence

@@ -31,7 +31,7 @@ def main(cfg: DictConfig):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     log.info(f'Starting action: {cfg.action} using device {device}')
-
+    exit(0)
     experiment = Experiment(cfg)
     atexit.register(error_alert, experiment)
     dict_config = omegaconf.OmegaConf.to_container(cfg, resolve=True)

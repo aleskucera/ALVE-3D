@@ -7,7 +7,7 @@ from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
 from src.utils.io import set_paths
-from src.learn.active import train_model_active, train_iteration, create_seed
+from src.learn.passive import train_model_passive, train_semantickitti_original
 
 log = logging.getLogger(__name__)
 
@@ -21,12 +21,10 @@ def main(cfg: DictConfig):
     else:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    if cfg.option == 'full':
-        train_model_active(cfg, device)
-    elif cfg.option == 'iteration':
-        train_iteration(cfg, device)
-    elif cfg.option == 'create_seed':
-        create_seed(cfg, device)
+    if cfg.option == 'baseline':
+        train_model_passive(cfg, device)
+    elif cfg.option == 'original':
+        train_semantickitti_original(cfg, device)
     else:
         raise ValueError(f'Option "{cfg.option}" is not supported')
 

@@ -12,7 +12,7 @@ show_help_job() {
   echo "  --ntasks-per-node    Number of CPUs per node (default: 4)"
 }
 
-show_help_conversion () {
+show_help_convert () {
   echo "Usage: convert.batch [options]"
   echo "Options:"
   echo "  -d, --dataset         Dataset name (default: KITTI360, options: KITTI360, SemanticKITTI)"
@@ -21,6 +21,12 @@ show_help_conversion () {
 
 show_help_create_superpoints () {
   echo "Usage: create_superpoints.batch [options]"
+  echo "Options:"
+  echo "  -d, --dataset         Dataset name (default: KITTI360, options: KITTI360, SemanticKITTI)"
+}
+
+show_help_redal_features () {
+  echo "Usage: redal_features.batch [options]"
   echo "Options:"
   echo "  -d, --dataset         Dataset name (default: KITTI360, options: KITTI360, SemanticKITTI)"
 }
@@ -36,7 +42,9 @@ show_help () {
 
 while [ "$#" -gt 0 ]; do
   case $1 in
-    --conversion) show_help_conversion; exit 0 ;;
+    --convert) show_help_convert; exit 0 ;;
+    --create_superpoints) show_help_create_superpoints; exit 0 ;;
+    --redal_features) show_help_redal_features; exit 0 ;;
     --job) show_help_job; exit 0 ;;
     -h|--help) show_help; exit 0 ;;
     *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;

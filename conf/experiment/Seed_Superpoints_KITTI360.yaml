@@ -1,0 +1,17 @@
+# @package _global_
+defaults:
+  - override /ds: KITTI360
+  - override /model: SalsaNext
+
+train:
+  epochs: 20
+  batch_size: 32
+  num_workers: 4
+  loss: FocalLoss
+  learning_rate: 0.01
+active:
+  strategy: Random
+  cloud_partitions: Superpoints
+  diversity_aware: false
+
+# sbatch --output=Seed_Superpoints_KITTI360.out --error=Seed_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/create_seed.batch --experiment Seed_Superpoints_KITTI360

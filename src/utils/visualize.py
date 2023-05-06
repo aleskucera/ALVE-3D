@@ -8,7 +8,6 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
 from ruamel.yaml import YAML
-from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 cmap_small = cm.get_cmap('tab10')
 cmap_large = cm.get_cmap('tab20')
@@ -142,7 +141,7 @@ class ExperimentVisualizer(object):
         with open(self.file, 'r') as f:
             self.data = yaml.load(f)
 
-        for s in self.data['SemanticKITTI']:
+        for s in self.data:
             strategy_name = s['name']
             self.strategies.append(strategy_name)
             self.histories[strategy_name] = []
@@ -212,29 +211,29 @@ def plot_result(file: str):
 
 
 if __name__ == '__main__':
-    experiment_visualizer = ExperimentVisualizer('test.yaml')
+    experiment_visualizer = ExperimentVisualizer('test2.yaml')
     experiment_visualizer.plot_mious()
-    plot_result('test.yaml')
+    # plot_result('test2.yaml')
     exit(0)
 
-    distributions = {'0.5%': np.array([0.1, 0.5, 0.4]),
-                     '1%': np.array([0.1, 0.5, 0.4]),
-                     '1.5%': np.array([0.1, 0.5, 0.4])}
-
-    labeled_distributions = {'0.5%': np.array([0.1, 0.2, 0.7]),
-                             '1%': np.array([0.1, 0.5, 0.4]),
-                             '1.5%': np.array([0.6, 0.3, 0.1])}
-
-    miou = {'0.5%': np.array([0.1, 0.1, 0.05, 0.2, 0.15]),
-            '1%': np.array([0.2, 0.2, 0.3, 0.23, 0.4]),
-            '1.5%': np.array([0.4, 0.35, 0.45, 0.6, 0.6])}
-
-    label_names = ['Car', 'Pedestrian', 'Cyclist']
-
-    # Assert that all distributions are equal
-    distributions_matrix = np.vstack(list(distributions.values()))
-    assert np.all(distributions_matrix == distributions_matrix[0]), 'Distributions are not equal.'
-
-    bar_chart(distributions['0.5%'], label_names, 'Mass [%]')
-    grouped_bar_chart(labeled_distributions, label_names, 'Mass [%]')
-    plot(miou, 'Epoch [-]', 'mIoU [-]')
+    # distributions = {'0.5%': np.array([0.1, 0.5, 0.4]),
+    #                  '1%': np.array([0.1, 0.5, 0.4]),
+    #                  '1.5%': np.array([0.1, 0.5, 0.4])}
+    #
+    # labeled_distributions = {'0.5%': np.array([0.1, 0.2, 0.7]),
+    #                          '1%': np.array([0.1, 0.5, 0.4]),
+    #                          '1.5%': np.array([0.6, 0.3, 0.1])}
+    #
+    # miou = {'0.5%': np.array([0.1, 0.1, 0.05, 0.2, 0.15]),
+    #         '1%': np.array([0.2, 0.2, 0.3, 0.23, 0.4]),
+    #         '1.5%': np.array([0.4, 0.35, 0.45, 0.6, 0.6])}
+    #
+    # label_names = ['Car', 'Pedestrian', 'Cyclist']
+    #
+    # # Assert that all distributions are equal
+    # distributions_matrix = np.vstack(list(distributions.values()))
+    # assert np.all(distributions_matrix == distributions_matrix[0]), 'Distributions are not equal.'
+    #
+    # bar_chart(distributions['0.5%'], label_names, 'Mass [%]')
+    # grouped_bar_chart(labeled_distributions, label_names, 'Mass [%]')
+    # plot(miou, 'Epoch [-]', 'mIoU [-]')
