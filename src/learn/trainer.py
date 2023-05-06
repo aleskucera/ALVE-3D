@@ -142,6 +142,12 @@ class SemanticTrainer(BaseTrainer):
     #
     #     log_history(history=self.logger.history, history_name=self.history_name)
 
+    def reset(self):
+        self.epoch = 0
+        self.logger.reset()
+        self.model.load_state_dict(self.best_model['state_dict'])
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.cfg.train.learning_rate)
+        
     def train(self):
         while not self.logger.miou_converged(self.min_epochs, self.patience):
 

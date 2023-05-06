@@ -84,8 +84,9 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
             log_dataset_statistics(cfg, train_ds, dataset_stats)
 
             # Train model on selected voxels
-            trainer.train_ds = train_ds
+            # trainer.train_ds = train_ds
             trainer.train()
 
             push_artifact(model_name, trainer.best_model['state_dict'], 'model')
             push_artifact(history_name, trainer.history, 'history')
+            trainer.reset()
