@@ -79,8 +79,11 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
             selector.load_voxel_selection(selection, train_ds)
 
             push_artifact(selection_name, selection, 'selection')
-            log_selection_metric_statistics(cfg, normal_metric_statistics, metric_stats)
-            log_selection_metric_statistics(cfg, weighted_metric_statistics, weighted_metric_stats, weighted=True)
+            if normal_metric_statistics is not None:
+                log_selection_metric_statistics(cfg, normal_metric_statistics, metric_stats)
+
+            if weighted_metric_statistics is not None:
+                log_selection_metric_statistics(cfg, weighted_metric_statistics, weighted_metric_stats, weighted=True)
             log_dataset_statistics(cfg, train_ds, dataset_stats)
 
             # Train model on selected voxels
