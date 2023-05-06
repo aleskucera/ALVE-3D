@@ -67,7 +67,7 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
 
     for p in percentages:
         cfg.active.percentage = p
-        with wandb.init(project='ActiveLearning-KITTI360',
+        with wandb.init(project='ActiveLearning-KITTI360-2',
                         group=f'{cfg.active.strategy}_{cfg.active.cloud_partitions}',
                         name=f'Iteration-{p}%',
                         config=omegaconf.OmegaConf.to_container(cfg, resolve=True)):
