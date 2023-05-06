@@ -10,6 +10,7 @@ train:
   loss: FocalLoss
   learning_rate: 0.01
 active:
+  percentage: 1
   strategy: Random
   cloud_partitions: Superpoints
   diversity_aware: false
