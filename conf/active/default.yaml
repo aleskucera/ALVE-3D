@@ -12,6 +12,6 @@ diversity_aware: true
 redal_weights: [ 1, 0.1, 0.05 ]
 
 # Artifacts
-model: null
-selection: null
+model_artifact: null
+selection_artifact: null
 

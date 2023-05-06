@@ -11,20 +11,21 @@
 #SBATCH --mail-type=BEGIN,END,FAIL                  # what to send, valid type values are NONE, BEGIN, END, FAIL, REQUEUE, ALL
 
 # Set default values for variables
-model="null"
+
 batch_size="32"
-selection="null"
-experiment="default"
 dataset_size="null"
+experiment="default"
+model_artifact="null"
+selection_artifact="null"
 
 # Parse command line arguments
 while [ "$#" -gt 0 ]; do
   case $1 in
     -b|--batch-size) batch_size="$2"; shift ;;
     -e|--experiment) experiment="$2"; shift ;;
-    -m|--model) model="$2"; shift ;;
+    -m|--model_artifact) model_artifact="$2"; shift ;;
     -n|--num_clouds) dataset_size="$2"; shift ;;
-    -s|--selection) selection="$2"; shift ;;
+    -s|--selection_artifact) selection_artifact="$2"; shift ;;
     *) echo "Unknown parameter passed: $1" >&2; exit 1 ;;
   esac
   shift
@@ -33,7 +34,7 @@ done
 singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf96016298e59b1e030ae \
             singularity/alve-3d.sif python train_active.py option=full \
             experiment="$experiment" \
-            active.model="$model" \
-            active.selection="$selection" \
             train.batch_size="$batch_size" \
-            train.dataset_size="$dataset_size"
+            train.dataset_size="$dataset_size" \
+            active.model_artifact="$model_artifact" \
+            active.selection_artifact="$selection_artifact"
