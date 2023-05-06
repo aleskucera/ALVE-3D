@@ -60,7 +60,7 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
     selector.load_voxel_selection(selection, train_ds)
 
     model_state_dict = pull_artifact(model_artifact, device=device)
-    model_state_dict = model_state_dict['model_state_dict']  # TODO: Remove this
+    # model_state_dict = model_state_dict['model_state_dict']  # TODO: Remove this
     trainer.model.load_state_dict(model_state_dict)
     selector.model.load_state_dict(model_state_dict)
 
