@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 def train_model_active(cfg: DictConfig, device: torch.device) -> None:
     model_artifact = 'aleskucera/AL-KITTI360/Model_Random_Superpoints_SalsaNext_KITTI360:v0'
     selection_artifact = 'aleskucera/AL-KITTI360/Selection_Random_Superpoints_SalsaNext_KITTI360:v0'
-    percentages = [1, 2, 4, 6, 8, 10]
+    percentages = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
 
     info = f'{cfg.active.strategy}_{cfg.active.cloud_partitions}_{cfg.model.architecture}_{cfg.ds.name}'
     model_name = f'Model_{info}'
