@@ -4,16 +4,15 @@ defaults:
   - override /model: SalsaNext
 
 train:
+  epochs: 150
   batch_size: 32
   num_workers: 4
   loss: FocalLoss
-  patience: 20
-  min_epochs: 50
   learning_rate: 0.01
 active:
-  batch_size: 128
+  diversity_aware: true
   strategy: EpistemicUncertainty
   cloud_partitions: Superpoints
-  diversity_aware: true
 
-# sbatch --output=EpistemicUncertainty_Superpoints_KITTI360.out --error=EpistemicUncertainty_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --percentage {p} --experiment EpistemicUncertainty_Superpoints_KITTI360
+
+# sbatch --output=EpistemicUncertainty_Superpoints_KITTI360.out --error=EpistemicUncertainty_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/full.batch --experiment EpistemicUncertainty_Superpoints_KITTI360

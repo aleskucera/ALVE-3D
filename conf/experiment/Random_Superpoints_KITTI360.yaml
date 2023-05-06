@@ -4,16 +4,15 @@ defaults:
   - override /model: SalsaNext
 
 train:
+  epochs: 150
   batch_size: 32
   num_workers: 4
   loss: FocalLoss
-  patience: 20
-  min_epochs: 50
   learning_rate: 0.01
 active:
-  batch_size: 128
   strategy: Random
-  cloud_partitions: Superpoints
   diversity_aware: false
+  cloud_partitions: Superpoints
 
-# sbatch --output=Random_Superpoints_KITTI360.out --error=Random_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --percentage {p} --experiment Random_Superpoints_KITTI360
+
+# sbatch --output=Random_Superpoints_KITTI360.out --error=Random_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/full.batch --experiment Random_Superpoints_KITTI360

@@ -4,18 +4,14 @@ defaults:
   - override /model: SalsaNext
 
 train:
+  epochs: 150
   batch_size: 32
   num_workers: 4
   loss: FocalLoss
-  patience: 20
-  min_epochs: 50
   learning_rate: 0.01
 active:
-  batch_size: 128
   strategy: Entropy
-  cloud_partitions: Superpoints
   diversity_aware: true
+  cloud_partitions: Superpoints
 
-# --selection aleskucera/AL-KITTI360/Selection_Random_Superpoints_SalsaNext_KITTI360:v0 --model aleskucera/AL-KITTI360/Model_Random_Superpoints_SalsaNext_KITTI360:v2
-
-# sbatch --output=Entropy_Superpoints_KITTI360.out --error=Entropy_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/{action}.batch --percentage {p} --experiment Entropy_Superpoints_KITTI360
+# sbatch --output=Entropy_Superpoints_KITTI360.out --error=Entropy_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/full.batch --experiment Entropy_Superpoints_KITTI360
