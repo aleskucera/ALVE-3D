@@ -15,9 +15,13 @@ log = logging.getLogger(__name__)
 
 
 def train_model_active(cfg: DictConfig, device: torch.device) -> None:
-    model_artifact = 'aleskucera/AL-Seed/SalsaNext_KITTI360:v0'
-    selection_artifact = 'aleskucera/AL-Seed/Seed_KITTI360:v0'
+    model_artifact = 'aleskucera/AL-Seed/SalsaNext_KITTI360:v1'
+    selection_artifact = 'aleskucera/AL-Seed/Seed_KITTI360:v1'
     percentages = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+
+    # percentages = cfg.active.percentages
+    # model_artifact = cfg.active.model_artifact
+    # selection_artifact = cfg.active.selection_artifact
 
     info = f'{cfg.active.strategy}_{cfg.active.cloud_partitions}_{cfg.model.architecture}_{cfg.ds.name}'
     model_name = f'Model_{info}'
@@ -60,7 +64,7 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
     selector.load_voxel_selection(selection, train_ds)
 
     model_state_dict = pull_artifact(model_artifact, device=device)
-    # model_state_dict = model_state_dict['model_state_dict']  # TODO: Remove this
+    # model_state_dict = model_state_dict['model_state_dict']
     trainer.model.load_state_dict(model_state_dict)
     selector.model.load_state_dict(model_state_dict)
 
@@ -68,7 +72,7 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
 
     for p in percentages:
         cfg.active.percentage = p
-        with wandb.init(project='ActiveLearning-KITTI360-2',
+        with wandb.init(project='ActiveLearning-KITTI360-3',
                         group=f'{cfg.active.strategy}_{cfg.active.cloud_partitions}',
                         name=f'Iteration-{p}%',
                         config=omegaconf.OmegaConf.to_container(cfg, resolve=True)):
