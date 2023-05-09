@@ -4,6 +4,7 @@ from omegaconf import DictConfig
 from .base_dataset import Dataset
 from src.utils.cloud import augment_points
 from src.utils.project import project_points
+from src.utils.filter import distant_points, radius_outliers, filter_scan
 
 
 class SemanticDataset(Dataset):
@@ -29,12 +30,15 @@ class SemanticDataset(Dataset):
                  num_clouds: int = None,
                  sequences: iter = None,
                  al_experiment: bool = False,
-                 selection_mode: bool = False):
+                 selection_mode: bool = False,
+                 filter_type: str = None):
 
         super().__init__(split, cfg, dataset_path,
                          project_name, resume, num_clouds,
                          sequences, al_experiment, selection_mode)
         self.parser_type = 'semantic'
+        assert filter_type in ['distance', 'radius', 'statistical', None], 'Invalid scan filter.'
+        self.filter_type = filter_type
 
     def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray, np.ndarray, int, bool]:
         scan_data = self.SI.read_scan(self.scans[idx])
@@ -43,6 +47,8 @@ class SemanticDataset(Dataset):
 
         if self.selection_mode:
             voxel_map[labels == self.ignore_index] = -1
+            indices = filter_scan(points, self.filter_type)
+            voxel_map[indices] = -1
 
         # Augment data and apply label mask
         elif self.split == 'train':
@@ -59,7 +65,7 @@ class SemanticDataset(Dataset):
 
         # Project points to image and map the projection
         proj = project_points(points, self.proj_H, self.proj_W, self.proj_fov_up, self.proj_fov_down)
-        proj_distances, proj_idx, proj_mask = proj['depth'], proj['idx'], proj['mask']
+        proj_distances, proj_xyz, proj_idx, proj_mask = proj['depth'], proj['xyz'], proj['idx'], proj['mask']
 
         # Project remissions
         proj_remissions = np.full((self.proj_H, self.proj_W), -1, dtype=np.float32)
@@ -75,6 +81,7 @@ class SemanticDataset(Dataset):
 
         if colors is None:
             proj_scan = np.concatenate([proj_distances[..., np.newaxis],
+                                        proj_xyz,
                                         proj_remissions[..., np.newaxis]],
                                        axis=-1, dtype=np.float32).transpose((2, 0, 1))
         else:
@@ -82,6 +89,7 @@ class SemanticDataset(Dataset):
             proj_colors[proj_mask] = colors[proj_idx[proj_mask]]
 
             proj_scan = np.concatenate([proj_distances[..., np.newaxis],
+                                        proj_xyz,
                                         proj_remissions[..., np.newaxis],
                                         proj_colors], axis=-1, dtype=np.float32).transpose((2, 0, 1))
 

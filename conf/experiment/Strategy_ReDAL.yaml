@@ -10,8 +10,9 @@ train:
   loss: FocalLoss
   learning_rate: 0.01
 active:
-  strategy: Confidence
+  strategy: ReDAL
   diversity_aware: true
   cloud_partitions: Superpoints
 
-# sbatch --output=Confidence_Superpoints_KITTI360.out --error=Confidence_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/full.batch --experiment Confidence_Superpoints_KITTI360
+
+# sbatch --output=Strategy_ReDAL.out --error=Strategy_ReDAL.out --gpus-per-node=1 scripts/active/full.batch --experiment Strategy_ReDAL

@@ -10,9 +10,8 @@ train:
   loss: FocalLoss
   learning_rate: 0.01
 active:
-  strategy: Margin
-  diversity_aware: true
+  strategy: Confidence
+  diversity_aware: false
   cloud_partitions: Superpoints
 
-
-# sbatch --output=Margin_Superpoints_KITTI360.out --error=Margin_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/full.batch --experiment Margin_Superpoints_KITTI360
+# sbatch --output=Strategy_Confidence.out --error=Strategy_Confidence.out --gpus-per-node=1 scripts/active/full.batch --experiment Strategy_Confidence

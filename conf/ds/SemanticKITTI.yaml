@@ -1,7 +1,7 @@
 name: SemanticKITTI
 path: data/SemanticKITTI
 num_classes: 17
-num_channels: 2
+num_channels: 5
 ignore_index: 0
 projection:
   H: 64

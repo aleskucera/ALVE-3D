@@ -6,6 +6,7 @@ import torch
 import wandb
 import hydra
 import numpy as np
+import open3d as o3d
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
@@ -13,11 +14,12 @@ from src.models import get_model
 from src.datasets import SemanticDataset
 from src.utils.cloud import visualize_cloud
 from src.laserscan import LaserScan, ScanVis
-from src.superpoints import partition_cloud, calculate_features, compute_color_discontinuity, compute_surface_variation
+# from src.superpoints import partition_cloud, calculate_features, compute_color_discontinuity, compute_surface_variation
 from src.utils.io import set_paths, ScanInterface, CloudInterface
 from src.kitti360 import KITTI360Converter, create_kitti360_config
 from src.utils.map import map_colors, colorize_values, colorize_instances
 from src.utils.visualize import plot, bar_chart, grouped_bar_chart, plot_confusion_matrix
+from src.utils.filter import filter_scan
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +54,8 @@ def main(cfg: DictConfig):
         create_kitti360_config()
     elif cfg.action == 'visualize_kitti360_conversion':
         visualize_kitti360_conversion(cfg)
+    elif cfg.action == 'visualize_filters':
+        visualize_filters(cfg)
     else:
         raise ValueError('Invalid demo type.')
 
@@ -118,6 +122,61 @@ def test_model(cfg: DictConfig) -> None:
         vis = ScanVis(laser_scan=laser_scan, scans=dataset.scans, labels=dataset.scans,
                       predictions=prediction_files)
         vis.run()
+
+
+def visualize_filters(cfg: DictConfig):
+    size = cfg.size if 'size' in cfg else None
+    split = cfg.split if 'split' in cfg else 'train'
+    sequences = [cfg.sequence] if 'sequence' in cfg else None
+
+    # Create dataset
+    dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
+                              cfg=cfg.ds, split=split, num_clouds=size, sequences=sequences)
+
+    scan_interface = ScanInterface()
+    scan = dataset.scans[491]
+    points = scan_interface.read_points(scan)
+    colors = scan_interface.read_colors(scan)
+
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points)
+    pcd.colors = o3d.utility.Vector3dVector(colors)
+    o3d.visualization.draw_geometries([pcd])
+
+    dist = filter_scan(points, 'distance')
+    rad = filter_scan(points, 'radius')
+    stat = filter_scan(points, 'statistical')
+
+    pcd.points = o3d.utility.Vector3dVector(points[stat])
+    pcd.colors = o3d.utility.Vector3dVector(colors[stat])
+    o3d.visualization.draw_geometries([pcd])
+
+    # # Remove points that are too far away
+    # _, f1_mask = filter_distant_points(points, 30)
+    # f1_colors = colors
+    # f1_colors[~f1_mask] = [1, 0, 0]
+    # pcd = o3d.geometry.PointCloud()
+    # pcd.points = o3d.utility.Vector3dVector(points)
+    # pcd.colors = o3d.utility.Vector3dVector(f1_colors)
+    # o3d.visualization.draw_geometries([pcd])
+    #
+    # # Remove radius outliers
+    # _, f2_indices = filter_radius_outliers(points, 10, 0.5)
+    # f2_colors = np.full_like(colors, [1, 0, 0])
+    # f2_colors[f2_indices] = colors[f2_indices]
+    # pcd = o3d.geometry.PointCloud()
+    # pcd.points = o3d.utility.Vector3dVector(points)
+    # pcd.colors = o3d.utility.Vector3dVector(f2_colors)
+    # o3d.visualization.draw_geometries([pcd])
+    #
+    # # Remove statistical outliers
+    # _, f3_indices = filter_statistical_outliers(points, 10, 1.8)
+    # f3_colors = np.full_like(colors, [1, 0, 0])
+    # f3_colors[f3_indices] = colors[f3_indices]
+    # pcd = o3d.geometry.PointCloud()
+    # pcd.points = o3d.utility.Vector3dVector(points)
+    # pcd.colors = o3d.utility.Vector3dVector(f3_colors)
+    # o3d.visualization.draw_geometries([pcd])
 
 
 def visualize_dataset_scans(cfg: DictConfig):

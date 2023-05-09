@@ -15,13 +15,13 @@ log = logging.getLogger(__name__)
 
 
 def train_model_active(cfg: DictConfig, device: torch.device) -> None:
-    model_artifact = 'aleskucera/AL-Seed/SalsaNext_KITTI360:v1'
-    selection_artifact = 'aleskucera/AL-Seed/Seed_KITTI360:v1'
-    percentages = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+    # model_artifact = 'aleskucera/AL-Seed/SalsaNext_KITTI360:v1'
+    # selection_artifact = 'aleskucera/AL-Seed/Seed_KITTI360:v1'
+    # percentages = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
 
-    # percentages = cfg.active.percentages
-    # model_artifact = cfg.active.model_artifact
-    # selection_artifact = cfg.active.selection_artifact
+    percentages = cfg.active.percentages
+    model_artifact = cfg.active.model_artifact
+    selection_artifact = cfg.active.selection_artifact
 
     info = f'{cfg.active.strategy}_{cfg.active.cloud_partitions}_{cfg.model.architecture}_{cfg.ds.name}'
     model_name = f'Model_{info}'
@@ -30,6 +30,9 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
     metric_stats = f'MetricStats_{info}'
     weighted_metric_stats = f'WeightedMetricStats_{info}'
     dataset_stats = f'DatasetStats_{info}'
+
+    wandb_project = 'AL-KITTI360'
+    wandb_group = f'{cfg.active.strategy}_{cfg.active.cloud_partitions}'
 
     # Create datasets
     train_ds = SemanticDataset(split='train',
@@ -64,7 +67,6 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
     selector.load_voxel_selection(selection, train_ds)
 
     model_state_dict = pull_artifact(model_artifact, device=device)
-    # model_state_dict = model_state_dict['model_state_dict']
     trainer.model.load_state_dict(model_state_dict)
     selector.model.load_state_dict(model_state_dict)
 
@@ -72,8 +74,8 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
 
     for p in percentages:
         cfg.active.percentage = p
-        with wandb.init(project='ActiveLearning-KITTI360-3',
-                        group=f'{cfg.active.strategy}_{cfg.active.cloud_partitions}',
+        with wandb.init(project=wandb_project,
+                        group=wandb_group,
                         name=f'Iteration-{p}%',
                         config=omegaconf.OmegaConf.to_container(cfg, resolve=True)):
 
@@ -142,7 +144,7 @@ def create_seed(cfg: DictConfig, device: torch.device) -> None:
                     group=f'{cfg.active.strategy}_{cfg.active.cloud_partitions}',
                     config=omegaconf.OmegaConf.to_container(cfg, resolve=True)):
         selection, normal_metric_statistics, weighted_metric_statistics = selector.select(train_ds,
-                                                                                          cfg.active.percentage)
+                                                                                          cfg.active.seed_percentage)
 
         selector.load_voxel_selection(selection, train_ds)
 

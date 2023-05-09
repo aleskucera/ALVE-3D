@@ -10,4 +10,4 @@ train:
   loss: FocalLoss
   learning_rate: 0.01
 
-# sbatch --output=Baseline_SalsaNext_KITTI360.out --error=Baseline_SalsaNext_KITTI360.out --gpus-per-node=1 scripts/passive/baseline.batch --experiment Baseline_SalsaNext_KITTI360
+# sbatch --output=Baseline.out --error=Baseline.out --gpus-per-node=1 scripts/passive/baseline.batch --experiment Baseline

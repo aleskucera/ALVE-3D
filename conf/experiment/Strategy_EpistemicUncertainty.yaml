@@ -10,9 +10,9 @@ train:
   loss: FocalLoss
   learning_rate: 0.01
 active:
-  diversity_aware: true
   strategy: EpistemicUncertainty
+  diversity_aware: false
   cloud_partitions: Superpoints
 
 
-# sbatch --output=EpistemicUncertainty_Superpoints_KITTI360.out --error=EpistemicUncertainty_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/full.batch --experiment EpistemicUncertainty_Superpoints_KITTI360
+# sbatch --output=Strategy_EpistemicUncertainty.out --error=Strategy_EpistemicUncertainty.out --gpus-per-node=1 scripts/active/full.batch --experiment Strategy_EpistemicUncertainty

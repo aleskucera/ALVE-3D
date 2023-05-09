@@ -1,0 +1,13 @@
+# @package _global_
+defaults:
+  - override /ds: KITTI360
+  - override /model: SalsaNext
+
+train:
+  epochs: 200
+  batch_size: 32
+  num_workers: 4
+  loss: CrossEntropyLoss
+  learning_rate: 0.01
+
+# sbatch --output=Loss_CrossEntropy.out --error=Loss_CrossEntropy.out --gpus-per-node=1 scripts/passive/baseline.batch --experiment Loss_CrossEntropy

@@ -8,23 +8,32 @@
 
 # Todo
 
-Checklist
+Experiments:
 
-- [x] Start the experiment 'Comparison of model architectures'
-    - 4 runs - 2 models and 2 datasets
-    - 200 epochs each, CrossEntropyLoss, Adam, lr=1e-3, batch_size=32
-- [x] Visualize the Epistemic Uncertainty of the model
-    - Visualize the max, min, mean, std of the epistemic uncertainty
-- [x] Start the active learning experiments
-- [x] Create random active learning experiment
-- [x] Change the LaserScan class
-- [x] Change the saving of the model
-- [x] Start the experiment 'SalsaNext on SemanticKITTI'
-- [x] Determine, how to use jakteristics in singularity
-- [X] Create a function that partitions the voxel cloud to the superpoints
-- [ ] Create a new datasets
-    - SemanticKITTI: [0, 2]
-    - KITTI-360: [0, 2]
+- Models - SalsaNext, DeepLabV3+
+- Loss Functions - Cross Entropy, Dice, Focal, Lovasz
+- Active Learning - Raw
+    - Viewpoint Variance
+    - Epistemic Uncertainty
+    - Entropy
+    - Margin
+    - Confidence
+    - Random
+- Active Learning - Filter distant points
+    - Viewpoint Variance
+    - Epistemic Uncertainty
+    - Entropy
+    - Margin
+    - Confidence
+    - Random
+- Active Learning - Filter radius outliers
+    - Viewpoint Variance
+    - Epistemic Uncertainty
+    - Entropy
+    - Margin
+    - Confidence
+    - Random
+  
 
 
 

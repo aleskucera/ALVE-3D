@@ -10,9 +10,9 @@ train:
   loss: FocalLoss
   learning_rate: 0.01
 active:
-  diversity_aware: true
   strategy: ViewpointVariance
+  diversity_aware: false
   cloud_partitions: Superpoints
 
 
-# sbatch --output=ViewpointVariance_Superpoints_KITTI360.out --error=ViewpointVariance_Superpoints_KITTI360.out --gpus-per-node=1 scripts/active/full.batch --experiment ViewpointVariance_Superpoints_KITTI360
+# sbatch --output=Strategy_ViewpointVariance.out --error=Strategy_ViewpointVariance.out --gpus-per-node=1 scripts/active/full.batch --experiment Strategy_ViewpointVariance
