@@ -22,7 +22,7 @@ action: null
 
 # W&B settings
 group: null
-project: null
+project_name: null
 job_type: null
 run_name: null
 
