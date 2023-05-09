@@ -11,4 +11,4 @@ train:
   loss: CrossEntropyLoss
   learning_rate: 0.01
 
-# sbatch --output=Model_SalsaNext.out --error=Model_SalsaNext.out --gpus-per-node=1 scripts/passive/baseline.batch --experiment Model_SalsaNext
+# sbatch --output=Model_SalsaNext.out --error=Model_SalsaNext.out --gpus-per-node=1 --partition=gpufast --time=4:00:00 scripts/passive/baseline.batch --experiment Model_SalsaNext

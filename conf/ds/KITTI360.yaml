@@ -1,6 +1,6 @@
 name: KITTI360
 path: data/KITTI-360
-num_classes: 15
+num_classes: 10
 num_channels: 8
 ignore_index: 0
 projection:
