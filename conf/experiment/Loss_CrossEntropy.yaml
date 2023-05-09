@@ -3,6 +3,7 @@ defaults:
   - override /ds: KITTI360
   - override /model: SalsaNext
 
+project_name: Loss-Comparison
 train:
   epochs: 200
   batch_size: 32

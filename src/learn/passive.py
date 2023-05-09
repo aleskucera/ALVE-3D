@@ -18,6 +18,8 @@ def train_model_passive(cfg: DictConfig, device: torch.device) -> None:
     model_name = f'Model_{info}'
     history_name = f'History_{info}'
 
+    project_name = cfg.project_name if cfg.project_name is not None else 'Baseline'
+
     train_ds = SemanticDataset(split='train',
                                cfg=cfg.ds,
                                dataset_path=cfg.ds.path,
@@ -38,7 +40,7 @@ def train_model_passive(cfg: DictConfig, device: torch.device) -> None:
 
     print(f'Labeled percentage of selection {train_ds.statistics["labeled_ratio"] * 100:.2f}%')
 
-    with wandb.init(project='Baseline',
+    with wandb.init(project=project_name,
                     group=cfg.ds.name, name=f'{cfg.model.architecture}-{cfg.train.loss}',
                     config=omegaconf.OmegaConf.to_container(cfg, resolve=True)):
         trainer.train()
