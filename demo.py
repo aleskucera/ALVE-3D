@@ -219,7 +219,6 @@ def visualize_dataset_clouds(cfg: DictConfig):
 
 def visualize_dataset_statistics(cfg: DictConfig):
     size = cfg.size if 'size' in cfg else None
-    split = cfg.split if 'split' in cfg else 'train'
     sequences = [cfg.sequence] if 'sequence' in cfg else None
 
     # Create dataset

@@ -33,6 +33,7 @@ Experiments:
     - Margin
     - Confidence
     - Random
+- rci_load
   
 
 
