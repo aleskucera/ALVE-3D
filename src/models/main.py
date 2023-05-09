@@ -12,7 +12,7 @@ def get_model(cfg: DictConfig, device: torch.device):
 
     if cfg.model.architecture == 'SalsaNext':
         model = SalsaNext(num_inputs, num_outputs)
-    elif cfg.model.architecture == 'DeepLabV3':
+    elif cfg.model.architecture == 'DeepLabV3Plus':
         model = smp.DeepLabV3Plus(
             encoder_name='resnet50',
             encoder_weights='imagenet',

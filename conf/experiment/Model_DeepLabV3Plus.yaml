@@ -1,7 +1,7 @@
 # @package _global_
 defaults:
   - override /ds: KITTI360
-  - override /model: DeepLabV3plus
+  - override /model: DeepLabV3Plus
 
 project_name: Model-Comparison
 train:
