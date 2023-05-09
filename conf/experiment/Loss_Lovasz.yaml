@@ -1,6 +1,6 @@
 # @package _global_
 defaults:
-  - override /ds: KITTI360
+  - override /ds: SemanticKITTI
   - override /model: SalsaNext
 
 project_name: Loss-Comparison
