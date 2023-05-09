@@ -11,4 +11,4 @@ train:
   loss: CrossEntropyLoss
   learning_rate: 0.01
 
-# sbatch --output=Model_DeepLabV3plus.out --error=Model_DeepLabV3plus.out --gpus-per-node=1 scripts/passive/baseline.batch --experiment Model_DeepLabV3plus
+# sbatch --output=Model_DeepLabV3Plus.out --error=Model_DeepLabV3Plus.out --gpus-per-node=1 scripts/passive/baseline.batch --experiment Model_DeepLabV3Plus
