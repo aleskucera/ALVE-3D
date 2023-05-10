@@ -15,8 +15,8 @@
 batch_size="32"
 dataset_size="null"
 experiment="default"
-model_artifact="null"
-selection_artifact="null"
+model_artifact="aleskucera/AL-Seed/SalsaNext_KITTI360:v2"
+selection_artifact="aleskucera/AL-Seed/Seed_KITTI360:v3"
 
 # Parse command line arguments
 while [ "$#" -gt 0 ]; do
