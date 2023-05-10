@@ -9,6 +9,8 @@ def filter_scan(points: np.ndarray, filter_type: str) -> np.ndarray:
         return radius_outliers(points, 10, 0.5)
     elif filter_type == 'statistical':
         return statistical_outliers(points, 10, 1.8)
+    elif filter_type is None:
+        return np.array([])
     else:
         raise ValueError(f'Invalid scan filter: {filter_type}')
 
