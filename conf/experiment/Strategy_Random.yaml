@@ -7,7 +7,7 @@ train:
   epochs: 150
   batch_size: 32
   num_workers: 4
-  loss: FocalLoss
+  loss: LovaszLoss
   learning_rate: 0.01
 active:
   strategy: Random
