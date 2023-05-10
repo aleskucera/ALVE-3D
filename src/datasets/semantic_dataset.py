@@ -47,8 +47,9 @@ class SemanticDataset(Dataset):
 
         if self.selection_mode:
             voxel_map[labels == self.ignore_index] = -1
-            indices = filter_scan(points, self.filter_type)
-            voxel_map[indices] = -1
+            if self.filter_type is not None:
+                indices = filter_scan(points, self.filter_type)
+                voxel_map[indices] = -1
 
         # Augment data and apply label mask
         elif self.split == 'train':
