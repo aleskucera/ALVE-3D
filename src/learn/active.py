@@ -74,7 +74,7 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
     log.info(f"Labeled percentage of seed selection {train_ds.statistics['labeled_ratio'] * 100:.2f}%")
 
     for p in percentages:
-        cfg.active.percentage = p
+        # cfg.active.percentage = p
         with wandb.init(project=wandb_project,
                         group=wandb_group,
                         name=f'Iteration-{p}%',
