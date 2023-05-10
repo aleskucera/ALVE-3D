@@ -2,7 +2,8 @@
 strategy: 'Entropy'
 cloud_partitions: 'Voxels'
 
-percentage: 0
+seed_percentage: 1
+percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 ]
 batch_size: 128
 
 # Diversity aware selection
@@ -12,6 +13,6 @@ diversity_aware: true
 redal_weights: [ 1, 0.1, 0.05 ]
 
 # Artifacts
-model_artifact: null
-selection_artifact: null
+model_artifact: aleskucera/AL-Seed/SalsaNext_KITTI360:v2
+selection_artifact: aleskucera/AL-Seed/Seed_KITTI360:v3
 
