@@ -14,6 +14,7 @@ from src.models import get_model
 from src.datasets import SemanticDataset
 from src.utils.cloud import visualize_cloud
 from src.laserscan import LaserScan, ScanVis
+from src.process import partition_cloud, calculate_features
 # from src.superpoints import partition_cloud, calculate_features, compute_color_discontinuity, compute_surface_variation
 from src.utils.io import set_paths, ScanInterface, CloudInterface
 from src.kitti360 import KITTI360Converter, create_kitti360_config
@@ -136,7 +137,8 @@ def visualize_filters(cfg: DictConfig):
     scan_interface = ScanInterface()
     scan = dataset.scans[491]
     points = scan_interface.read_points(scan)
-    colors = scan_interface.read_colors(scan)
+    radius = points[:, 2]
+    colors = colorize_values(radius, color_map='inferno', data_range=(np.min(radius), np.max(radius)))
 
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
@@ -147,8 +149,15 @@ def visualize_filters(cfg: DictConfig):
     rad = filter_scan(points, 'radius')
     stat = filter_scan(points, 'statistical')
 
-    pcd.points = o3d.utility.Vector3dVector(points[stat])
-    pcd.colors = o3d.utility.Vector3dVector(colors[stat])
+    new_colors = np.full(colors.shape, [0.7, 0.7, 0.7])
+    new_colors[dist] = np.array([131, 56, 236]) / 255
+
+    # Filter from points indices rad and dist
+    valid_points = np.setdiff1d(np.arange(points.shape[0]), rad)
+    valid_points = np.setdiff1d(valid_points, dist)
+
+    pcd.points = o3d.utility.Vector3dVector(points[valid_points])
+    pcd.colors = o3d.utility.Vector3dVector(colors[valid_points])
     o3d.visualization.draw_geometries([pcd])
 
     # # Remove points that are too far away
@@ -235,7 +244,7 @@ def visualize_dataset_statistics(cfg: DictConfig):
 def visualize_feature(cfg: DictConfig) -> None:
     size = cfg.size if 'size' in cfg else None
     split = cfg.split if 'split' in cfg else 'train'
-    feature = cfg.feature if 'feature' in cfg else 'planarity'
+    feature = cfg.feature if 'feature' in cfg else 'sphericity'
     sequences = [cfg.sequence] if 'sequence' in cfg else None
 
     # Create dataset
@@ -251,7 +260,7 @@ def visualize_feature(cfg: DictConfig) -> None:
 
         # Visualize feature
         log.info(f'{feature} max: {np.max(feature)}, {feature} min: {np.min(feature[feature != -1])}')
-        feature_colors = colorize_values(feature, color_map='viridis', data_range=(0, np.max(feature)), ignore=(-1,))
+        feature_colors = colorize_values(feature, color_map='viridis', data_range=(-0.5, np.max(feature)), ignore=(-1,))
         visualize_cloud(points, feature_colors)
 
 

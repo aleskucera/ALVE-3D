@@ -41,7 +41,8 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
                                project_name=info,
                                num_clouds=cfg.train.dataset_size,
                                al_experiment=True,
-                               selection_mode=False)
+                               selection_mode=False,
+                               filter_type=cfg.active.filter_type)
 
     val_ds = SemanticDataset(split='val',
                              cfg=cfg.ds,

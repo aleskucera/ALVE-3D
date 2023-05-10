@@ -147,7 +147,10 @@ class KITTI360Converter:
         dynamic_colors = np.ones_like(dynamic_points) * [0, 0, 1]
 
         self.static_window.points = o3d.utility.Vector3dVector(static_points)
-        self.static_window.colors = o3d.utility.Vector3dVector(static_colors)
+
+        # grey
+        self.static_window.colors = o3d.utility.Vector3dVector(np.full(static_points.shape, [0.7, 0.7, 0.7]))
+        # self.static_window.colors = o3d.utility.Vector3dVector(static_colors)
 
         self.dynamic_window.points = o3d.utility.Vector3dVector(dynamic_points)
         self.dynamic_window.colors = o3d.utility.Vector3dVector(dynamic_colors)
@@ -209,7 +212,7 @@ class KITTI360Converter:
 
         plt.show()
 
-        self.scan.points = o3d.utility.Vector3dVector(transformed_scan_points)
+        self.scan.points = o3d.utility.Vector3dVector(transformed_scan_points + [0, 0, 0.1])
         self.scan.colors = o3d.utility.Vector3dVector(scan_colors)
 
     def next_window(self, vis):
