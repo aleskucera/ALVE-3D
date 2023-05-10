@@ -211,7 +211,7 @@ def plot_result(file: str):
 
 
 if __name__ == '__main__':
-    experiment_visualizer = ExperimentVisualizer('test2.yaml')
+    experiment_visualizer = ExperimentVisualizer('test4.yaml')
     experiment_visualizer.plot_mious()
     # plot_result('test2.yaml')
     exit(0)
