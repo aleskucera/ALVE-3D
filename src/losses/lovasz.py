@@ -73,9 +73,7 @@ def lovasz_softmax_flat(probs, labels, classes='present'):
 
     # If probs is [P, C] then ok, if probs [C] then add a dimension
     if probs.dim() == 1:
-        print(probs.size())
         probs = probs.unsqueeze(0)
-    print(probs.size())
     C = probs.size(1)
     losses = []
     class_to_sum = list(range(C)) if classes in ['all', 'present'] else classes
