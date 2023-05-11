@@ -4,7 +4,7 @@ defaults:
   # Training and testing settings
   - ds: KITTI360
   - train: default
-  - model: DeepLabV3
+  - model: SalsaNext
   - active: default
 
   # Common settings

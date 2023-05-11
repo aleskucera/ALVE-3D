@@ -17,7 +17,7 @@ def bar_chart(values: np.ndarray, labels: list, value_label: str, title: str = N
     y = np.arange(len(labels))
 
     fig, ax = plt.subplots()
-    rects = ax.barh(y, values, color=cmap_small(0.5))
+    rects = ax.barh(y, values, color=cmap_small(0))
     bar_labels = [f"{val:.1e}" if val >= 0.00001 else "" for val in values]
     ax.bar_label(rects, labels=bar_labels, padding=10)
 
@@ -27,7 +27,7 @@ def bar_chart(values: np.ndarray, labels: list, value_label: str, title: str = N
     ax.set_xlabel(value_label)
     ax.set_yticks(y)
     ax.set_yticklabels(labels)
-    ax.set_xlim(0, np.max(values) + 0.15)
+    ax.set_xlim(0, np.max(values) + 0.25 * np.max(values))
     fig.subplots_adjust(left=0.2)
 
     if save_path is not None:

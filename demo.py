@@ -10,17 +10,16 @@ import open3d as o3d
 from omegaconf import DictConfig
 from hydra.core.hydra_config import HydraConfig
 
-from src.models import get_model
 from src.datasets import SemanticDataset
-from src.utils.cloud import visualize_cloud
-from src.laserscan import LaserScan, ScanVis
-from src.process import partition_cloud, calculate_features
-# from src.superpoints import partition_cloud, calculate_features, compute_color_discontinuity, compute_surface_variation
-from src.utils.io import set_paths, ScanInterface, CloudInterface
-from src.kitti360 import KITTI360Converter, create_kitti360_config
-from src.utils.map import map_colors, colorize_values, colorize_instances
-from src.utils.visualize import plot, bar_chart, grouped_bar_chart, plot_confusion_matrix
+from src.utils.io import set_paths, ScanInterface
+from src.kitti360 import KITTI360Converter
+from src.utils.map import colorize_values
+from src.utils.visualize import plot
 from src.utils.filter import filter_scan
+
+from src.visualizations.dataset import visualize_scans, visualize_clouds, visualize_statistics
+from src.visualizations.superpoints import visualize_feature, visualize_superpoints
+from src.visualizations.experiment import visualize_model_comparison
 
 log = logging.getLogger(__name__)
 
@@ -31,98 +30,54 @@ def main(cfg: DictConfig):
 
     log.info(f'Starting demo: {cfg.action}')
 
-    if cfg.action == 'config_object':
-        show_hydra_config(cfg)
-    elif cfg.action == 'test':
-        test(cfg)
-    elif cfg.action == 'visualize_dataset_scans':
-        visualize_dataset_scans(cfg)
-    elif cfg.action == 'visualize_dataset_clouds':
-        visualize_dataset_clouds(cfg)
-    elif cfg.action == 'visualize_dataset_statistics':
-        visualize_dataset_statistics(cfg)
-    elif cfg.action == 'visualize_feature':
+    # ==================== DATASET VISUALIZATIONS ====================
+
+    if cfg.option == 'dataset_scans':
+        visualize_scans(cfg)
+    elif cfg.option == 'dataset_clouds':
+        visualize_clouds(cfg)
+    elif cfg.option == 'dataset_statistics':
+        visualize_statistics(cfg)
+    elif cfg.option == 'augmentation':
+        raise NotImplementedError
+
+    # ==================== SUPERPOINT VISUALIZATIONS ====================
+
+    elif cfg.option == 'feature':
         visualize_feature(cfg)
-    elif cfg.action == 'visualize_superpoints':
+    elif cfg.option == 'superpoints':
         visualize_superpoints(cfg)
-    elif cfg.action == 'test_model':
-        test_model(cfg)
-    elif cfg.action == 'visualize_model_training':
-        visualize_model_training(cfg)
-    elif cfg.action == 'visualize_model_experiment':
-        visualize_model_experiment(cfg)
-    elif cfg.action == 'create_kitti360_config':
-        create_kitti360_config()
-    elif cfg.action == 'visualize_kitti360_conversion':
-        visualize_kitti360_conversion(cfg)
-    elif cfg.action == 'visualize_filters':
+
+    # ==================== EXPERIMENT VISUALIZATIONS ====================
+
+    elif cfg.option == 'model_comparison':
+        visualize_model_comparison(cfg)
+    elif cfg.option == 'loss_comparison':
+        raise NotImplementedError
+    elif cfg.option == 'baseline':
+        raise NotImplementedError
+    elif cfg.option == 'learning':
+        raise NotImplementedError
+
+    # ==================== FILTERING ====================
+
+    elif cfg.option == 'filters':
         visualize_filters(cfg)
+
+    # ==================== MODEL PREDICTIONS ====================
+
+    elif cfg.option == 'model_predictions':
+        raise NotImplementedError
+
+    # ==================== DATASET CONVERSION ====================
+
+    elif cfg.option == 'kitti360_conversion':
+        converter = KITTI360Converter(cfg)
+        converter.visualize()
     else:
         raise ValueError('Invalid demo type.')
 
     log.info('Demo completed.')
-
-
-def test(cfg: DictConfig):
-    print(cfg)
-
-
-def show_hydra_config(cfg: DictConfig) -> None:
-    """ Show how to use Hydra for configuration management.
-    :param cfg: Configuration object.
-    """
-    print('\nThis project uses Hydra for configuration management.')
-    print(f'Configuration object type is: {type(cfg)}')
-    print(f'Configuration content is separated into groups:')
-    for group in cfg.keys():
-        print(f'\t{group}')
-
-    print(cfg.train.batch_size)
-
-    print('\nPaths dynamically generated to DictConfig object:')
-    for name, path in cfg.path.items():
-        print(f'\t{name}: {path}')
-    print('')
-
-
-def test_model(cfg: DictConfig) -> None:
-    artifact_path = cfg.artifact_path
-    size = cfg.size if 'size' in cfg else None
-    model_name = artifact_path.split('/')[-1].split(':')[0]
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    dataset = SemanticDataset(split='val', cfg=cfg.ds, dataset_path=cfg.ds.path,
-                              project_name='demo', num_clouds=size)
-    scan_interface = ScanInterface(dataset.project_name)
-
-    laser_scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True,
-                           H=cfg.ds.projection.H, W=cfg.ds.projection.W, fov_up=cfg.ds.projection.fov_up,
-                           fov_down=cfg.ds.projection.fov_down)
-
-    prediction_files = [path.replace('sequences', dataset.project_name) for path in dataset.scans]
-    with wandb.init(project='demo', job_type='test_model'):
-        # Load the model
-        artifact_dir = wandb.use_artifact(artifact_path).download()
-        model = torch.load(os.path.join(artifact_dir, f'{model_name}.pt'), map_location=device)
-        model_state_dict = model['model_state_dict']
-        model = get_model(cfg=cfg, device=device)
-        model.load_state_dict(model_state_dict)
-
-        # Save the predictions of the model on the validation set
-        model.eval()
-        with torch.no_grad():
-            for i, scan_file in enumerate(dataset.scans):
-                scan, label, _, _, _ = dataset[i]
-                scan = torch.from_numpy(scan).to(device).unsqueeze(0)
-                pred = model(scan)
-                pred = pred.argmax(dim=1)
-                pred = pred.cpu().numpy().squeeze()
-                scan_interface.add_prediction(scan_file, pred)
-
-        # Visualize the predictions
-        vis = ScanVis(laser_scan=laser_scan, scans=dataset.scans, labels=dataset.scans,
-                      predictions=prediction_files)
-        vis.run()
 
 
 def visualize_filters(cfg: DictConfig):
@@ -186,108 +141,6 @@ def visualize_filters(cfg: DictConfig):
     # pcd.points = o3d.utility.Vector3dVector(points)
     # pcd.colors = o3d.utility.Vector3dVector(f3_colors)
     # o3d.visualization.draw_geometries([pcd])
-
-
-def visualize_dataset_scans(cfg: DictConfig):
-    size = cfg.size if 'size' in cfg else None
-    split = cfg.split if 'split' in cfg else 'train'
-    sequences = [cfg.sequence] if 'sequence' in cfg else None
-
-    # Create dataset
-    dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
-                              cfg=cfg.ds, split=split, num_clouds=size, sequences=sequences)
-
-    # Create scan object
-    laser_scan = LaserScan(label_map=cfg.ds.learning_map, color_map=cfg.ds.color_map_train, colorize=True,
-                           H=cfg.ds.projection.H, W=cfg.ds.projection.W, fov_up=cfg.ds.projection.fov_up,
-                           fov_down=cfg.ds.projection.fov_down)
-
-    # Visualizer
-    vis = ScanVis(laser_scan=laser_scan, scans=dataset.scan_files, labels=dataset.scan_files,
-                  raw_scan=True)
-    vis.run()
-
-
-def visualize_dataset_clouds(cfg: DictConfig):
-    size = cfg.size if 'size' in cfg else None
-    split = cfg.split if 'split' in cfg else 'train'
-    sequences = [cfg.sequence] if 'sequence' in cfg else None
-
-    # Create dataset
-    dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
-                              cfg=cfg.ds, split=split, num_clouds=size, sequences=sequences)
-    cloud_interface = CloudInterface()
-
-    for cloud_file in dataset.clouds:
-        points = cloud_interface.read_points(cloud_file)
-        labels = cloud_interface.read_labels(cloud_file)
-
-        colors = map_colors(labels, cfg.ds.color_map_train)
-        visualize_cloud(points, colors)
-
-
-def visualize_dataset_statistics(cfg: DictConfig):
-    size = cfg.size if 'size' in cfg else None
-    sequences = [cfg.sequence] if 'sequence' in cfg else None
-
-    # Create dataset
-    train_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
-                               cfg=cfg.ds, split='train', num_clouds=size, sequences=sequences)
-    val_ds = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
-                             cfg=cfg.ds, split='val', num_clouds=size, sequences=sequences)
-    train_stats = train_ds.statistics
-    val_stats = val_ds.statistics
-
-    print('done')
-
-
-def visualize_feature(cfg: DictConfig) -> None:
-    size = cfg.size if 'size' in cfg else None
-    split = cfg.split if 'split' in cfg else 'train'
-    feature = cfg.feature if 'feature' in cfg else 'sphericity'
-    sequences = [cfg.sequence] if 'sequence' in cfg else None
-
-    # Create dataset
-    dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
-                              cfg=cfg.ds, split=split, num_clouds=size, sequences=sequences)
-    cloud_interface = CloudInterface()
-
-    for cloud_file in dataset.clouds:
-        points = cloud_interface.read_points(cloud_file)
-
-        # Compute features
-        feature = calculate_features(points)[feature]
-
-        # Visualize feature
-        log.info(f'{feature} max: {np.max(feature)}, {feature} min: {np.min(feature[feature != -1])}')
-        feature_colors = colorize_values(feature, color_map='viridis', data_range=(-0.5, np.max(feature)), ignore=(-1,))
-        visualize_cloud(points, feature_colors)
-
-
-def visualize_superpoints(cfg: DictConfig) -> None:
-    size = cfg.size if 'size' in cfg else None
-    split = cfg.split if 'split' in cfg else 'train'
-    sequences = [cfg.sequence] if 'sequence' in cfg else None
-
-    # Create dataset
-    dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
-                              cfg=cfg.ds, split=split, num_clouds=size, sequences=sequences)
-    cloud_interface = CloudInterface()
-
-    for cloud_file in dataset.clouds:
-        points = cloud_interface.read_points(cloud_file)
-        colors = cloud_interface.read_colors(cloud_file)
-        edge_sources, edge_targets = cloud_interface.read_edges(cloud_file)
-
-        components, component_map = partition_cloud(points=points, colors=colors,
-                                                    edge_sources=edge_sources, edge_targets=edge_targets)
-
-        superpoint_colors = colorize_instances(component_map)
-        visualize_cloud(points, superpoint_colors)
-
-
-def visualize_redal_features(cfg: DictConfig):
-    pass
 
 
 def visualize_model_training(cfg: DictConfig) -> None:
@@ -355,23 +208,6 @@ def visualize_model_experiment(cfg: DictConfig) -> None:
 
         # TODO: Add confusion matrix of the best epoch
         # TODO: Add gradient flow of the last epoch
-
-
-def visualize_loss_experiment(cfg: DictConfig) -> None:
-    # TODO: Add train and validation loss
-    # TODO: Add train and validation accuracy
-    # TODO: Add train and validation MIoU
-
-    raise NotImplementedError
-
-
-def visualize_kitti360_conversion(cfg: DictConfig):
-    """ Visualize KITTI360 conversion.
-    :param cfg: Configuration object.
-    """
-
-    converter = KITTI360Converter(cfg)
-    converter.visualize()
 
 
 if __name__ == '__main__':

@@ -74,6 +74,7 @@ def pull_artifact(artifact: str, device: torch.device = torch.device('cpu')) -> 
     data = torch.load(os.path.join(artifact_dir, f'{file_name}.pt'), map_location=device)
     log.info(f'Artifact {artifact} pulled from W&B.')
     shutil.rmtree(artifact_dir)
+    delete_empty_directory(os.path.dirname(artifact_dir))
     return data
 
 
@@ -102,3 +103,14 @@ def push_artifact(artifact: str, data: Any, artifact_type: str, metadata: dict =
     artifact.add_file(path)
     wandb.log_artifact(artifact)
     os.remove(path)
+
+
+def delete_empty_directory(directory_path):
+    if os.path.exists(directory_path):
+        if len(os.listdir(directory_path)) == 0:
+            os.rmdir(directory_path)
+            log.info("Empty directory deleted:", directory_path)
+        else:
+            log.info("Directory is not empty:", directory_path)
+    else:
+        log.info("Directory does not exist:", directory_path)

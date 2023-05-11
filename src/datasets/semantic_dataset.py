@@ -4,7 +4,7 @@ from omegaconf import DictConfig
 from .base_dataset import Dataset
 from src.utils.cloud import augment_points
 from src.utils.project import project_points
-from src.utils.filter import distant_points, radius_outliers, filter_scan
+from src.utils.filter import filter_scan
 
 
 class SemanticDataset(Dataset):
