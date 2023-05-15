@@ -128,7 +128,8 @@ class SemanticTrainer(BaseTrainer):
     def reset(self):
         self.epoch = 0
         self.logger.reset()
-        self.model.load_state_dict(self.best_model['state_dict'])
+        self.model = get_model(self.cfg, self.device)
+        # self.model.load_state_dict(self.best_model['state_dict'])
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.cfg.train.learning_rate)
 
     def train(self):
@@ -140,5 +141,6 @@ class SemanticTrainer(BaseTrainer):
                 self.best_model['state_dict'] = self.model.state_dict()
                 self.best_model['miou'] = self.logger.history['miou_val'][-1]
                 self.best_model['epoch'] = self.epoch
+                log.info(f'New best model found at epoch {self.epoch} with mIoU {self.best_model["miou"]:.4f}')
 
             self.epoch += 1

@@ -109,8 +109,8 @@ def delete_empty_directory(directory_path):
     if os.path.exists(directory_path):
         if len(os.listdir(directory_path)) == 0:
             os.rmdir(directory_path)
-            log.info("Empty directory deleted:", directory_path)
+            log.info(f"Empty directory deleted: {directory_path}")
         else:
-            log.info("Directory is not empty:", directory_path)
+            log.info(f"Directory is not empty: {directory_path}")
     else:
-        log.info("Directory does not exist:", directory_path)
+        log.info(f"Directory does not exist: {directory_path}")
