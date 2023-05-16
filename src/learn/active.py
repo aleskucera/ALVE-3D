@@ -31,7 +31,7 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
     weighted_metric_stats = f'WeightedMetricStats_{info}'
     dataset_stats = f'DatasetStats_{info}'
 
-    wandb_project = 'AL-KITTI360-2'
+    wandb_project = 'AL-KITTI360-Distance-2'
     wandb_group = f'{cfg.active.strategy}_{cfg.active.cloud_partitions}'
 
     # Create datasets

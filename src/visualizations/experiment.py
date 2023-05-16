@@ -119,6 +119,6 @@ def visualize_baseline(cfg: DictConfig) -> None:
 
 
 def visualize_learning(cfg: DictConfig) -> None:
-    vis = StrategyExperimentVisualizer('experiments/strategy_comparison/KITTI360.yaml')
+    vis = StrategyExperimentVisualizer('experiments/strategy_comparison/KITTI360-2.yaml')
     vis.plot_miou()
     vis.plot_accuracy()
