@@ -32,7 +32,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 singularity run --nv --bind /mnt --env WANDB_API_KEY=c54dade10e3c04fca21bf96016298e59b1e030ae \
-            singularity/alve-3d.sif python train_active.py option=full \
+            singularity/alve-3d.sif python train_active.py option=train \
             experiment="$experiment" \
             train.batch_size="$batch_size" \
             train.dataset_size="$dataset_size" \
