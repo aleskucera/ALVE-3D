@@ -145,7 +145,6 @@ def create_seed(cfg: DictConfig, device: torch.device) -> None:
         log_dataset_statistics(cfg, train_ds)
 
         # Train model on selected voxels
-        print(f'Labeled percentage of selection {train_ds.statistics["labeled_ratio"] * 100:.2f}%')
         trainer.train()
 
         push_artifact(model_name, trainer.best_model['state_dict'], 'model')
