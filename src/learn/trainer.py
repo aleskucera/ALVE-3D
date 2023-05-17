@@ -129,7 +129,6 @@ class SemanticTrainer(BaseTrainer):
         self.epoch = 0
         self.logger.reset()
         self.model = get_model(self.cfg, self.device)
-        # self.model.load_state_dict(self.best_model['state_dict'])
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.cfg.train.learning_rate)
 
     def train(self):
