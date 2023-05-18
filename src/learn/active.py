@@ -19,7 +19,8 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
     model_artifact = cfg.active.model_artifact
     selection_artifact = cfg.active.selection_artifact
 
-    info = f'{cfg.active.strategy}_{cfg.active.cloud_partitions}_{cfg.model.architecture}_{cfg.ds.name}'
+    filter_type = cfg.active.filter_type if cfg.active.filter_type is not None else ''
+    info = f'{cfg.active.strategy}_{cfg.active.cloud_partitions}_{cfg.ds.name}_{filter_type}'
     model_name = f'Model_{info}'
     history_name = f'History_{info}'
     metric_stats = f'MetricStats_{info}'
@@ -27,7 +28,7 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
     dataset_stats = f'DatasetStats_{info}'
     weighted_metric_stats = f'WeightedMetricStats_{info}'
 
-    wandb_project = 'AL-KITTI360-4'
+    wandb_project = f'AL-KITTI360-{filter_type}-4'
     wandb_group = f'{cfg.active.strategy}_{cfg.active.cloud_partitions}'
 
     # Create datasets

@@ -14,5 +14,4 @@ active:
   diversity_aware: false
   cloud_partitions: Superpoints
 
-
 # sbatch --output=Strategy_EpistemicUncertainty.out --error=Strategy_EpistemicUncertainty.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_EpistemicUncertainty
