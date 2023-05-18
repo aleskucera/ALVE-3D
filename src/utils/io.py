@@ -123,10 +123,10 @@ class CloudInterface(object):
                 return map_labels(np.asarray(f['labels']).flatten().astype(np.int64), self.label_map)
             return np.asarray(f['labels']).flatten().astype(np.int64)
 
-    def read_selected_labels(self, path: str):
+    def read_voxel_selection(self, path: str):
         if self.project_name is not None:
             with h5py.File(path.replace('sequences', self.project_name), 'r') as f:
-                return np.asarray(f['selected_labels']).flatten().astype(bool)
+                return np.asarray(f['voxel_selection']).flatten().astype(np.int64)
 
     @staticmethod
     def read_edges(path: str):
@@ -204,14 +204,15 @@ class CloudInterface(object):
                 del f['color_discontinuity']
             f.create_dataset('color_discontinuity', data=color_discontinuity.astype(np.float32))
 
-    def select_voxels(self, path: str, voxels: np.ndarray):
+    def write_voxel_selection(self, path: str, voxel_selection: np.ndarray):
         with h5py.File(path.replace('sequences', self.project_name), 'r+') as f:
-            f['selected_labels'][voxels] = 1
+            if 'voxel_selection' in f:
+                del f['voxel_selection']
+            f['voxel_selection'] = voxel_selection.astype(np.int64)
 
     def select_graph(self, path: str, edges: np.ndarray, vertices: np.ndarray):
         with h5py.File(path.replace('sequences', self.project_name), 'r+') as f:
             f['selected_edges'][edges] = 1
-            f['selected_labels'][vertices] = 1
             f['selected_vertices'][vertices] = 1
 
 
@@ -280,11 +281,11 @@ def __initialize_dataset(scans: np.ndarray, clouds: np.ndarray, project_name: st
 
         with h5py.File(cloud.replace('sequences', project_name), 'w') as f:
             if al_experiment and split == 'train':
-                f.create_dataset('selected_labels', data=np.zeros_like(labels, dtype=bool))
+                f.create_dataset('voxel_selection', data=np.zeros_like(labels, dtype=bool))
                 f.create_dataset('selected_vertices', data=np.zeros_like(labels, dtype=bool))
                 f.create_dataset('selected_edges', data=np.zeros_like(edge_sources, dtype=bool))
             else:
-                f.create_dataset('selected_labels', data=np.ones_like(labels, dtype=bool))
+                f.create_dataset('voxel_selection', data=np.ones_like(labels, dtype=bool))
                 f.create_dataset('selected_vertices', data=np.ones_like(labels, dtype=bool))
                 f.create_dataset('selected_edges', data=np.ones_like(edge_sources, dtype=bool))
 

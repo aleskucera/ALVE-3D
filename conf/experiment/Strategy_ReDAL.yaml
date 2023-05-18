@@ -14,5 +14,4 @@ active:
   diversity_aware: true
   cloud_partitions: Superpoints
 
-
-# sbatch --output=Strategy_ReDAL.out --error=Strategy_ReDAL.out --gpus-per-node=1 scripts/active/full.batch --experiment Strategy_ReDAL
+# sbatch --output=Strategy_ReDAL.out --error=Strategy_ReDAL.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_ReDAL

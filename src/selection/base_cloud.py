@@ -203,83 +203,10 @@ class Cloud(object):
         self._save_metric(least_confidence, features=features)
         self.__reset()
 
-    # def __calculate_metric(self, values: torch.Tensor, function: callable) -> None:
-    #     """ Calculates the metric for the voxels in the cloud specified by the function argument.
-    #
-    #     :param values: Items that should be used to calculate the metric.
-    #                   The expected shape is (N, C) where N is the number
-    #     :param function: Function that is used to calculate the metric. The function must take a tensor
-    #                      of shape (N, C) and return a scalar value.
-    #     """
-    #     log.info('Calculating metric for cloud: ' + self.path)
-    #     start = time.time()
-    #     metric = torch.full((self.size,), float('nan'), dtype=torch.float32)
-    #     features = torch.full((self.size, self.num_classes), float('nan'),
-    #                           dtype=torch.float32) if self.diversity_aware else None
-    #
-    #     order = torch.argsort(self.voxel_map)
-    #     unique_voxels, num_views = torch.unique(self.voxel_map, return_counts=True)
-    #
-    #     values = values[order]
-    #     voxel_map = unique_voxels.type(torch.long)
-    #     value_sets = torch.split(values, num_views.tolist())
-    #
-    #     vals = torch.tensor([])
-    #     feats = torch.tensor([])
-    #     for value_set in value_sets:
-    #         vals = torch.cat((vals, function(value_set).unsqueeze(0)), dim=0)
-    #         if self.diversity_aware:
-    #             feats = torch.cat((feats, value_set.mean(dim=0).unsqueeze(0)), dim=0)
-    #
-    #     log.info(f'Calculating metric for {self.path} took {time.time() - start} seconds.')
-    #     start = time.time()
-    #     metric[voxel_map] = vals
-    #     if self.diversity_aware:
-    #         features[voxel_map] = feats
-    #         self._save_metric(metric, features)
-    #     else:
-    #         self._save_metric(metric)
-    #     log.info(f'Saving metric for {self.path} took {time.time() - start} seconds.')
-
     def __reset(self) -> None:
         self.voxel_map = torch.zeros((0,), dtype=torch.int32)
         self.variances = torch.zeros((0,), dtype=torch.float32)
         self.predictions = torch.zeros((0,), dtype=torch.float32)
-
-    # def __average_entropy(self, probability_distribution_set: torch.Tensor) -> torch.Tensor:
-    #     probability_distribution_set = torch.clamp(probability_distribution_set, min=self.eps, max=1 - self.eps)
-    #     entropies = torch.sum(- probability_distribution_set * torch.log(probability_distribution_set), dim=1)
-    #     return torch.mean(entropies)
-    #
-    # def __viewpoint_entropy(self, probability_distribution_set: torch.Tensor) -> torch.Tensor:
-    #     mean_distribution = torch.mean(probability_distribution_set, dim=0)
-    #     mean_distribution = torch.clamp(mean_distribution, min=self.eps, max=1 - self.eps)
-    #     return torch.sum(- mean_distribution * torch.log(mean_distribution))
-    #
-    # @staticmethod
-    # def __least_confident(probability_distribution_set: torch.Tensor) -> torch.Tensor:
-    #     max_probabilities = torch.max(probability_distribution_set, dim=1)[0]
-    #     return torch.mean(1 - max_probabilities)
-    #
-    # @staticmethod
-    # def __margin(probability_distribution_set: torch.Tensor) -> torch.Tensor:
-    #     sorted_probabilities = torch.sort(probability_distribution_set, dim=1)[0]
-    #     margin = sorted_probabilities[:, -1] - sorted_probabilities[:, -2]
-    #     return torch.mean(margin)
-    #
-    # @staticmethod
-    # def __variance(predictions: torch.Tensor) -> torch.Tensor:
-    #     var = torch.var(predictions, dim=0)
-    #     return torch.mean(var)
-
-    # @staticmethod
-    # def __cluster_by_voxels(items: torch.Tensor, voxel_map: torch.Tensor) -> tuple:
-    #     order = torch.argsort(voxel_map)
-    #     unique_voxels, num_views = torch.unique(voxel_map, return_counts=True)
-    #
-    #     items = items[order]
-    #     item_sets = torch.split(items, num_views.tolist())
-    #     return item_sets, unique_voxels.type(torch.long)
 
     def __len__(self) -> int:
         return self.size

@@ -49,7 +49,7 @@ def cart2sph(points: np.ndarray) -> tuple:
 
     x, y, z = points[:, 0], points[:, 1], points[:, 2]
     r = np.linalg.norm(points, axis=1)
-    elev = np.arctan2(y, x)
+    elev = - np.arctan2(y, x)
     azim = np.arctan2(z, np.sqrt(x ** 2 + y ** 2))
     return r, elev, azim
 

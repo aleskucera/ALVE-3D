@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 from src.models import get_model
 from .base_cloud import Cloud
 from src.datasets import Dataset
+from src.utils.io import CloudInterface
 
 log = logging.getLogger(__name__)
 
@@ -61,11 +62,16 @@ class Selector(object):
 
     def load_voxel_selection(self, voxel_selection: dict, dataset: Dataset = None) -> None:
         self.voxels_labeled = 0
+        CI = CloudInterface(self.project_name)
         for cloud_name, label_mask in voxel_selection.items():
             cloud = self.get_cloud(cloud_name)
             voxels = torch.nonzero(label_mask).squeeze(1)
-            cloud.label_voxels(voxels, dataset)
             self.voxels_labeled += voxels.shape[0]
+
+            cloud.label_mask[voxels] = True
+            if dataset is not None:
+                dataset.label_voxels(voxels.numpy(), cloud.path)
+
         log.info(f'Loaded voxel selection with {self.percentage_selected}% of the dataset labeled.')
 
     def _compute_values(self, dataset: Dataset) -> None:

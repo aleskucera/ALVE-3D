@@ -14,5 +14,4 @@ active:
   diversity_aware: false
   cloud_partitions: Superpoints
 
-
-# sbatch --output=Strategy_Random.out --error=Strategy_Random.out --gpus-per-node=1 scripts/active/full.batch --experiment Strategy_Random
+# sbatch --output=Strategy_Random.out --error=Strategy_Random.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_Random

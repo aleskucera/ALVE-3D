@@ -14,7 +14,6 @@ log = logging.getLogger(__name__)
 class SuperpointSelector(Selector):
     def __init__(self, cfg: DictConfig, project_name: str, cloud_paths: np.ndarray, device: torch.device):
         super().__init__(cfg, project_name, cloud_paths, device)
-
         self._initialize()
 
     def _initialize(self):
@@ -25,6 +24,7 @@ class SuperpointSelector(Selector):
             surface_variation = torch.from_numpy(cloud_interface.read_surface_variation(cloud_path))
             color_discontinuity = cloud_interface.read_color_discontinuity(cloud_path)
             color_discontinuity = torch.from_numpy(color_discontinuity) if color_discontinuity is not None else None
+
             num_voxels = superpoint_map.shape[0]
             self.num_voxels += num_voxels
             self.clouds.append(SuperpointCloud(path=cloud_path,
@@ -59,15 +59,15 @@ class SuperpointSelector(Selector):
         return self._choose_voxels(superpoint_map, superpoint_sizes, labels, cloud_map, selection_size)
 
     def _select_by_criterion(self, dataset: Dataset, percentage: float) -> tuple:
+        selection_size = self.get_selection_size(percentage)
+        self._compute_values(dataset)
+
         values = torch.tensor([], dtype=torch.float32)
         labels = torch.tensor([], dtype=torch.long)
         cloud_map = torch.tensor([], dtype=torch.long)
         features = torch.tensor([], dtype=torch.float32)
         superpoint_map = torch.tensor([], dtype=torch.long)
         superpoint_sizes = torch.tensor([], dtype=torch.long)
-        selection_size = self.get_selection_size(percentage)
-
-        self._compute_values(dataset)
 
         for cloud in self.clouds:
             if cloud.values is None:
@@ -120,8 +120,7 @@ class SuperpointSelector(Selector):
 
         log.info(f"Choosing superpoints from {superpoint_map.shape[0]} superpoints")
         log.info(f"Selected {selected_superpoints.shape[0]} superpoints")
-        log.info(f"Weighted order: {True if weighted_order is not None else False}")
-        log.info(f"Normal order: {True if normal_order is not None else False}")
+        log.info(f"Order type: {'Weighted' if weighted_order is not None else 'Normal'}")
 
         voxel_selection = dict()
         for cloud in self.clouds:

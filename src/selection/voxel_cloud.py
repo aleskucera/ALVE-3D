@@ -5,15 +5,16 @@ from .base_cloud import Cloud
 
 class VoxelCloud(Cloud):
     def __init__(self, path: str, size: int, cloud_id: int,
+                 labels: torch.Tensor,
                  diversity_aware: bool,
                  surface_variation: torch.Tensor,
                  color_discontinuity: torch.Tensor = None):
-        super().__init__(path, size, cloud_id, diversity_aware,
+        super().__init__(path, size, cloud_id, diversity_aware, labels,
                          surface_variation, color_discontinuity)
         self.values = None
         self.features = None
         self.voxel_indices = torch.arange(self.size, dtype=torch.long)
-        self.cloud_ids = torch.full((self.size,), self.id, dtype=torch.long)
+        self.ids = torch.full((self.size,), self.id, dtype=torch.long)
 
     def _save_values(self, values: torch.Tensor, features: torch.Tensor = None):
         self.values = values

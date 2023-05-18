@@ -134,8 +134,8 @@ class Dataset(TorchDataset):
 
         for path in tqdm(self.clouds, desc='Calculating dataset statistics'):
             labels = self.CI.read_labels(path)
-            label_mask = self.CI.read_selected_labels(path)
-            sel_labels = labels[label_mask]
+            voxel_selection = self.CI.read_voxel_selection(path)
+            sel_labels = labels[voxel_selection]
 
             class_counts, counter = self.__add_counts(labels=labels,
                                                       counter=counter,
@@ -193,7 +193,7 @@ class Dataset(TorchDataset):
             self.scan_selection_mask[sample_idx] = self.SI.select_voxels(scan_file, voxels)
 
         cloud_idx = self.cloud_index(cloud_path)
-        self.CI.select_voxels(cloud_path, voxels)
+        self.CI.write_voxel_selection(cloud_path, voxels)
         self.cloud_selection_mask[cloud_idx] = True
 
     def __initialize(self):

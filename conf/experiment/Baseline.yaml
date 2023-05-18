@@ -10,4 +10,4 @@ train:
   loss: LovaszLoss
   learning_rate: 0.01
 
-# sbatch --output=Baseline.out --error=Baseline.out --gpus-per-node=1 scripts/passive/baseline.batch --experiment Baseline
+# sbatch --output=Baseline.out --error=Baseline.out --gpus-per-node=1 scripts/passive/train.batch --experiment Baseline

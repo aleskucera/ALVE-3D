@@ -11,4 +11,4 @@ train:
   loss: LovaszLoss
   learning_rate: 0.01
 
-# sbatch --output=Loss_Lovasz.out --error=Loss_Lovasz.out --gpus-per-node=1 --partition=gpufast --time=4:00:00 scripts/passive/baseline.batch --experiment Loss_Lovasz
+# sbatch --output=Loss_Lovasz.out --error=Loss_Lovasz.out --gpus-per-node=1 --partition=gpufast --time=4:00:00 scripts/passive/train.batch --experiment Loss_Lovasz

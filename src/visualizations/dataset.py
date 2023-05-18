@@ -1,20 +1,23 @@
 import logging
 
+import numpy as np
+import matplotlib.pyplot as plt
 from omegaconf import DictConfig
+from mpl_toolkits.axes_grid1 import ImageGrid
 
 from src.datasets import SemanticDataset
-from src.utils.cloud import visualize_cloud
+from src.utils.cloud import visualize_cloud, augment_points
 from src.laserscan import LaserScan, ScanVis
-from src.utils.io import CloudInterface
+from src.utils.io import CloudInterface, ScanInterface
 from src.utils.map import map_colors
 from src.utils.visualize import bar_chart
+from src.utils.project import project_points
 
 log = logging.getLogger(__name__)
 
 
 def visualize_scans(cfg: DictConfig):
     split = cfg.split if 'split' in cfg else 'train'
-
     log.info(f'Visualizing scans of {split} split')
 
     dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
@@ -32,7 +35,6 @@ def visualize_scans(cfg: DictConfig):
 def visualize_clouds(cfg: DictConfig):
     color_arg = cfg.color if 'color' in cfg else 'labels'
     split = cfg.split if 'split' in cfg else 'train'
-
     log.info(f'Visualizing clouds of {split} split')
 
     dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
@@ -55,7 +57,6 @@ def visualize_clouds(cfg: DictConfig):
 
 def visualize_statistics(cfg: DictConfig):
     split = cfg.split if 'split' in cfg else 'train'
-
     log.info(f'Visualizing statistics of {split} split')
 
     dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
@@ -65,3 +66,75 @@ def visualize_statistics(cfg: DictConfig):
     dataset_distribution = dataset.statistics['class_distribution'][1:] * 100
 
     bar_chart(values=dataset_distribution, labels=label_names, value_label='Proportion [%]')
+
+
+def visualize_augmentation(cfg: DictConfig):
+    split = cfg.split if 'split' in cfg else 'train'
+    log.info(f'Visualizing statistics of {split} split')
+
+    dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
+                              cfg=cfg.ds, split=split, num_clouds=None, sequences=None)
+
+    scan_interface = ScanInterface(label_map=cfg.ds.learning_map)
+    scan = dataset.scans[491]
+    points = scan_interface.read_points(scan)
+    labels = scan_interface.read_labels(scan)
+
+    # Project original scan
+    proj_original = project_augmentation(cfg, points, labels, augmentation=None)
+    proj_original = map_colors(proj_original, cfg.ds.color_map_train)
+
+    # Drop points
+    proj_drop = project_augmentation(cfg, points, labels, augmentation='drop')
+    proj_drop = map_colors(proj_drop, cfg.ds.color_map_train)
+
+    # Rotate points around z-axis
+    proj_rotate = project_augmentation(cfg, points, labels, augmentation='rotate')
+    proj_rotate = map_colors(proj_rotate, cfg.ds.color_map_train)
+
+    # Jitter points
+    proj_jitter = project_augmentation(cfg, points, labels, augmentation='jitter')
+    proj_jitter = map_colors(proj_jitter, cfg.ds.color_map_train)
+
+    # Flip points around x-axis
+    proj_flip = project_augmentation(cfg, points, labels, augmentation='flip')
+    proj_flip = map_colors(proj_flip, cfg.ds.color_map_train)
+
+    fig = plt.figure(figsize=(6, 4), dpi=150)
+    grid = ImageGrid(fig, 111, nrows_ncols=(5, 1), axes_pad=0.4)
+
+    images = [proj_original, proj_drop, proj_rotate, proj_jitter, proj_flip]
+    titles = ['Original', 'Drop Random Points', 'Rotate around z-axis', 'Jitter', 'Flip around x-axis']
+
+    for ax, image, title in zip(grid, images, titles):
+        ax.set_title(title)
+        ax.imshow(image, aspect='auto')
+        ax.axis('off')
+
+    plt.show()
+
+
+def project_augmentation(cfg, points: np.ndarray, labels: np.ndarray, augmentation: str = None):
+    assert augmentation in [None, 'drop', 'rotate', 'jitter', 'flip']
+    proj_H = cfg.ds.projection.H
+    proj_W = cfg.ds.projection.W
+    proj_fov_up = cfg.ds.projection.fov_up
+    proj_fov_down = cfg.ds.projection.fov_down
+
+    if augmentation == 'drop':
+        points, drop_mask = augment_points(points, drop_prob=0.5, flip_prob=0, rotation_prob=0, translation_prob=0)
+        labels = labels[drop_mask]
+    elif augmentation == 'rotate':
+        points, _ = augment_points(points, drop_prob=0, flip_prob=0, rotation_prob=1, translation_prob=0)
+    elif augmentation == 'jitter':
+        points, _ = augment_points(points, drop_prob=0, flip_prob=0, rotation_prob=0, translation_prob=1)
+    elif augmentation == 'flip':
+        points, _ = augment_points(points, drop_prob=0, flip_prob=1, rotation_prob=0, translation_prob=0)
+
+    proj = project_points(points, proj_H, proj_W, proj_fov_up, proj_fov_down)
+    proj_idx, proj_mask = proj['idx'], proj['mask']
+
+    proj_labels = np.zeros((proj_H, proj_W), dtype=np.long)
+    proj_labels[proj_mask] = labels[proj_idx[proj_mask]]
+
+    return proj_labels

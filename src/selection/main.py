@@ -21,9 +21,9 @@ log = logging.getLogger(__name__)
 
 
 def get_selector(cfg: DictConfig, project_name: str, cloud_paths: np.ndarray, device: torch.device, ) -> Selector:
-    # if selection_objects == 'Voxels':
-    #     return VoxelSelector(dataset_path, project_name, cloud_paths, device, criterion, cfg)
-    if cfg.active.cloud_partitions == 'Superpoints':
+    if cfg.active.cloud_partitions == 'Voxels':
+        return VoxelSelector(cfg, project_name, cloud_paths, device)
+    elif cfg.active.cloud_partitions == 'Superpoints':
         return SuperpointSelector(cfg, project_name, cloud_paths, device)
     else:
         raise ValueError(f'Unknown selection_objects: {cfg.active.cloud_partitions}')
