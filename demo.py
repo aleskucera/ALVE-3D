@@ -19,7 +19,8 @@ from src.utils.filter import filter_scan
 
 from src.visualizations.dataset import visualize_scans, visualize_clouds, visualize_statistics
 from src.visualizations.superpoints import visualize_feature, visualize_superpoints
-from src.visualizations.experiment import visualize_model_comparison, visualize_learning
+from src.visualizations.experiment import visualize_model_comparison, visualize_learning, visualize_loss_comparison, \
+    visualize_baseline
 
 log = logging.getLogger(__name__)
 
@@ -53,9 +54,9 @@ def main(cfg: DictConfig):
     elif cfg.option == 'model_comparison':
         visualize_model_comparison(cfg)
     elif cfg.option == 'loss_comparison':
-        raise NotImplementedError
+        visualize_loss_comparison(cfg)
     elif cfg.option == 'baseline':
-        raise NotImplementedError
+        visualize_baseline(cfg)
     elif cfg.option == 'strategy_comparison':
         visualize_learning(cfg)
 

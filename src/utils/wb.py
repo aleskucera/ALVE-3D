@@ -74,6 +74,7 @@ def pull_artifact(artifact: str, device: torch.device = torch.device('cpu')) -> 
     data = torch.load(os.path.join(artifact_dir, f'{file_name}.pt'), map_location=device)
     log.info(f'Artifact {artifact} pulled from W&B.')
     shutil.rmtree(artifact_dir)
+    log.info(f'Artifact directory {artifact_dir} deleted.')
     delete_empty_directory(os.path.dirname(artifact_dir))
     return data
 

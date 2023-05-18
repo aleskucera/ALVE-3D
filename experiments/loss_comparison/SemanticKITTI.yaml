@@ -1,0 +1,4 @@
+LovaszLoss: aleskucera/Loss-Comparison/History_SalsaNext_SemanticKITTI_LovaszLoss:v0
+CrossEntropyLoss: aleskucera/Loss-Comparison/History_SalsaNext_SemanticKITTI_CrossEntropyLoss:v0
+FocalLoss: aleskucera/Loss-Comparison/History_SalsaNext_SemanticKITTI_FocalLoss:v0
+DiceLoss: aleskucera/Loss-Comparison/History_SalsaNext_SemanticKITTI_DiceLoss:v0
