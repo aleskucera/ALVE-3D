@@ -77,7 +77,7 @@ class Selector(object):
     def _compute_values(self, dataset: Dataset) -> None:
 
         dataset.select_mode()
-        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=4)
+        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=1)
         with torch.no_grad():
             for batch in tqdm(loader, desc=f'Calculating {self.strategy}'):
                 scan_batch, _, voxel_map_batch, cloud_id_batch, end_batch = batch
