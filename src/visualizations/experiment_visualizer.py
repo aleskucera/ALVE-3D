@@ -53,13 +53,11 @@ class ActiveLearningVisualizer(object):
         fig, ax = plt.subplots()
 
         for i, strategy in enumerate(self.strategies):
-            miou = self.max_mious[strategy]
-            miou = np.array(self.max_mious[strategy])
-            miou = self.nondecreasing_series(miou)
+            miou = self.nondecreasing_series(np.array(self.max_mious[strategy]))
             ax.plot(self.percentages[strategy], miou, label=strategy, linewidth=1.5)
 
-        ax.axhline(y=self.baseline_miou, linestyle='--', linewidth=2, label='100% Baseline')
-        ax.axhline(y=0.9 * self.baseline_miou, linestyle='--', linewidth=2, label='90% Baseline')
+        ax.axhline(y=self.baseline_miou, linestyle='--', linewidth=2, label='100% Baseline', color='black')
+        ax.axhline(y=0.9 * self.baseline_miou, linestyle=':', linewidth=2, label='90% Baseline', color='black')
 
         ax.set_title('Max MIoU over percentages')
         ax.set_xlabel('Percentage of training data')
@@ -75,8 +73,9 @@ class ActiveLearningVisualizer(object):
             accuracy = self.nondecreasing_series(np.array(self.max_accs[strategy]))
             ax.plot(self.percentages[strategy], accuracy, label=strategy, linewidth=1.5)
 
-        ax.axhline(y=self.baseline_acc, linestyle='--', linewidth=2, label='100% Baseline')
-        ax.axhline(y=0.9 * self.baseline_acc, linestyle='--', linewidth=2, label='90% Baseline')
+        # Color black
+        ax.axhline(y=self.baseline_acc, linestyle='--', linewidth=2, label='100% Baseline', color='black')
+        ax.axhline(y=0.9 * self.baseline_acc, linestyle=':', linewidth=2, label='90% Baseline', color='black')
 
         ax.set_title('Max accuracy over percentages')
         ax.set_xlabel('Percentage of training data')
