@@ -2,7 +2,7 @@
 strategy: 'Entropy'
 cloud_partitions: 'Voxels'
 
-batch_size: 2
+batch_size: 1
 seed_percentage: 1
 percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
 
