@@ -13,7 +13,7 @@ diversity_aware: true
 redal_weights: [ 1, 0.1, 0.05 ]
 
 # Scan filter
-filter_type: 'Distance'
+filter_type: 'Radius'
 
 # Artifacts
 model_artifact: 'aleskucera/AL-Seed/SalsaNext_KITTI360:v2'
