@@ -37,7 +37,7 @@ class SemanticDataset(Dataset):
                          project_name, resume, num_clouds,
                          sequences, al_experiment, selection_mode)
         self.parser_type = 'semantic'
-        assert filter_type in ['distance', 'radius', 'statistical', None], 'Invalid scan filter.'
+        assert filter_type in ['Distance', 'Radius', None], 'Invalid scan filter.'
         self.filter_type = filter_type
 
     def __getitem__(self, idx) -> tuple[np.ndarray, np.ndarray, np.ndarray, int, bool]:

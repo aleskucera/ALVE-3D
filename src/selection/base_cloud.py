@@ -190,7 +190,7 @@ class Cloud(object):
     def compute_margin(self) -> None:
         voxel_mean_predictions = scatter_mean(self.predictions, self.voxel_map, dim=0, dim_size=self.size)
         sorted_predictions = torch.sort(voxel_mean_predictions, dim=1, descending=True)[0]
-        margin = sorted_predictions[:, 0] - sorted_predictions[:, 1]
+        margin = sorted_predictions[:, 1] - sorted_predictions[:, 0]
         features = voxel_mean_predictions if self.diversity_aware else None
         self._save_metric(margin, features=features)
         self.__reset()

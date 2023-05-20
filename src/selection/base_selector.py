@@ -11,7 +11,6 @@ from torch.utils.data import DataLoader
 from src.models import get_model
 from .base_cloud import Cloud
 from src.datasets import Dataset
-from src.utils.io import CloudInterface
 
 log = logging.getLogger(__name__)
 
