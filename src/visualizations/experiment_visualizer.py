@@ -47,7 +47,6 @@ class ActiveLearningVisualizer(object):
 
     @staticmethod
     def calculate_max_metric(history_list: list, metric: str):
-        print('hello')
         return [np.max(h[metric]) for h in history_list]
 
     def plot_miou(self):
