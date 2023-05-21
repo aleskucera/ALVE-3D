@@ -1,6 +1,12 @@
 baseline: aleskucera/Baseline/History_SalsaNext_KITTI360_LovaszLoss:v0
 
 strategies:
+  - name: ViewpointVariance
+    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
+    history:
+      artifact: aleskucera/AL-KITTI360-distance-4/History_ViewpointVariance_Superpoints_KITTI360_Distance
+      versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+
   - name: ReDAL
     percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
     history:
@@ -11,6 +17,12 @@ strategies:
     percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
     history:
       artifact: aleskucera/AL-KITTI360-distance-4/History_Confidence_Superpoints_KITTI360_distance
+      versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+
+  - name: Margin
+    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
+    history:
+      artifact: aleskucera/AL-KITTI360-distance-4/History_Margin_Superpoints_KITTI360_Distance
       versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
 
   - name: Entropy

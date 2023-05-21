@@ -17,7 +17,7 @@ def visualize_voxel_selection(cfg: DictConfig) -> None:
     cfg.active.strategy = 'Random'
     cfg.active.cloud_partitions = 'Voxels'
     split = cfg.split if 'split' in cfg else 'train'
-    percentage = cfg.percentage if 'percentage' in cfg else 10
+    percentage = cfg.percentage if 'percentage' in cfg else 25
 
     # Create dataset
     dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
@@ -48,7 +48,7 @@ def visualize_superpoint_selection(cfg: DictConfig) -> None:
     cfg.active.strategy = 'Random'
     cfg.active.cloud_partitions = 'Superpoints'
     split = cfg.split if 'split' in cfg else 'train'
-    percentage = cfg.percentage if 'percentage' in cfg else 10
+    percentage = cfg.percentage if 'percentage' in cfg else 25
 
     dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
                               cfg=cfg.ds, split=split, num_clouds=None, sequences=None)

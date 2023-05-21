@@ -76,7 +76,13 @@ def visualize_augmentation(cfg: DictConfig):
                               cfg=cfg.ds, split=split, num_clouds=None, sequences=None)
 
     scan_interface = ScanInterface(label_map=cfg.ds.learning_map)
-    scan = dataset.scans[491]
+
+    if cfg.ds.name == 'SemanticKITTI':
+        scan = dataset.scans[44]
+    elif cfg.ds.name == 'KITTI360':
+        scan = dataset.scans[491]
+    else:
+        raise ValueError(f'Invalid dataset name: {cfg.ds.name}')
     points = scan_interface.read_points(scan)
     labels = scan_interface.read_labels(scan)
 
@@ -100,7 +106,7 @@ def visualize_augmentation(cfg: DictConfig):
     proj_flip = project_augmentation(cfg, points, labels, augmentation='flip')
     proj_flip = map_colors(proj_flip, cfg.ds.color_map_train)
 
-    fig = plt.figure(figsize=(6, 4), dpi=150)
+    fig = plt.figure(figsize=(6, 4), dpi=350)
     grid = ImageGrid(fig, 111, nrows_ncols=(5, 1), axes_pad=0.4)
 
     images = [proj_original, proj_drop, proj_rotate, proj_jitter, proj_flip]

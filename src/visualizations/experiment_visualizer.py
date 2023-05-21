@@ -129,9 +129,9 @@ class PassiveLearningVisualizer(object):
             epochs = np.arange(1, len(miou) + 1)
             ax.plot(epochs, ewm_miou, label=name, linewidth=1.5)
 
-        ax.set_title('Validation MIoU over epochs')
+        # ax.set_title('Validation MIoU over epochs')
         ax.set_xlabel('Epoch')
-        ax.set_ylabel('Validation MIoU')
+        ax.set_ylabel('mIoU')
         ax.legend(loc='lower right')
         ax.grid()
         plt.show()
@@ -145,9 +145,9 @@ class PassiveLearningVisualizer(object):
             epochs = np.arange(1, len(acc) + 1)
             ax.plot(epochs, ewm_acc, label=name, linewidth=1.5)
 
-        ax.set_title('Validation accuracy over epochs')
+        # ax.set_title('Validation accuracy over epochs')
         ax.set_xlabel('Epoch')
-        ax.set_ylabel('Validation accuracy')
+        ax.set_ylabel('Accuracy')
         ax.legend(loc='lower right')
         ax.grid()
         plt.show()
