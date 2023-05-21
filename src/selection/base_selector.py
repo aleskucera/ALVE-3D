@@ -138,7 +138,7 @@ class Selector(object):
         elif self.strategy == 'Confidence':
             cloud.compute_confidence()
         else:
-            raise ValueError('Criterion not supported')
+            raise ValueError(f'Criterion {self.strategy} not implemented.')
 
     def __get_model_predictions(self, scan_batch: torch.Tensor,
                                 split_sizes: torch.Tensor, valid_indices: list):

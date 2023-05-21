@@ -16,7 +16,8 @@ from src.visualizations.experiment import visualize_model_comparison, visualize_
     visualize_loss_comparison, visualize_baseline
 from src.visualizations.model import visualize_model_predictions
 from src.visualizations.selection import visualize_voxel_selection, \
-    visualize_superpoint_selection, visualize_scan_selection
+    visualize_superpoint_selection, visualize_uncertainty_score_voxels, \
+    visualize_uncertainty_score_superpoints
 
 log = logging.getLogger(__name__)
 
@@ -91,8 +92,10 @@ def main(cfg: DictConfig):
         visualize_voxel_selection(cfg)
     elif cfg.option == 'superpoint_selection':
         visualize_superpoint_selection(cfg)
-    elif cfg.option == 'scan_selection':
-        visualize_scan_selection(cfg)
+    elif cfg.option == 'scan_mapping':
+        visualize_uncertainty_score_voxels(cfg)
+    elif cfg.option == 'uncertainty_score_superpoints':
+        visualize_uncertainty_score_superpoints(cfg)
 
     # ==================== FILTERING ====================
 

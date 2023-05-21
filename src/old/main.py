@@ -21,7 +21,7 @@ from src.learn import train_model, train_model_active, train_semantickitti_origi
 log = logging.getLogger(__name__)
 
 
-@hydra.main(version_base=None, config_path="conf", config_name="config")
+@hydra.main(version_base=None, config_path="../../conf", config_name="config")
 def main(cfg: DictConfig):
     cfg = set_paths(cfg, HydraConfig.get().runtime.output_dir)
 

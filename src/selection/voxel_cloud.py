@@ -16,7 +16,7 @@ class VoxelCloud(Cloud):
         self.voxel_indices = torch.arange(self.size, dtype=torch.long)
         self.ids = torch.full((self.size,), self.id, dtype=torch.long)
 
-    def _save_values(self, values: torch.Tensor, features: torch.Tensor = None):
+    def _save_metric(self, values: torch.Tensor, features: torch.Tensor = None):
         self.values = values
         self.features = features
 
