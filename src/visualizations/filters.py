@@ -23,18 +23,25 @@ def visualize_filters(cfg: DictConfig):
                               cfg=cfg.ds, split=split, num_clouds=size, sequences=sequences)
 
     scan_interface = ScanInterface()
-    points = scan_interface.read_points(dataset.scans[491])
 
-    radius = points[:, 2]
-    colors = colorize_values(radius, color_map='inferno', data_range=(np.min(radius), np.max(radius)))
+    if cfg.ds.name == 'SemanticKITTI':
+        scan_file = dataset.scans[44]
+    elif cfg.ds.name == 'KITTI360':
+        scan_file = dataset.scans[491]
+    else:
+        raise ValueError(f'Invalid dataset name: {cfg.ds.name}')
+
+    points = scan_interface.read_points(scan_file)
+    colors = colorize_values(points[:, 2], color_map='inferno',
+                             data_range=(np.min(points[:, 2]), np.max(points[:, 2])))
 
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
     pcd.colors = o3d.utility.Vector3dVector(colors)
     o3d.visualization.draw_geometries([pcd])
 
-    dist = filter_scan(points, 'distance')
-    rad = filter_scan(points, 'radius')
+    dist = filter_scan(points, 'Distance')
+    rad = filter_scan(points, 'Radius')
 
     dist_colors = np.full(colors.shape, [0.7, 0.7, 0.7])
     dist_colors[dist] = np.array([131, 56, 236]) / 255

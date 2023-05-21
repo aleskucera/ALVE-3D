@@ -10,7 +10,7 @@ from src.kitti360 import KITTI360Converter
 
 from src.visualizations.filters import visualize_filters
 from src.visualizations.dataset import visualize_scans, visualize_clouds, \
-    visualize_statistics, visualize_augmentation
+    visualize_statistics, visualize_augmentation, visualize_scan_mapping
 from src.visualizations.superpoints import visualize_feature, visualize_superpoints
 from src.visualizations.experiment import visualize_model_comparison, visualize_learning, \
     visualize_loss_comparison, visualize_baseline
@@ -46,6 +46,8 @@ def main(cfg: DictConfig):
         visualize_statistics(cfg)
     elif cfg.option == 'augmentation':
         visualize_augmentation(cfg)
+    elif cfg.option == 'scan_mapping':
+        visualize_scan_mapping(cfg)
 
         # ==================== SUPERPOINT VISUALIZATIONS ====================
 

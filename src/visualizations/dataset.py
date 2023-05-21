@@ -6,12 +6,14 @@ from omegaconf import DictConfig
 from mpl_toolkits.axes_grid1 import ImageGrid
 
 from src.datasets import SemanticDataset
-from src.utils.cloud import visualize_cloud, augment_points
+from src.utils.cloud import visualize_cloud, augment_points, transform_points
 from src.laserscan import LaserScan, ScanVis
 from src.utils.io import CloudInterface, ScanInterface
 from src.utils.map import map_colors
 from src.utils.visualize import bar_chart
 from src.utils.project import project_points
+from src.utils.map import colorize_values
+from src.utils.filter import filter_scan
 
 log = logging.getLogger(__name__)
 
@@ -55,6 +57,51 @@ def visualize_clouds(cfg: DictConfig):
         visualize_cloud(points, colors)
 
 
+def visualize_scan_mapping(cfg: DictConfig):
+    split = cfg.split if 'split' in cfg else 'train'
+    log.info(f'Visualizing mapping of {split} split')
+
+    dataset = SemanticDataset(dataset_path=cfg.ds.path, project_name='demo',
+                              cfg=cfg.ds, split=split, num_clouds=None, sequences=None)
+
+    SI = ScanInterface(label_map=cfg.ds.learning_map)
+    CI = CloudInterface(label_map=cfg.ds.learning_map)
+
+    if cfg.ds.name == 'SemanticKITTI':
+        scan_file = dataset.scans[44]
+        cloud_file = dataset.cloud_map[44]
+    elif cfg.ds.name == 'KITTI360':
+        scan_file = dataset.scans[491]
+        cloud_file = dataset.cloud_map[491]
+    else:
+        raise ValueError(f'Invalid dataset name: {cfg.ds.name}')
+
+    scan_pose = SI.read_pose(scan_file)
+    scan_points = SI.read_points(scan_file)
+    scan_colors = colorize_values(scan_points[:, 2], color_map='inferno',
+                                  data_range=(np.min(scan_points[:, 2]), np.max(scan_points[:, 2])))
+    dist = filter_scan(scan_points, 'Distance')
+    rad = filter_scan(scan_points, 'Radius')
+
+    valid_points = np.setdiff1d(np.arange(scan_points.shape[0]), rad)
+    valid_points = np.setdiff1d(valid_points, dist)
+
+    scan_points = scan_points[valid_points]
+    scan_colors = scan_colors[valid_points]
+
+    scan_points[:, 2] += 0.5
+    scan_points = transform_points(scan_points, scan_pose)
+
+    cloud_points = CI.read_points(cloud_file)
+    cloud_colors = np.full((cloud_points.shape[0], 3), fill_value=0.7)
+
+    # Concatenate points and colors
+    points = np.concatenate((scan_points, cloud_points), axis=0)
+    colors = np.concatenate((scan_colors, cloud_colors), axis=0)
+
+    visualize_cloud(points, colors)
+
+
 def visualize_statistics(cfg: DictConfig):
     split = cfg.split if 'split' in cfg else 'train'
     log.info(f'Visualizing statistics of {split} split')
@@ -83,6 +130,7 @@ def visualize_augmentation(cfg: DictConfig):
         scan = dataset.scans[491]
     else:
         raise ValueError(f'Invalid dataset name: {cfg.ds.name}')
+
     points = scan_interface.read_points(scan)
     labels = scan_interface.read_labels(scan)
 
