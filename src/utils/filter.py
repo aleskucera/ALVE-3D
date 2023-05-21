@@ -8,7 +8,7 @@ def filter_scan(points: np.ndarray, filter_type: str) -> np.ndarray:
     if filter_type == 'Distance':
         return distant_points(points, 30)
     elif filter_type == 'Radius':
-        return radius_outliers(points, 10, 0.4)
+        return radius_outliers(points, 20, 0.1)
     else:
         raise ValueError(f'Invalid scan filter: {filter_type}')
 

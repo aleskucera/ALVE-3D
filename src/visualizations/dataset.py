@@ -116,6 +116,7 @@ def visualize_statistics(cfg: DictConfig):
 
 
 def visualize_augmentation(cfg: DictConfig):
+    augmentation = cfg.augmentation if 'augmentation' in cfg else None
     split = cfg.split if 'split' in cfg else 'train'
     log.info(f'Visualizing statistics of {split} split')
 
@@ -134,38 +135,50 @@ def visualize_augmentation(cfg: DictConfig):
     points = scan_interface.read_points(scan)
     labels = scan_interface.read_labels(scan)
 
-    # Project original scan
-    proj_original = project_augmentation(cfg, points, labels, augmentation=None)
-    proj_original = map_colors(proj_original, cfg.ds.color_map_train)
+    augmented_projection = project_augmentation(cfg, points, labels, augmentation=augmentation)
+    augmented_projection = map_colors(augmented_projection, cfg.ds.color_map_train)
 
-    # Drop points
-    proj_drop = project_augmentation(cfg, points, labels, augmentation='drop')
-    proj_drop = map_colors(proj_drop, cfg.ds.color_map_train)
+    fig = plt.figure(frameon=False)
+    fig.set_size_inches(augmented_projection.shape[1] / 100, augmented_projection.shape[0] / 100)
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.set_axis_off()
+    fig.add_axes(ax)
 
-    # Rotate points around z-axis
-    proj_rotate = project_augmentation(cfg, points, labels, augmentation='rotate')
-    proj_rotate = map_colors(proj_rotate, cfg.ds.color_map_train)
-
-    # Jitter points
-    proj_jitter = project_augmentation(cfg, points, labels, augmentation='jitter')
-    proj_jitter = map_colors(proj_jitter, cfg.ds.color_map_train)
-
-    # Flip points around x-axis
-    proj_flip = project_augmentation(cfg, points, labels, augmentation='flip')
-    proj_flip = map_colors(proj_flip, cfg.ds.color_map_train)
-
-    fig = plt.figure(figsize=(6, 4), dpi=350)
-    grid = ImageGrid(fig, 111, nrows_ncols=(5, 1), axes_pad=0.4)
-
-    images = [proj_original, proj_drop, proj_rotate, proj_jitter, proj_flip]
-    titles = ['Original', 'Drop Random Points', 'Rotate around z-axis', 'Jitter', 'Flip around x-axis']
-
-    for ax, image, title in zip(grid, images, titles):
-        ax.set_title(title)
-        ax.imshow(image, aspect='auto')
-        ax.axis('off')
-
+    ax.imshow(augmented_projection, aspect='auto')
     plt.show()
+
+    # # Project original scan
+    # proj_original = project_augmentation(cfg, points, labels, augmentation=None)
+    # proj_original = map_colors(proj_original, cfg.ds.color_map_train)
+    #
+    # # Drop points
+    # proj_drop = project_augmentation(cfg, points, labels, augmentation='drop')
+    # proj_drop = map_colors(proj_drop, cfg.ds.color_map_train)
+    #
+    # # Rotate points around z-axis
+    # proj_rotate = project_augmentation(cfg, points, labels, augmentation='rotate')
+    # proj_rotate = map_colors(proj_rotate, cfg.ds.color_map_train)
+    #
+    # # Jitter points
+    # proj_jitter = project_augmentation(cfg, points, labels, augmentation='jitter')
+    # proj_jitter = map_colors(proj_jitter, cfg.ds.color_map_train)
+    #
+    # # Flip points around x-axis
+    # proj_flip = project_augmentation(cfg, points, labels, augmentation='flip')
+    # proj_flip = map_colors(proj_flip, cfg.ds.color_map_train)
+
+    # fig = plt.figure(figsize=(6, 4), dpi=350)
+    # grid = ImageGrid(fig, 111, nrows_ncols=(5, 1), axes_pad=0.4)
+    #
+    # images = [proj_original, proj_drop, proj_rotate, proj_jitter, proj_flip]
+    # titles = ['Original', 'Drop Random Points', 'Rotate around z-axis', 'Jitter', 'Flip around x-axis']
+    #
+    # for ax, image, title in zip(grid, images, titles):
+    #     ax.set_title(title)
+    #     ax.imshow(image, aspect='auto')
+    #     ax.axis('off')
+    #
+    # plt.show()
 
 
 def project_augmentation(cfg, points: np.ndarray, labels: np.ndarray, augmentation: str = None):

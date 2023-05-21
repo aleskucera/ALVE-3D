@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from ruamel.yaml import YAML
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 from src.utils.wb import pull_artifact
 
@@ -103,6 +104,10 @@ class ActiveLearningVisualizer(object):
 class PassiveLearningVisualizer(object):
     def __init__(self, file: str):
 
+        self.font_size = 22
+        self.line_width = 4
+        self.figure_size = (10, 8)
+
         self.data = None
         self.names = list()
         self.histories = dict()
@@ -120,34 +125,46 @@ class PassiveLearningVisualizer(object):
             self.histories[name] = pull_artifact(history)
 
     def plot_miou(self, ewm_span: int = 10):
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=self.figure_size)
 
         for name, history in self.histories.items():
             miou = pd.Series(history['miou_val'])
             ewm_miou = miou.ewm(span=ewm_span).mean()
-
             epochs = np.arange(1, len(miou) + 1)
-            ax.plot(epochs, ewm_miou, label=name, linewidth=1.5)
+            ax.plot(epochs, ewm_miou, label=name, linewidth=self.line_width)
 
-        # ax.set_title('Validation MIoU over epochs')
-        ax.set_xlabel('Epoch')
-        ax.set_ylabel('mIoU')
-        ax.legend(loc='lower right')
-        ax.grid()
+        ax.set_xlabel('Epoch', fontsize=self.font_size)
+        ax.set_ylabel('mIoU', fontsize=self.font_size)
+        ax.tick_params(axis='x', labelsize=self.font_size)
+        ax.tick_params(axis='y', labelsize=self.font_size)
+        ax.grid(color='gray', linestyle='-', linewidth=2, alpha=0.5)
+        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x:.2f}"))
+
+        leg = ax.legend(loc='lower right', fontsize=self.font_size)
+        for obj in leg.legendHandles:
+            obj.set_linewidth(self.line_width)
+
         plt.show()
 
     def plot_accuracy(self, ewm_span: int = 10):
-        fig, ax = plt.subplots()
+
+        fig, ax = plt.subplots(figsize=self.figure_size)
 
         for name, history in self.histories.items():
             acc = pd.Series(history['accuracy_val'])
             ewm_acc = acc.ewm(span=ewm_span).mean()
             epochs = np.arange(1, len(acc) + 1)
-            ax.plot(epochs, ewm_acc, label=name, linewidth=1.5)
+            ax.plot(epochs, ewm_acc, label=name, linewidth=self.line_width)
 
-        # ax.set_title('Validation accuracy over epochs')
-        ax.set_xlabel('Epoch')
-        ax.set_ylabel('Accuracy')
-        ax.legend(loc='lower right')
-        ax.grid()
+        ax.set_xlabel('Epoch', fontsize=self.font_size)
+        ax.set_ylabel('Accuracy', fontsize=self.font_size)
+        ax.tick_params(axis='x', labelsize=self.font_size)
+        ax.tick_params(axis='y', labelsize=self.font_size)
+        ax.grid(color='gray', linestyle='-', linewidth=2, alpha=0.5)
+        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x:.2f}"))
+
+        leg = ax.legend(loc='lower right', fontsize=self.font_size)
+        for obj in leg.legendHandles:
+            obj.set_linewidth(self.line_width)
+
         plt.show()
