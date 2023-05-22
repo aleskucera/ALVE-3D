@@ -22,9 +22,9 @@ def train_model_active(cfg: DictConfig, device: torch.device) -> None:
     info = f'{cfg.active.strategy}_{cfg.active.cloud_partitions}_{cfg.ds.name}'
     if cfg.active.filter_type is not None:
         info += f'_{cfg.active.filter_type}'
-        wandb_project = f'AL-{cfg.ds.name}-{cfg.active.filter_type}-4'
+        wandb_project = f'AL-{cfg.ds.name}-{cfg.active.filter_type}'
     else:
-        wandb_project = f'AL-{cfg.ds.name}-4'
+        wandb_project = f'AL-{cfg.ds.name}'
 
     wandb_group = f'{cfg.active.strategy}_{cfg.active.cloud_partitions}'
 
