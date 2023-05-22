@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 CP_CUTOFF = 25
 REG_STRENGTH = 10
 EDGE_WEIGHT_THRESHOLD = -0.5
-FEATURES = ['anisotropy', 'planarity', 'linearity', 'PCA2',
+FEATURES = ['anisotropy', 'planarity', 'linearity',
             'sphericity', 'verticality', 'surface_variation']
 
 

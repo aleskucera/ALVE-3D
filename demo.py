@@ -114,6 +114,8 @@ def main(cfg: DictConfig):
     elif cfg.option == 'kitti360_conversion':
         converter = KITTI360Converter(cfg)
         converter.visualize()
+    elif cfg.option == 'semantic_kitti_conversion':
+        raise NotImplementedError
     else:
         raise ValueError('Invalid demo type.')
 

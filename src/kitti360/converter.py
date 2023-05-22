@@ -11,7 +11,7 @@ from .ply import read_kitti360_ply
 from src.utils.project import project_points
 from src.utils.map import map_labels, map_colors
 from .convert import convert_sequence, STATIC_THRESHOLD
-from src.utils.cloud import transform_points, nearest_neighbors_2
+from src.utils.cloud import transform_points, nearest_neighbors_2, downsample_cloud
 from .utils import get_disjoint_ranges, read_kitti360_poses, \
     read_kitti360_scan, get_window_range, read_txt
 
@@ -29,7 +29,7 @@ class KITTI360Converter:
 
         # ----------------- KITTI-360 structure attributes -----------------
         self.cfg = cfg
-        self.sequence = cfg.sequence if 'sequence' in cfg else 3
+        self.sequence = cfg.sequence if 'sequence' in cfg else 0
         self.seq_name = f'2013_05_28_drive_{self.sequence:04d}_sync'
 
         self.velodyne_path = os.path.join(cfg.ds.path, 'data_3d_raw', self.seq_name, 'velodyne_points', 'data')
@@ -60,8 +60,6 @@ class KITTI360Converter:
         self.num_scans = len(os.listdir(self.velodyne_path))
         self.num_windows = len(self.static_windows)
 
-        self.semantic = None
-
         # ----------------- Transformations -----------------
 
         self.T_cam_to_velo = np.concatenate([np.loadtxt(self.calib_path).reshape(3, 4), [[0, 0, 0, 1]]], axis=0)
@@ -72,22 +70,36 @@ class KITTI360Converter:
 
         # Point clouds for visualization
         self.scan = o3d.geometry.PointCloud()
-        self.static_window = o3d.geometry.PointCloud()
-        self.dynamic_window = o3d.geometry.PointCloud()
+        self.void_cloud = o3d.geometry.PointCloud()
+        self.static_cloud = o3d.geometry.PointCloud()
+        self.dynamic_cloud = o3d.geometry.PointCloud()
 
-        self.semantic_color = None
+        self.void_points = None
+        self.void_colors = None
+        self.label_colors = None
+        self.static_points = None
+        self.static_colors = None
+        self.dynamic_points = None
+        self.dynamic_colors = None
+
+        self.static_rgb = None
+        self.scan_visible = True
+        self.void_visible = True
+        self.dynamic_visible = True
 
         # Visualization parameters
         self.scan_num = 0
         self.window_num = 0
-
         self.visualization_step = cfg.conversion.visualization_step
-
         self.key_callbacks = {
-            ord(']'): self.prev_window,
+            ord('['): self.prev_window,
             ord(']'): self.next_window,
             ord('N'): self.next_scan,
             ord('B'): self.prev_scan,
+            ord('D'): self.toggle_dynamic_visibility,
+            ord('V'): self.toggle_void_visibility,
+            ord('S'): self.toggle_scan_visibility,
+            ord('C'): self.toggle_static_color,
             ord('Q'): self.quit,
         }
 
@@ -138,22 +150,51 @@ class KITTI360Converter:
         return train_samples, val_samples, train_clouds, val_clouds
 
     def update_window(self):
-        static_points, static_colors, self.semantic, _ = read_kitti360_ply(self.static_windows[self.window_num])
 
-        self.semantic = map_labels(self.semantic, self.cfg.ds.learning_map).flatten()
-        self.semantic_color = map_colors(self.semantic, self.cfg.ds.color_map_train)
+        # Load the static window
+        static_points, static_colors, labels, _ = read_kitti360_ply(self.static_windows[self.window_num])
+        static_points, static_colors, labels = downsample_cloud(static_points, static_colors, labels, 0.2)
 
-        dynamic_points, _, _, _ = read_kitti360_ply(self.dynamic_windows[self.window_num])
-        dynamic_colors = np.ones_like(dynamic_points) * [0, 0, 1]
+        # Create colors for the points
+        labels = map_labels(labels, self.cfg.ds.learning_map).flatten()
+        label_colors = map_colors(labels, self.cfg.ds.color_map_train)
 
-        self.static_window.points = o3d.utility.Vector3dVector(static_points)
+        # Filter out void points
+        void_indices = np.where(labels == self.cfg.ds.ignore_index)[0]
+        labeled_indices = np.where(labels != self.cfg.ds.ignore_index)[0]
 
-        # grey
-        self.static_window.colors = o3d.utility.Vector3dVector(np.full(static_points.shape, [0.7, 0.7, 0.7]))
-        # self.static_window.colors = o3d.utility.Vector3dVector(static_colors)
+        self.label_colors = label_colors[labeled_indices]
+        self.static_points = static_points[labeled_indices]
+        self.static_colors = static_colors[labeled_indices]
 
-        self.dynamic_window.points = o3d.utility.Vector3dVector(dynamic_points)
-        self.dynamic_window.colors = o3d.utility.Vector3dVector(dynamic_colors)
+        # self.void_colors = label_colors[void_indices]
+        self.void_points = static_points[void_indices]
+        self.void_colors = np.full((self.void_points.shape[0], 3), [0, 0, 0], dtype=np.uint8)
+
+        # Load the dynamic window
+        self.dynamic_points, _, _, _ = read_kitti360_ply(self.dynamic_windows[self.window_num])
+        self.dynamic_colors = np.full((self.dynamic_points.shape[0], 3), [0, 0, 1], dtype=np.uint8)
+
+        self.static_rgb, self.scan_visible = True, True
+        self.void_visible, self.dynamic_visible, = True, True
+
+        self.void_cloud.points = o3d.utility.Vector3dVector(self.void_points)
+        self.void_cloud.colors = o3d.utility.Vector3dVector(self.void_colors)
+
+        self.static_cloud.points = o3d.utility.Vector3dVector(self.static_points)
+        self.static_cloud.colors = o3d.utility.Vector3dVector(self.static_colors)
+
+        self.dynamic_cloud.points = o3d.utility.Vector3dVector(self.dynamic_points)
+        self.dynamic_cloud.colors = o3d.utility.Vector3dVector(self.dynamic_colors)
+
+        # self.static_window.points = o3d.utility.Vector3dVector(static_points)
+        # self.static_window.colors = o3d.utility.Vector3dVector(np.full(static_points.shape, [0.7, 0.7, 0.7]))
+        #
+        # self.void_points.points = o3d.utility.Vector3dVector(void_points)
+        # self.void_points.colors = o3d.utility.Vector3dVector(void_colors)
+        #
+        # self.dynamic_window.points = o3d.utility.Vector3dVector(dynamic_points)
+        # self.dynamic_window.colors = o3d.utility.Vector3dVector(dynamic_colors)
 
         self.scan_num = self.window_ranges[self.window_num][0]
         self.update_scan()
@@ -162,75 +203,75 @@ class KITTI360Converter:
 
         # Read scan
         scan = read_kitti360_scan(self.velodyne_path, self.scan_num)
-        scan_points = scan[:, :3]
-
-        # Transform scan to world coordinates
-        transformed_scan_points = transform_points(scan_points, self.poses[self.scan_num])
+        self.scan_points = transform_points(scan[:, :3], self.poses[self.scan_num])
 
         # Find neighbours in the static window
-        dists, indices = nearest_neighbors_2(self.static_window.points, transformed_scan_points, k_nn=1)
+        dists, indices = nearest_neighbors_2(self.static_points, self.scan_points, k_nn=1)
         mask = np.logical_and(dists >= 0, dists <= STATIC_THRESHOLD)
+        self.scan_points += [0, 0, 0.1]
 
         # Extract RGB values from the static window
-        rgb = np.array(self.static_window.colors)[indices[mask]]
+        # rgb = np.array(self.static_colors)[indices[mask]]
 
         # Color of the scan in world coordinates
-        scan_colors = np.ones_like(scan_points) * [1, 0, 0]
-        scan_colors[mask] = [0, 1, 0]
+        self.scan_colors = np.ones_like(self.scan_points) * [1, 0, 0]
+        self.scan_colors[mask] = [0, 1, 0]
+        #
+        # # Get point cloud labels
+        # semantics = np.array(self.label_colors)[indices[mask]]
+        #
+        # # Project the scan to the camera
+        # projection = project_points(scan_points, 64, 1024, 3, -25.0)
+        # proj_mask = projection['mask']
+        #
+        # # Project the filtered scan to the camera
+        # filtered_projection = project_points(scan_points[mask], 64, 1024, 3, -25.0)
+        # filtered_proj_mask = filtered_projection['mask']
+        # filtered_proj_indices = filtered_projection['idx'][filtered_proj_mask]
+        #
+        # # Project color, semantic and instance labels to the camera
+        # proj_color = np.zeros((64, 1024, 3), dtype=np.float32)
+        # proj_semantics = np.zeros((64, 1024, 3), dtype=np.float32)
+        # proj_instances = np.zeros((64, 1024, 3), dtype=np.float32)
+        #
+        # proj_color[filtered_proj_mask] = rgb[filtered_proj_indices]
+        # proj_semantics[filtered_proj_mask] = semantics[filtered_proj_indices]
+        #
+        # # Visualize the projection
+        # fig = plt.figure(figsize=(11, 4), dpi=150)
+        # grid = ImageGrid(fig, 111, nrows_ncols=(5, 1), axes_pad=0.4)
+        #
+        # images = [proj_mask, filtered_proj_mask, proj_color, proj_semantics, proj_instances]
+        # titles = ['Projection Mask', 'Filtered Projection Mask', 'RGB Color', 'Semantic Labels', 'Instance Labels']
+        #
+        # for ax, image, title in zip(grid, images, titles):
+        #     ax.set_title(title)
+        #     ax.imshow(image, aspect='auto')
+        #     ax.axis('off')
+        #
+        # plt.show()
 
-        # Get point cloud labels
-        semantics = np.array(self.semantic_color)[indices[mask]]
-
-        # Project the scan to the camera
-        projection = project_points(scan_points, 64, 1024, 3, -25.0)
-        proj_mask = projection['mask']
-
-        # Project the filtered scan to the camera
-        filtered_projection = project_points(scan_points[mask], 64, 1024, 3, -25.0)
-        filtered_proj_mask = filtered_projection['mask']
-        filtered_proj_indices = filtered_projection['idx'][filtered_proj_mask]
-
-        # Project color, semantic and instance labels to the camera
-        proj_color = np.zeros((64, 1024, 3), dtype=np.float32)
-        proj_semantics = np.zeros((64, 1024, 3), dtype=np.float32)
-        proj_instances = np.zeros((64, 1024, 3), dtype=np.float32)
-
-        proj_color[filtered_proj_mask] = rgb[filtered_proj_indices]
-        proj_semantics[filtered_proj_mask] = semantics[filtered_proj_indices]
-
-        # Visualize the projection
-        fig = plt.figure(figsize=(11, 4), dpi=150)
-        grid = ImageGrid(fig, 111, nrows_ncols=(5, 1), axes_pad=0.4)
-
-        images = [proj_mask, filtered_proj_mask, proj_color, proj_semantics, proj_instances]
-        titles = ['Projection Mask', 'Filtered Projection Mask', 'RGB Color', 'Semantic Labels', 'Instance Labels']
-
-        for ax, image, title in zip(grid, images, titles):
-            ax.set_title(title)
-            ax.imshow(image, aspect='auto')
-            ax.axis('off')
-
-        plt.show()
-
-        self.scan.points = o3d.utility.Vector3dVector(transformed_scan_points + [0, 0, 0.1])
-        self.scan.colors = o3d.utility.Vector3dVector(scan_colors)
+        self.scan.points = o3d.utility.Vector3dVector(self.scan_points)
+        self.scan.colors = o3d.utility.Vector3dVector(self.scan_colors)
 
     def next_window(self, vis):
         self.window_num += 1
         self.update_window()
-        vis.update_geometry(self.static_window)
-        vis.update_geometry(self.dynamic_window)
         vis.update_geometry(self.scan)
+        vis.update_geometry(self.void_cloud)
+        vis.update_geometry(self.static_cloud)
+        vis.update_geometry(self.dynamic_cloud)
         vis.reset_view_point(True)
         vis.update_renderer()
         return False
 
     def prev_window(self, vis):
-        self.window_num -= self.visualization_step
+        self.window_num -= 1
         self.update_window()
-        vis.update_geometry(self.static_window)
-        vis.update_geometry(self.dynamic_window)
         vis.update_geometry(self.scan)
+        vis.update_geometry(self.void_cloud)
+        vis.update_geometry(self.static_cloud)
+        vis.update_geometry(self.dynamic_cloud)
         vis.reset_view_point(True)
         vis.update_renderer()
         return False
@@ -249,6 +290,60 @@ class KITTI360Converter:
         vis.update_renderer()
         return False
 
+    def toggle_static_color(self, vis):
+        self.static_rgb = not self.static_rgb
+
+        if self.static_rgb:
+            self.static_cloud.colors = o3d.utility.Vector3dVector(self.static_colors)
+        else:
+            self.static_cloud.colors = o3d.utility.Vector3dVector(self.label_colors)
+
+        vis.update_geometry(self.static_cloud)
+        vis.update_renderer()
+        return False
+
+    def toggle_scan_visibility(self, vis):
+        self.scan_visible = not self.scan_visible
+
+        if self.scan_visible:
+            self.scan.points = o3d.utility.Vector3dVector(self.scan_points)
+            self.scan.colors = o3d.utility.Vector3dVector(self.scan_colors)
+        else:
+            self.scan.points = o3d.utility.Vector3dVector([])
+            self.scan.colors = o3d.utility.Vector3dVector([])
+
+        vis.update_geometry(self.scan)
+        vis.update_renderer()
+        return False
+
+    def toggle_dynamic_visibility(self, vis):
+        self.dynamic_visible = not self.dynamic_visible
+
+        if self.dynamic_visible:
+            self.dynamic_cloud.points = o3d.utility.Vector3dVector(self.dynamic_points)
+            self.dynamic_cloud.colors = o3d.utility.Vector3dVector(self.dynamic_colors)
+        else:
+            self.dynamic_cloud.points = o3d.utility.Vector3dVector([])
+            self.dynamic_cloud.colors = o3d.utility.Vector3dVector([])
+
+        vis.update_geometry(self.dynamic_cloud)
+        vis.update_renderer()
+        return False
+
+    def toggle_void_visibility(self, vis):
+        self.void_visible = not self.void_visible
+
+        if self.void_visible:
+            self.void_cloud.points = o3d.utility.Vector3dVector(self.void_points)
+            self.void_cloud.colors = o3d.utility.Vector3dVector(self.void_colors)
+        else:
+            self.void_cloud.points = o3d.utility.Vector3dVector([])
+            self.void_cloud.colors = o3d.utility.Vector3dVector([])
+
+        vis.update_geometry(self.void_cloud)
+        vis.update_renderer()
+        return False
+
     @staticmethod
     def quit(vis):
         vis.destroy_window()
@@ -261,8 +356,13 @@ class KITTI360Converter:
         print('  - Press "p" to go to the previous scan')
         print('  - Press "]" to go to the next window')
         print('  - Press "[" to go to the previous window')
+        print('  - Press "d" to change the visibility of the dynamic window')
+        print('  - Press "v" to change the visibility of the void class')
+        print('  - Press "s" to change the visibility of the static window')
+        print('  - Press "c" to change the color of the static window')
+        print('  - Press "q" to quit')
         self.update_window()
         self.update_scan()
         o3d.visualization.draw_geometries_with_key_callbacks(
-            [self.static_window, self.scan],
+            [self.static_cloud, self.scan, self.void_cloud, self.dynamic_cloud],
             self.key_callbacks)
