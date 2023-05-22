@@ -10,6 +10,10 @@ from src.utils.wb import pull_artifact
 class ActiveLearningVisualizer(object):
     def __init__(self, file: str):
 
+        self.font_size = 18
+        self.line_width = 3
+        self.figure_size = (10, 8)
+
         self.data = None
         self.strategies = list()
         self.histories = dict()
@@ -51,38 +55,51 @@ class ActiveLearningVisualizer(object):
         return [np.max(h[metric]) for h in history_list]
 
     def plot_miou(self):
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=self.figure_size)
 
         for i, strategy in enumerate(self.strategies):
-            miou = self.nondecreasing_series(np.array(self.max_mious[strategy]))
-            ax.plot(self.percentages[strategy], miou, label=strategy, linewidth=1.5)
+            miou = self.nondecreasing_series(np.array(self.max_mious[strategy])) * 100
+            ax.plot(self.percentages[strategy], miou, label=strategy, linewidth=self.line_width)
 
-        ax.axhline(y=self.baseline_miou, linestyle='--', linewidth=2, label='100% Baseline', color='black')
-        ax.axhline(y=0.9 * self.baseline_miou, linestyle=':', linewidth=2, label='90% Baseline', color='black')
+        # Color black
+        ax.axhline(y=self.baseline_miou * 100, linestyle='--', linewidth=self.line_width, color='black')
+        ax.axhline(y=self.baseline_miou * 90, linestyle=':', linewidth=self.line_width, color='black')
 
-        ax.set_title('Max MIoU over percentages')
-        ax.set_xlabel('Percentage of training data')
-        ax.set_ylabel('Max MIoU')
-        ax.legend(loc='lower right')
-        ax.grid()
+        ax.set_xlabel('Labeled voxels [%]', fontsize=self.font_size)
+        ax.set_ylabel('mIoU [%]', fontsize=self.font_size)
+        ax.tick_params(axis='x', labelsize=self.font_size)
+        ax.tick_params(axis='y', labelsize=self.font_size)
+        ax.grid(color='gray', linestyle='-', linewidth=2, alpha=0.5)
+        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x:.2f}"))
+
+        leg = ax.legend(loc='lower right', fontsize=self.font_size)
+        for obj in leg.legendHandles:
+            obj.set_linewidth(self.line_width)
+
         plt.show()
 
     def plot_accuracy(self):
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=self.figure_size)
 
         for i, strategy in enumerate(self.strategies):
-            accuracy = self.nondecreasing_series(np.array(self.max_accs[strategy]))
-            ax.plot(self.percentages[strategy], accuracy, label=strategy, linewidth=1.5)
+            accuracy = self.nondecreasing_series(np.array(self.max_accs[strategy])) * 100
+            ax.plot(self.percentages[strategy], accuracy, label=strategy, linewidth=self.line_width)
 
         # Color black
-        ax.axhline(y=self.baseline_acc, linestyle='--', linewidth=2, label='100% Baseline', color='black')
-        ax.axhline(y=0.9 * self.baseline_acc, linestyle=':', linewidth=2, label='90% Baseline', color='black')
+        ax.axhline(y=self.baseline_acc * 100, linestyle='--', linewidth=self.line_width, color='black')
+        ax.axhline(y=self.baseline_acc * 90, linestyle=':', linewidth=self.line_width, color='black')
 
-        ax.set_title('Max accuracy over percentages')
-        ax.set_xlabel('Percentage of training data')
-        ax.set_ylabel('Max accuracy')
-        ax.legend(loc='lower right')
-        ax.grid()
+        ax.set_xlabel('Labeled voxels [%]', fontsize=self.font_size)
+        ax.set_ylabel('Accuracy [%]', fontsize=self.font_size)
+        ax.tick_params(axis='x', labelsize=self.font_size)
+        ax.tick_params(axis='y', labelsize=self.font_size)
+        ax.grid(color='gray', linestyle='-', linewidth=2, alpha=0.5)
+        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x:.2f}"))
+
+        leg = ax.legend(loc='lower right', fontsize=self.font_size)
+        for obj in leg.legendHandles:
+            obj.set_linewidth(self.line_width)
+
         plt.show()
 
     @staticmethod
