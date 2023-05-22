@@ -15,3 +15,5 @@ active:
   cloud_partitions: Superpoints
 
 # sbatch --output=Strategy_EpistemicUncertainty.out --error=Strategy_EpistemicUncertainty.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_EpistemicUncertainty
+# sbatch --output=Strategy_EpistemicUncertainty_Distance.out --error=Strategy_EpistemicUncertainty_Distance.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_EpistemicUncertainty
+# sbatch --output=Strategy_EpistemicUncertainty_Radius.out --error=Strategy_EpistemicUncertainty_Radius.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_EpistemicUncertainty

@@ -15,3 +15,5 @@ active:
   cloud_partitions: Superpoints
 
 # sbatch --output=Strategy_ViewpointVariance.out --error=Strategy_ViewpointVariance.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_ViewpointVariance
+# sbatch --output=Strategy_ViewpointVariance_Distance.out --error=Strategy_ViewpointVariance_Distance.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_ViewpointVariance
+# sbatch --output=Strategy_ViewpointVariance_Radius.out --error=Strategy_ViewpointVariance_Radius.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_ViewpointVariance

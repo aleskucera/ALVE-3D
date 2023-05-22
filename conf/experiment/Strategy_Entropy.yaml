@@ -15,3 +15,5 @@ active:
   cloud_partitions: Superpoints
 
 # sbatch --output=Strategy_Entropy.out --error=Strategy_Entropy.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_Entropy
+# sbatch --output=Strategy_Entropy_Distance.out --error=Strategy_Entropy_Distance.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_Entropy
+# sbatch --output=Strategy_Entropy_Radius.out --error=Strategy_Entropy_Radius.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_Entropy

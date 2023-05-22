@@ -15,3 +15,5 @@ active:
   cloud_partitions: Superpoints
 
 # sbatch --output=Strategy_Margin.out --error=Strategy_Margin.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_Margin
+# sbatch --output=Strategy_Margin_Distance.out --error=Strategy_Margin_Distance.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_Margin
+# sbatch --output=Strategy_Margin_Radius.out --error=Strategy_Margin_Radius.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_Margin
