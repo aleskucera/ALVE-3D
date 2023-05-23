@@ -12,7 +12,6 @@ train:
 active:
   strategy: Random
   diversity_aware: false
-  filter_type: null
   cloud_partitions: Superpoints
 
 # sbatch --output=Strategy_Random.out --error=Strategy_Random.out --gpus-per-node=1 scripts/active/train.batch --experiment Strategy_Random
