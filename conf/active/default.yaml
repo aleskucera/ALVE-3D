@@ -4,7 +4,7 @@ cloud_partitions: 'Voxels'
 
 batch_size: 128
 seed_percentage: 1
-percentages: [ 18, 20, 22, 24 ]
+percentages: [ 26, 28, 30 ]
 
 # Diversity aware selection
 decay_rate: 0.95
@@ -13,7 +13,7 @@ diversity_aware: true
 redal_weights: [ 1, 0.1, 0.05 ]
 
 # Scan filter
-filter_type: 'Distance'
+filter_type: null
 
 # Artifacts
 #model_artifact: 'aleskucera/AL-Seed/SalsaNext_KITTI360:v2'
