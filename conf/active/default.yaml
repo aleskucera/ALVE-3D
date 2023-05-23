@@ -4,7 +4,7 @@ cloud_partitions: 'Voxels'
 
 batch_size: 128
 seed_percentage: 1
-percentages: [ 10, 12, 14, 16 ]
+percentages: [ 18, 20, 22, 24 ]
 
 # Diversity aware selection
 decay_rate: 0.95
