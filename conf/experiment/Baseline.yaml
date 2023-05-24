@@ -4,7 +4,7 @@ defaults:
   - override /model: SalsaNext
 
 train:
-  epochs: 200
+  epochs: 250
   batch_size: 32
   num_workers: 4
   loss: LovaszLoss
