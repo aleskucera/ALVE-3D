@@ -1,7 +1,7 @@
 baseline: aleskucera/Baseline/History_SalsaNext_KITTI360_LovaszLoss:v0
 
 strategies:
-  - name: ViewpointVariance
+  - name: VV
     percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
     history:
       artifact: aleskucera/AL-KITTI360-distance-4/History_ViewpointVariance_Superpoints_KITTI360_Distance
@@ -13,25 +13,31 @@ strategies:
       artifact: aleskucera/AL-KITTI360-distance-4/History_ReDAL_Superpoints_KITTI360_distance
       versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
 
-  - name: Confidence
+  - name: EPI
     percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
     history:
-      artifact: aleskucera/AL-KITTI360-distance-4/History_Confidence_Superpoints_KITTI360_distance
+      artifact: aleskucera/AL-KITTI360-distance-4/History_EpistemicUncertainty_Superpoints_KITTI360_distance
       versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
 
-  - name: Margin
-    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
-    history:
-      artifact: aleskucera/AL-KITTI360-distance-4/History_Margin_Superpoints_KITTI360_Distance
-      versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
-
-  - name: Entropy
+  - name: ENT
     percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
     history:
       artifact: aleskucera/AL-KITTI360-distance-4/History_Entropy_Superpoints_KITTI360_distance
       versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
 
-  - name: Random
+  - name: MAR
+    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
+    history:
+      artifact: aleskucera/AL-KITTI360-distance-4/History_Margin_Superpoints_KITTI360_Distance
+      versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+
+  - name: CONF
+    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
+    history:
+      artifact: aleskucera/AL-KITTI360-distance-4/History_Confidence_Superpoints_KITTI360_distance
+      versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+
+  - name: RAND
     percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
     history:
       artifact: aleskucera/AL-KITTI360-distance-4/History_Random_Superpoints_KITTI360_distance

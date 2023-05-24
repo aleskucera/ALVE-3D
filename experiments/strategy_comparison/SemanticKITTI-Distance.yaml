@@ -1,38 +1,44 @@
 baseline: aleskucera/Baseline/History_SalsaNext_SemanticKITTI_LovaszLoss:v0
 
 strategies:
-  - name: ViewpointVariance
-    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
+  - name: VV
+    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 ]
     history:
       artifact: aleskucera/AL-SemanticKITTI-Distance/History_ViewpointVariance_Superpoints_SemanticKITTI_Distance
-      versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+      versions: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ]
 
   - name: ReDAL
-    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
+    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 ]
     history:
       artifact: aleskucera/AL-SemanticKITTI-Distance/History_ReDAL_Superpoints_SemanticKITTI_Distance
-      versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+      versions: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ]
 
-  - name: Entropy
-    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
+  - name: EPI
+    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 ]
+    history:
+      artifact: aleskucera/AL-SemanticKITTI-Distance/History_EpistemicUncertainty_Superpoints_SemanticKITTI_Distance
+      versions: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ]
+
+  - name: ENT
+    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 ]
     history:
       artifact: aleskucera/AL-SemanticKITTI-Distance/History_Entropy_Superpoints_SemanticKITTI_Distance
-      versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+      versions: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ]
 
-  - name: Margin
-    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
+  - name: MAR
+    percentages: [ 2, 4, 6, 8, 10, 12, 14, 18, 20, 22, 24 ]
     history:
       artifact: aleskucera/AL-SemanticKITTI-Distance/History_Margin_Superpoints_SemanticKITTI_Distance
-      versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+      versions: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
 
-  - name: Confidence
-    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
+  - name: CONF
+    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 ]
     history:
       artifact: aleskucera/AL-SemanticKITTI-Distance/History_Confidence_Superpoints_SemanticKITTI_Distance
-      versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+      versions: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ]
 
-  - name: Random
-    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
+  - name: RAND
+    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 ]
     history:
       artifact: aleskucera/AL-SemanticKITTI-Distance/History_Random_Superpoints_SemanticKITTI_Distance
-      versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+      versions: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ]
