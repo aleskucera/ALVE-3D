@@ -1,4 +1,4 @@
-baseline: aleskucera/Baseline/History_SalsaNext_SemanticKITTI_LovaszLoss:v0
+baseline: aleskucera/Baseline/History_SalsaNext_SemanticKITTI_LovaszLoss:v1
 
 strategies:
   - name: ViewpointVariance

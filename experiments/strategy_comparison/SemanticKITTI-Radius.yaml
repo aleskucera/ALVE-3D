@@ -2,16 +2,16 @@ baseline: aleskucera/Baseline/History_SalsaNext_SemanticKITTI_LovaszLoss:v1
 
 strategies:
   - name: VV
-    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 ]
+    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 ]
     history:
       artifact: aleskucera/AL-SemanticKITTI/History_ViewpointVariance_Superpoints_SemanticKITTI
-      versions: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ]
+      versions: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ]
 
   - name: ReDAL
-    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 ]
+    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 ]
     history:
       artifact: aleskucera/AL-SemanticKITTI/History_ReDAL_Superpoints_SemanticKITTI
-      versions: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ]
+      versions: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ]
 
   - name: EPI
     percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 ]
@@ -26,10 +26,10 @@ strategies:
       versions: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ]
 
   - name: MAR
-    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 ]
+    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 ]
     history:
       artifact: aleskucera/AL-SemanticKITTI/History_Margin_Superpoints_SemanticKITTI
-      versions: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ]
+      versions: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ]
 
   - name: CONF
     percentages: [ 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 ]
