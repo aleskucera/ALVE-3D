@@ -1,4 +1,4 @@
-<h1 align="center">ALVE-3D</h1>
+<h1 align="center">MuVAL</h1>
 
 <p align="center">
 <img src="https://img.shields.io/badge/Python-14354C?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
