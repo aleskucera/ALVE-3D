@@ -13,7 +13,7 @@ from src.visualizations.dataset import visualize_scans, visualize_clouds, \
     visualize_statistics, visualize_augmentation, visualize_scan_mapping
 from src.visualizations.superpoints import visualize_feature, visualize_superpoints
 from src.visualizations.experiment import visualize_model_comparison, visualize_learning, \
-    visualize_loss_comparison, visualize_baseline
+    visualize_loss_comparison, visualize_baseline, visualize_class_distribution
 from src.visualizations.model import visualize_model_predictions
 from src.visualizations.selection import visualize_voxel_selection, \
     visualize_superpoint_selection, visualize_uncertainty_score_voxels, \
@@ -82,6 +82,8 @@ def main(cfg: DictConfig):
         visualize_baseline(cfg)
     elif cfg.option == 'strategy_comparison':
         visualize_learning(cfg)
+    elif cfg.option == 'class_distribution':
+        visualize_class_distribution(cfg)
 
         # ==================== SELECTION VISUALIZATIONS ====================
 

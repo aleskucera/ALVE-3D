@@ -112,7 +112,7 @@ def visualize_statistics(cfg: DictConfig):
     label_names = [v for v in cfg.ds.labels_train.values() if v != 'void']
     dataset_distribution = dataset.statistics['class_distribution'][1:] * 100
 
-    bar_chart(values=dataset_distribution, labels=label_names, value_label='Proportion [%]')
+    bar_chart(values=dataset_distribution, labels=label_names, value_label='Class Distribution [%]')
 
 
 def visualize_augmentation(cfg: DictConfig):

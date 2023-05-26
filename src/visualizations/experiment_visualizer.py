@@ -10,8 +10,8 @@ from src.utils.wb import pull_artifact
 class ActiveLearningVisualizer(object):
     def __init__(self, file: str):
 
-        self.font_size = 18
-        self.line_width = 3
+        self.font_size = 22
+        self.line_width = 4
         self.figure_size = (10, 8)
 
         self.data = None
@@ -56,10 +56,21 @@ class ActiveLearningVisualizer(object):
 
     def plot_miou(self):
         fig, ax = plt.subplots(figsize=self.figure_size)
+        latex_row = 'mIoU LaTeX rows: \n'
 
         for i, strategy in enumerate(self.strategies):
             miou = self.nondecreasing_series(np.array(self.max_mious[strategy])) * 100
             ax.plot(self.percentages[strategy], miou, label=strategy, linewidth=self.line_width)
+            latex_row += f'{strategy}: '
+            for j, a in enumerate(miou):
+                latex_row += f'{a:.1f} & '
+                if j == 7:
+                    latex_row += ' \n '
+            latex_row += '\\ \n'
+
+        print(latex_row[:-1])
+        print(f'100% Baseline: {self.baseline_miou * 100:.1f}')
+        print(f'90% Baseline: {self.baseline_miou * 90:.1f}')
 
         # Color black
         ax.axhline(y=self.baseline_miou * 100, linestyle='--', linewidth=self.line_width, color='black')
@@ -70,7 +81,7 @@ class ActiveLearningVisualizer(object):
         ax.tick_params(axis='x', labelsize=self.font_size)
         ax.tick_params(axis='y', labelsize=self.font_size)
         ax.grid(color='gray', linestyle='-', linewidth=2, alpha=0.5)
-        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x:.2f}"))
+        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{int(x)}"))
 
         leg = ax.legend(loc='lower right', fontsize=self.font_size)
         for obj in leg.legendHandles:
@@ -80,10 +91,21 @@ class ActiveLearningVisualizer(object):
 
     def plot_accuracy(self):
         fig, ax = plt.subplots(figsize=self.figure_size)
+        latex_row = 'Accuracy LaTeX rows: \n'
 
         for i, strategy in enumerate(self.strategies):
             accuracy = self.nondecreasing_series(np.array(self.max_accs[strategy])) * 100
             ax.plot(self.percentages[strategy], accuracy, label=strategy, linewidth=self.line_width)
+            latex_row += f'{strategy}: '
+            for j, a in enumerate(accuracy):
+                latex_row += f'{a:.1f} & '
+                if j == 7:
+                    latex_row += ' \n '
+            latex_row += '\\ \n'
+
+        print(latex_row[:-1])
+        print(f'100% Baseline: {self.baseline_acc * 100:.1f}')
+        print(f'90% Baseline: {self.baseline_acc * 90:.1f}')
 
         # Color black
         ax.axhline(y=self.baseline_acc * 100, linestyle='--', linewidth=self.line_width, color='black')
@@ -94,7 +116,7 @@ class ActiveLearningVisualizer(object):
         ax.tick_params(axis='x', labelsize=self.font_size)
         ax.tick_params(axis='y', labelsize=self.font_size)
         ax.grid(color='gray', linestyle='-', linewidth=2, alpha=0.5)
-        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x:.2f}"))
+        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{int(x)}"))
 
         leg = ax.legend(loc='lower right', fontsize=self.font_size)
         for obj in leg.legendHandles:
@@ -141,21 +163,21 @@ class PassiveLearningVisualizer(object):
             self.names.append(name)
             self.histories[name] = pull_artifact(history)
 
-    def plot_miou(self, ewm_span: int = 10):
+    def plot_miou(self, ewm_span: int = 10, max_epochs: int = None):
         fig, ax = plt.subplots(figsize=self.figure_size)
 
         for name, history in self.histories.items():
-            miou = pd.Series(history['miou_val'])
+            miou = pd.Series(history['miou_val']) * 100
             ewm_miou = miou.ewm(span=ewm_span).mean()
-            epochs = np.arange(1, len(miou) + 1)
-            ax.plot(epochs, ewm_miou, label=name, linewidth=self.line_width)
+            epochs = np.arange(1, len(miou) + 1) if max_epochs is None else np.arange(1, max_epochs + 1)
+            ax.plot(epochs, ewm_miou[:max_epochs], label=name, linewidth=self.line_width)
 
-        ax.set_xlabel('Epoch', fontsize=self.font_size)
-        ax.set_ylabel('mIoU', fontsize=self.font_size)
+        ax.set_xlabel('Epoch [-]', fontsize=self.font_size)
+        ax.set_ylabel('mIoU [%]', fontsize=self.font_size)
         ax.tick_params(axis='x', labelsize=self.font_size)
         ax.tick_params(axis='y', labelsize=self.font_size)
         ax.grid(color='gray', linestyle='-', linewidth=2, alpha=0.5)
-        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x:.2f}"))
+        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{int(x)}"))
 
         leg = ax.legend(loc='lower right', fontsize=self.font_size)
         for obj in leg.legendHandles:
@@ -163,22 +185,21 @@ class PassiveLearningVisualizer(object):
 
         plt.show()
 
-    def plot_accuracy(self, ewm_span: int = 10):
-
+    def plot_accuracy(self, ewm_span: int = 10, max_epochs: int = None):
         fig, ax = plt.subplots(figsize=self.figure_size)
 
         for name, history in self.histories.items():
-            acc = pd.Series(history['accuracy_val'])
+            acc = pd.Series(history['accuracy_val']) * 100
             ewm_acc = acc.ewm(span=ewm_span).mean()
-            epochs = np.arange(1, len(acc) + 1)
-            ax.plot(epochs, ewm_acc, label=name, linewidth=self.line_width)
+            epochs = np.arange(1, len(acc) + 1) if max_epochs is None else np.arange(1, max_epochs + 1)
+            ax.plot(epochs, ewm_acc[:max_epochs], label=name, linewidth=self.line_width)
 
-        ax.set_xlabel('Epoch', fontsize=self.font_size)
-        ax.set_ylabel('Accuracy', fontsize=self.font_size)
+        ax.set_xlabel('Epoch [-]', fontsize=self.font_size)
+        ax.set_ylabel('Accuracy [%]', fontsize=self.font_size)
         ax.tick_params(axis='x', labelsize=self.font_size)
         ax.tick_params(axis='y', labelsize=self.font_size)
         ax.grid(color='gray', linestyle='-', linewidth=2, alpha=0.5)
-        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{x:.2f}"))
+        ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f"{int(x)}"))
 
         leg = ax.legend(loc='lower right', fontsize=self.font_size)
         for obj in leg.legendHandles:

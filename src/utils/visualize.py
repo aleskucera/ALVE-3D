@@ -10,17 +10,19 @@ cmap_large = cm.get_cmap('tab20')
 def bar_chart(values: np.ndarray, labels: list, value_label: str, title: str = None, save_path: str = None):
     y = np.arange(len(labels))
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(10, 8))
     rects = ax.barh(y, values, color=cmap_small(0))
-    bar_labels = [f"{val:.1e}" if val >= 0.00001 else "" for val in values]
-    ax.bar_label(rects, labels=bar_labels, padding=10)
+    bar_labels = [f"{val:.1f}%" if val >= 0.01 else "" for val in values]
+    ax.bar_label(rects, labels=bar_labels, padding=10, fontsize=20)
 
     if title is not None:
-        ax.set_title(title)
+        ax.set_title(title, fontsize=20)
 
-    ax.set_xlabel(value_label)
+    ax.set_xlabel(value_label, fontsize=20)
     ax.set_yticks(y)
-    ax.set_yticklabels(labels)
+    ax.set_yticklabels(labels, fontsize=20)
+    ax.set_xticks(ax.get_xticks())
+    ax.set_xticklabels(ax.get_xticks(), fontsize=18)
     ax.set_xlim(0, np.max(values) + 0.25 * np.max(values))
     fig.subplots_adjust(left=0.2)
 
@@ -28,6 +30,29 @@ def bar_chart(values: np.ndarray, labels: list, value_label: str, title: str = N
         plt.savefig(save_path)
     else:
         plt.show()
+
+
+# def bar_chart(values: np.ndarray, labels: list, value_label: str, title: str = None, save_path: str = None):
+#     y = np.arange(len(labels))
+#
+#     fig, ax = plt.subplots()
+#     rects = ax.barh(y, values, color=cmap_small(0))
+#     bar_labels = [f"{val:.1e}" if val >= 0.00001 else "" for val in values]
+#     ax.bar_label(rects, labels=bar_labels, padding=10)
+#
+#     if title is not None:
+#         ax.set_title(title)
+#
+#     ax.set_xlabel(value_label)
+#     ax.set_yticks(y)
+#     ax.set_yticklabels(labels)
+#     ax.set_xlim(0, np.max(values) + 0.25 * np.max(values))
+#     fig.subplots_adjust(left=0.2)
+#
+#     if save_path is not None:
+#         plt.savefig(save_path)
+#     else:
+#         plt.show()
 
 
 def grouped_bar_chart(values: dict, labels: list, value_label: str, title: str = None, save_path: str = None):

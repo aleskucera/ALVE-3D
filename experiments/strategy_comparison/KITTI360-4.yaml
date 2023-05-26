@@ -37,8 +37,8 @@ strategies:
       artifact: aleskucera/AL-KITTI360-4/History_Confidence_Superpoints_SalsaNext_KITTI360
       versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
 
-  - name: RAND
-    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
-    history:
-      artifact: aleskucera/AL-KITTI360-4/History_Random_Superpoints_SalsaNext_KITTI360
-      versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+#  - name: RAND
+#    percentages: [ 2, 4, 6, 8, 10, 12, 14, 16 ]
+#    history:
+#      artifact: aleskucera/AL-KITTI360-4/History_Random_Superpoints_SalsaNext_KITTI360
+#      versions: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
